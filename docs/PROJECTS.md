@@ -34,6 +34,7 @@ does not create a consent dialog or grant access automatically.
 | `project.listFiles(path?, options?)` | One directory listing under the selected root |
 | `project.openFile(path, options?)` | Read a file and retain its immutable content/revision in a session |
 | `project.createFile(path, content, options?)` | Create-if-absent using revision `null`, then return a session |
+| `project.watchFiles(paths, options?)` | Observe 1–16 explicit file revisions without changing edit snapshots; SDK 0.5.0 |
 | `session.snapshot` | Last confirmed `{path, content, revision}`; not editable |
 | `session.save(content, options?)` | Save against the retained revision; never force overwrite |
 | `session.saveEdits(edits, options?)` | Apply edits against one snapshot, then perform one CAS save |
@@ -41,7 +42,8 @@ does not create a consent dialog or grant access automatically.
 | `session.state` | `ready`, `saving`, `reloading`, `needs-reload` or `disposed` |
 | `dispose()` | Cancel owned work; project disposal leaves the caller's client connected |
 
-Options are `{signal?, timeoutMs?}`. Only one save/reload may run per session.
+Read/write options are `{signal?, timeoutMs?}`. Observation has separate
+[options and lifetime rules](OBSERVATION.md). Only one save/reload may run per session.
 Two sessions editing the same file retain independent revisions. A conflict or
 failed write moves the session to `needs-reload`; further saves fail until an
 explicit `reload()` succeeds. Preserve any unsaved UI draft separately and let
@@ -64,8 +66,9 @@ at most 500 edits and 64 open or opening sessions per project. Text and resultin
 files remain limited to 262,144 UTF-8 bytes; JSON and request limits also apply.
 
 These helpers inherit server restrictions: selected root, protected paths,
-read-only mode and per-file revision checks. They do not add filesystem watching,
-recursive discovery, multi-file transactions, shell access or cross-process
+read-only mode and per-file revision checks. File observation samples existing
+reads; it does not add OS filesystem watching, recursive discovery,
+multi-file transactions, shell access or cross-process
 atomicity against an external editor. See [workspace limits](WORKSPACES.md).
 
 ## 한국어
@@ -80,3 +83,7 @@ atomicity against an external editor. See [workspace limits](WORKSPACES.md).
 취소는 이미 서버에 저장된 변경을 되돌리지 않습니다. 텍스트 편집은 같은 원본을
 기준으로 적용하고 겹친 범위·잘못된 Unicode·제한 초과를 거부합니다. 0.2.x 서버와
 같은 HTTP protocol v1을 사용하며 새 실행 권한이나 DDS 제품 설치 기능은 추가하지 않습니다.
+
+0.5.0의 `watchFiles()`는 지정한 파일의 revision 변경만 알립니다. 기존 snapshot을
+자동으로 갱신하지 않으며 관찰 중단·프로젝트 폐기 시 관련 읽기 요청을 취소합니다.
+상세 제한과 예제는 [변경 관찰 안내](OBSERVATION.md)를 확인하세요.

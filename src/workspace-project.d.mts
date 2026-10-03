@@ -1,6 +1,7 @@
 import type {Range} from './index.mjs';
 import type {WorkspaceClient, WorkspaceRequestOptions} from './workspace-client.mjs';
 import type {WorkspaceHello, WorkspaceEntry} from './workspace-protocol.mjs';
+import type {WorkspaceFileWatchOptions, WorkspaceFileChange, WorkspaceObserver} from './workspace-observation.mjs';
 
 export interface TextEdit {readonly range: Range; readonly text: string;}
 export interface EditSnapshot {readonly path: string; readonly content: string; readonly revision: string;}
@@ -14,6 +15,8 @@ export interface WorkspaceEditSession {
 }
 export interface WorkspaceProject {
   readonly workspace: WorkspaceHello['workspace'];
+  /** Observe explicit file revisions without replacing edit-session snapshots. */
+  watchFiles(paths: readonly string[], options?: WorkspaceFileWatchOptions): WorkspaceObserver<WorkspaceFileChange>;
   listFiles(path?: string, options?: WorkspaceRequestOptions): Promise<{entries: readonly WorkspaceEntry[]}>;
   openFile(path: string, options?: WorkspaceRequestOptions): Promise<WorkspaceEditSession>;
   /** Create-if-absent (expectedRevision=null). It never overwrites an existing file. */

@@ -49,6 +49,8 @@ try {
   }
   await cp(join(installed, 'examples', 'command-jobs'), join(consumer, 'job-example'), {recursive:true});
   assert.match(run(process.execPath, ['job-example/run.mjs'], consumer), /pinned result file verified/);
+  await cp(join(installed, 'examples', 'workspace-observation'), join(consumer, 'observation-example'), {recursive:true});
+  assert.match(run(process.execPath, ['observation-example/run.mjs'], consumer), /file changes, retained draft and resumed job verified/);
   for (const entry of Object.values(metadata.exports)) {
     for (const file of typeof entry === 'string' ? [entry] : Object.values(entry)) {
       assert.ok(paths.includes(file.replace(/^\.\//, '')), `Export ${file} is absent from the archive`);
@@ -174,6 +176,7 @@ try {
   await cp(join(root, 'tests', 'types', 'language.mts'), join(consumer, 'language.mts'));
   await cp(join(root, 'tests', 'types', 'workspace-project.mts'), join(consumer, 'workspace-project.mts'));
   await cp(join(root, 'tests', 'types', 'jobs-devtools.mts'), join(consumer, 'jobs-devtools.mts'));
+  await cp(join(root, 'tests', 'types', 'workspace-observation.mts'), join(consumer, 'workspace-observation.mts'));
   await cp(join(root, 'tests', 'types', 'tsconfig.json'), join(consumer, 'tsconfig.json'));
   const typescript = join(root, 'node_modules', 'typescript', 'bin', 'tsc');
   run(process.execPath, [typescript, '--noEmit', '-p', 'tsconfig.json'], consumer);

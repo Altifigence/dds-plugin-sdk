@@ -71,9 +71,9 @@ export async function doctorPlugin(directory) {
   try {
     const packagePath = createRequire(path.join(root, 'package.json')).resolve('@altifigence/dds-plugin-sdk/package.json');
     const installed = await readJson(packagePath);
-    if (installed.name !== sdk.name || !/^0\.4\.\d+(?:$|-)/.test(installed.version)) throw error('Install SDK 0.4.x for these development tools.');
+    if (installed.name !== sdk.name || !/^0\.5\.\d+(?:$|-)/.test(installed.version)) throw error('Install SDK 0.5.x for these development tools.');
     check('sdk', 'pass', `SDK ${installed.version} resolves from this project.`);
-  } catch {check('sdk', 'error', 'SDK 0.4.x is not installed for this project.', 'Run npm install --ignore-scripts using the pinned SDK archive in package.json.');}
+  } catch {check('sdk', 'error', 'SDK 0.5.x is not installed for this project.', 'Run npm install --ignore-scripts using the pinned SDK archive in package.json.');}
   return Object.freeze({ok: checks.every(item => item.status !== 'error'), directory: root, checks: Object.freeze(checks)});
 }
 

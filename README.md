@@ -15,7 +15,7 @@ application, private engines/services and production signing systems are outside
 this repository. Read the [public scope](docs/PUBLIC_SCOPE.md) and
 [compatibility table](docs/COMPATIBILITY.md) for exact boundaries.
 
-Version **0.4.0** supports Node 22 and 24. Manifest v1 diagnostic plugins remain
+Version **0.5.0** supports Node 22 and 24. Manifest v1 diagnostic plugins remain
 compatible. Manifest v2 adds commands, permission-scoped workspace and backend
 APIs, and open-source or proprietary distribution metadata. Themes export to
 the XML format already supported by DDS. The workspace host runs trusted plugins
@@ -25,6 +25,8 @@ Start a standalone plugin with [`dds-plugin init`](docs/DEVTOOLS.md), diagnose i
 without executing code with `doctor`, and run trusted code with `dev --watch`.
 [Command jobs](docs/JOBS.md) add progress, logs, cancellation and pinned result
 files to explicitly enabled hosts while keeping existing API contracts.
+[Workspace observation](docs/OBSERVATION.md) follows explicit file revisions and
+job progress with cancellable async iterators, preserving edit drafts and job IDs.
 
 ## Run your first plugin
 
@@ -57,7 +59,7 @@ mkdir my-dds-plugin
 cd my-dds-plugin
 npm init -y
 npm pkg set type=module
-npm install --ignore-scripts --save-exact https://github.com/Altifigence/dds-plugin-sdk/releases/download/v0.4.0/altifigence-dds-plugin-sdk-0.4.0.tgz
+npm install --ignore-scripts --save-exact https://github.com/Altifigence/dds-plugin-sdk/releases/download/v0.5.0/altifigence-dds-plugin-sdk-0.5.0.tgz
 ```
 
 Copy the example's `plugin.mjs` and `run.mjs` into this directory, then run:
@@ -80,7 +82,7 @@ and the install command includes the release URL rather than an npm registry loo
 | `@altifigence/dds-plugin-sdk/schemas` | JSON Schema objects, loaded separately from the core API |
 | `@altifigence/dds-plugin-sdk/themes` | Validate a theme and export DDS XML without executing theme code |
 | `@altifigence/dds-plugin-sdk/workspace-node` | Serve an explicit project directory and operator-selected plugins/tools |
-| `@altifigence/dds-plugin-sdk/workspace-client` | Authenticated client, connection-bound projects, CAS edit sessions and text edits |
+| `@altifigence/dds-plugin-sdk/workspace-client` | Authenticated client, project edit sessions, file observation and job completion helpers |
 | `@altifigence/dds-plugin-sdk/publishing` | Node.js allowlist validation, deterministic packaging and downloaded archive verification |
 | `@altifigence/dds-plugin-sdk/consent` | Versioned notices, explicit local receipts and permission identity checks |
 | `@altifigence/dds-plugin-sdk/devtools` | Create projects, diagnose metadata and run/watch trusted local plugin code |

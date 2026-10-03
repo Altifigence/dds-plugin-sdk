@@ -1,6 +1,6 @@
 # Security
 
-The current development line is **0.4.x**. It retains the security fixes from
+The current development line is **0.5.x**. It retains the security fixes from
 0.3.2. Update workspace servers and clients together, using a current patched
 Node 22 or 24; do not use a pre-0.3.2 workspace host.
 Report an SDK

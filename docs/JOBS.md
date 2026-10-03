@@ -1,5 +1,9 @@
 # Long-running command jobs
 
+SDK 0.5.0 also supplies [`watchJob()` and `waitForJob()`](OBSERVATION.md) over these
+existing requests. They drain event pages, support caller cancellation and
+explicit cursor resumption, and never start or cancel the underlying command.
+
 SDK 0.4.0 provides bounded, in-memory jobs for trusted workspace commands. A job
 reports progress, plain-text logs and revision-pinned UTF-8 workspace files. It
 does not add shell execution, a task scheduler, persistent storage or a DDS UI.
