@@ -1,11 +1,21 @@
 # DDS Plugin SDK
 
+[Developer guide](https://docs.altifigence.com/developers/plugin-sdk/) ·
+[한국어 가이드](https://docs.altifigence.com/ko-kr/developers/plugin-sdk/) ·
+[Releases](https://github.com/Altifigence/dds-plugin-sdk/releases) ·
+[CI](https://github.com/Altifigence/dds-plugin-sdk/actions/workflows/ci.yml)
+
 Build themes, diagnostics and workspace commands for Digital Design Studio with
 a small ESM package, TypeScript declarations and versioned contracts. Connect
 your own workspace and tools with the Node.js host and HTTP client. The SDK has
 **zero runtime dependencies**.
 
-Version **0.2.0** supports Node 22 and 24. Manifest v1 diagnostic plugins remain
+This is the intentionally public SDK for external plugin developers. The DDS
+application, private engines/services and production signing systems are outside
+this repository. Read the [public scope](docs/PUBLIC_SCOPE.md) and
+[compatibility table](docs/COMPATIBILITY.md) for exact boundaries.
+
+Version **0.2.1** supports Node 22 and 24. Manifest v1 diagnostic plugins remain
 compatible. Manifest v2 adds commands, permission-scoped workspace and backend
 APIs, and open-source or proprietary distribution metadata. Themes export to
 the XML format already supported by DDS. The workspace host runs trusted plugins
@@ -42,7 +52,7 @@ mkdir my-dds-plugin
 cd my-dds-plugin
 npm init -y
 npm pkg set type=module
-npm install --save-exact https://github.com/Altifigence/dds-plugin-sdk/releases/download/v0.2.0/altifigence-dds-plugin-sdk-0.2.0.tgz
+npm install --save-exact https://github.com/Altifigence/dds-plugin-sdk/releases/download/v0.2.1/altifigence-dds-plugin-sdk-0.2.1.tgz
 ```
 
 Copy the example's `plugin.mjs` and `run.mjs` into this directory, then run:

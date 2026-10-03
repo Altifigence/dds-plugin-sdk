@@ -38,6 +38,12 @@ Package identity and a checksum help identify the artifact. A checksum alone
 does not authenticate a publisher or prove that code is safe. Hosts need their
 own installation, identity, permission and isolation controls.
 
+The packer rejects common credential/configuration paths and recognizable private
+keys and provider token patterns, including when they appear in an allowed source
+file. Errors do not print the detected value. This is a conservative additional
+check, not a complete secret or malware scanner. Inspect your source and final
+archive; obfuscated credentials and confidential implementation may evade it.
+
 ## Package format and SDK 0.2.0 CLI
 
 SDK 0.2.0 supplies the following CLI; SDK 0.1.0 does not provide these commands.

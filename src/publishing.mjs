@@ -4,12 +4,13 @@ import { lstat, realpath, open, mkdir, writeFile, unlink } from 'node:fs/promise
 import path from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { parseManifest } from './index.mjs';
+import { containsKnownCredential } from './publication-policy.mjs';
 
 const MAX_FILE = 4 * 1024 * 1024;
 const MAX_PACKAGE = 10 * 1024 * 1024;
 const MAX_FILES = 256;
 const utf8 = new TextDecoder('utf-8', {fatal: true});
-const forbidden = /^(?:\.git|\.hg|\.svn|node_modules|\.env(?:\..*)?|\.npmrc|\.pypirc|id_rsa|id_ed25519)$/i;
+const forbidden = /^(?:\.git|\.hg|\.svn|node_modules|\.env(?:\..*)?|\.npmrc|\.pypirc|\.netrc|\.aws|\.azure|\.ssh|\.gnupg|\.kube|\.docker|id_rsa|id_ed25519)$/i;
 const secretExtension = /\.(?:pem|key|p12|pfx)$/i;
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 function fail(message) { throw new Error(`Plugin package: ${message}`); }
@@ -116,6 +117,7 @@ async function inspect(directory) {
   if (!(await lstat(requested)).isDirectory()) fail('package root must be a real directory');
   const root = await realpath(requested);
   const configuration = await readRegular(root, 'dds-package.json', 64 * 1024);
+  if (containsKnownCredential(configuration)) fail('recognizable credential material cannot be packaged');
   const config = json(configuration, 'dds-package.json');
   record(config, ['schemaVersion', 'files']);
   if (config.schemaVersion !== 1 || !Array.isArray(config.files) || config.files.length < 3 || config.files.length > MAX_FILES - 2) fail('invalid package file allowlist');
@@ -126,6 +128,7 @@ async function inspect(directory) {
   let size = configuration.length;
   for (const file of [...files].sort()) {
     const bytes = await readRegular(root, file);
+    if (containsKnownCredential(bytes)) fail('recognizable credential material cannot be packaged');
     if ((size += bytes.length) > MAX_PACKAGE) fail('package exceeds the 10 MiB uncompressed limit');
     contents.set(file, bytes);
   }
