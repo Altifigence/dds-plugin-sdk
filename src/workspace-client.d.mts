@@ -1,4 +1,5 @@
 import type {Json,WorkspaceMethod,WorkspaceHello,WorkspaceEntry,WorkspacePlugin} from './workspace-protocol.mjs';
+import type {JobOptions,JobSnapshot,JobEvents,JobArtifactContent,JobCapabilities} from './jobs.mjs';
 export {createWorkspaceProject, applyTextEdits} from './workspace-project.mjs';
 export type {TextEdit, EditSnapshot, WorkspaceEditSession, WorkspaceProject} from './workspace-project.mjs';
 export interface WorkspaceRequestOptions {readonly signal?:AbortSignal;readonly timeoutMs?:number;}
@@ -14,6 +15,12 @@ export interface WorkspaceClient {
   remove(path:string,expectedRevision?:string,options?:WorkspaceRequestOptions):Promise<{path:string}>;
   listPlugins(options?:WorkspaceRequestOptions):Promise<{plugins:readonly WorkspacePlugin[]}>;
   runCommand(pluginId:string,commandId:string,input:Json,artifactSha256:string,options?:WorkspaceRequestOptions):Promise<Json>;
+  getJobCapabilities(options?:WorkspaceRequestOptions):Promise<JobCapabilities>;
+  startCommandJob(pluginId:string,commandId:string,input:Json,artifactSha256:string,job:JobOptions,options?:WorkspaceRequestOptions):Promise<JobSnapshot>;
+  getJob(jobId:string,options?:WorkspaceRequestOptions):Promise<JobSnapshot>;
+  getJobEvents(jobId:string,after?:number,options?:WorkspaceRequestOptions):Promise<JobEvents>;
+  cancelJob(jobId:string,options?:WorkspaceRequestOptions):Promise<JobSnapshot>;
+  readJobArtifact(jobId:string,artifactId:string,options?:WorkspaceRequestOptions):Promise<JobArtifactContent>;
   disconnect():void;dispose():void;
 }
 export function normalizeWorkspaceUrl(value:string):string;

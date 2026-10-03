@@ -1,4 +1,5 @@
 import {WORKSPACE_PATH, WORKSPACE_LIMITS, WorkspaceError, workspaceFailure, requireToken, parseWorkspaceRequest, parseWorkspaceReply, parseWorkspaceHello, parseWorkspaceMethodResult} from './workspace-protocol.mjs';
+import {parseJobOptions} from './jobs.mjs';
 export {createWorkspaceProject, applyTextEdits} from './workspace-project.mjs';
 
 export function normalizeWorkspaceUrl(value) {
@@ -110,6 +111,18 @@ export function createWorkspaceClient({url, token, fetch: transport = globalThis
       if (method === 'plugins.list' && JSON.stringify(result.plugins) !== JSON.stringify(captured.plugins)) {
         revoke(); throw workspaceFailure('plugin_mismatch', 'Workspace plugin metadata changed; reconnect and obtain consent again');
       }
+      if (method.startsWith('jobs.') && method !== 'jobs.capabilities') {
+        if (result.jobId !== params.jobId || result.scope.projectId !== captured.workspace.id || result.scope.sessionId !== captured.workspace.generation) throw workspaceFailure('invalid_request', 'Job reply identity mismatch');
+        if (method === 'jobs.start' && (result.pluginId !== params.pluginId || result.commandId !== params.commandId)) throw workspaceFailure('invalid_request', 'Job command identity mismatch');
+        if (method === 'jobs.events' && result.after !== params.after) throw workspaceFailure('invalid_request', 'Job event cursor mismatch');
+        if (method === 'jobs.artifact') {
+          if (result.artifact.id !== params.artifactId) throw workspaceFailure('invalid_request', 'Job artifact identity mismatch');
+          const digest = [...new Uint8Array(await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(result.content)))].map(byte => byte.toString(16).padStart(2, '0')).join('');
+          if (controller.signal.aborted) throw controller.signal.reason;
+          if (closed || revision !== bindingSequence) throw workspaceFailure('disposed', 'Workspace connection changed');
+          if (digest !== result.artifact.revision) throw workspaceFailure('invalid_request', 'Job artifact digest mismatch');
+        }
+      }
       return result;
     } catch (failure) {
       if (controller.signal.aborted) { if (method !== 'hello' && method !== 'request.cancel') void cancelRemote(requestId, captured); throw controller.signal.reason; }
@@ -145,6 +158,12 @@ export function createWorkspaceClient({url, token, fetch: transport = globalThis
     remove: (path, expectedRevision, options) => request('fs.remove', {path, ...(expectedRevision === undefined ? {} : {expectedRevision})}, options),
     listPlugins: options => request('plugins.list', {}, options),
     runCommand: (pluginId, commandId, input, artifactSha256, options) => request('commands.run', {pluginId, commandId, input, artifactSha256}, options),
+    getJobCapabilities: options => request('jobs.capabilities', {}, options),
+    startCommandJob: (pluginId, commandId, input, artifactSha256, job, options) => request('jobs.start', {pluginId, commandId, input, artifactSha256, ...parseJobOptions(job)}, options),
+    getJob: (jobId, options) => request('jobs.get', {jobId}, options),
+    getJobEvents: (jobId, after = 0, options) => request('jobs.events', {jobId, after}, options),
+    cancelJob: (jobId, options) => request('jobs.cancel', {jobId}, options),
+    readJobArtifact: (jobId, artifactId, options) => request('jobs.artifact', {jobId, artifactId}, options),
     disconnect() { revoke(); },
     dispose() { if (closed) return; revoke(); closed = true; token = ''; },
   });

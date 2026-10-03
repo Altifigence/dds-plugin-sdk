@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.3.2/schemas/language-request.schema.json",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.4.0/schemas/language-request.schema.json",
   "title": "language-request",
   "oneOf": [
     {

@@ -56,7 +56,9 @@ export interface CommandDefinition {
   readonly parameters?: readonly CommandParameter[];
 }
 export interface RegisteredCommand extends CommandDefinition {readonly pluginId: string;}
-export type CommandHandler = (input: JsonValue, options: {readonly signal: AbortSignal}) => JsonValue | Promise<JsonValue>;
+import type {JobReporter, JobOptions, JobSnapshot, JobEvents, JobArtifactContent, JobCapabilities} from './jobs.mjs';
+export type {JobReporter, JobOptions, JobSnapshot, JobEvents, JobArtifactContent, JobCapabilities} from './jobs.mjs';
+export type CommandHandler = (input: JsonValue, options: {readonly signal: AbortSignal; readonly job?: JobReporter}) => JsonValue | Promise<JsonValue>;
 export interface WorkspaceFile {readonly path: string; readonly content: string; readonly revision: string;}
 export interface WorkspaceWriteResult {readonly path: string; readonly revision: string;}
 export interface WorkspaceEntry {readonly path: string; readonly kind: 'file' | 'directory'; readonly revision?: string; readonly name?: string; readonly size?: number;}
@@ -70,7 +72,7 @@ export interface WorkspaceApi {
   writeFile(path: string, content: string, options: RequestOptions & {readonly expectedRevision: string | null}): Promise<WorkspaceWriteResult>;
   listFiles(path?: string, options?: RequestOptions): Promise<readonly WorkspaceEntry[]>;
 }
-export type BackendHandler = (input: JsonValue, options: {readonly signal: AbortSignal; readonly pluginId: string; readonly scope: Scope}) => JsonValue | Promise<JsonValue>;
+export type BackendHandler = (input: JsonValue, options: {readonly signal: AbortSignal; readonly pluginId: string; readonly scope: Scope; readonly job?: JobReporter}) => JsonValue | Promise<JsonValue>;
 export interface BackendsApi {invoke(id: string, input: JsonValue, options?: RequestOptions): Promise<JsonValue>;}
 export interface Scope { readonly projectId: string; readonly sessionId: string; }
 export interface SnapshotIdentity {
@@ -143,6 +145,7 @@ export function definePlugin(manifest: PluginManifest, activate: Plugin['activat
 /** For trusted host implementers. Authorization and isolation belong to the host. */
 export function createDiagnosticsRegistry(options?: {readonly isCurrent?: (request: DiagnosticsRequest) => boolean}): DiagnosticsRegistry;
 export interface PluginHostOptions {
+  readonly jobs?: boolean;
   readonly hostId?: HostId; readonly scope?: Scope; readonly grants?: readonly Permission[];
   readonly workspace?: WorkspacePort; readonly backends?: Readonly<Record<string, BackendHandler>>;
 }
@@ -153,6 +156,12 @@ export interface PluginHost extends Disposable {
   requestLanguage<K extends LanguageFeature>(kind: K, input: LanguageInput<K>, options?: RequestOptions): Promise<LanguageResult<K>>;
   listCommands(): readonly RegisteredCommand[];
   executeCommand(pluginId: string, commandId: string, input: JsonValue, options?: RequestOptions): Promise<JsonValue>;
+  jobCapabilities(): JobCapabilities;
+  startCommandJob(pluginId: string, commandId: string, input: JsonValue, options: JobOptions): JobSnapshot;
+  getJob(jobId: string): JobSnapshot;
+  getJobEvents(jobId: string, after?: number): JobEvents;
+  cancelJob(jobId: string): JobSnapshot;
+  readJobArtifact(jobId: string, artifactId: string, options?: RequestOptions): Promise<JobArtifactContent>;
   listPlugins(): readonly PluginManifest[];
   deactivate(pluginId: string): void;
 }

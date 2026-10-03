@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.4.0
+
+- Add `dds-plugin init`, `doctor` and `dev` plus Node APIs. Scaffolds pin the SDK
+  release; diagnostics never execute plugin code; explicitly trusted dev runs in
+  a supervised child with bounded output and allowlist-based watch/restart.
+- Add opt-in command jobs with progress, bounded log pages, stable job IDs,
+  cancellation, deadlines and revision-pinned UTF-8 result files. Existing
+  workspace/backend permissions, auth and host generation checks still apply.
+- Add five job schemas, TypeScript declarations and an executable HTTP example.
+  Preserve v1 hello and existing methods for 0.3 clients. New plugin packages
+  declare `>=0.4.0 <0.5.0`; verification still accepts exact 0.3 metadata without
+  changing its peer range. Publishers must validate and repack for 0.4 installs.
+- Verify dev process/descendant cleanup, watch restart, job lifetime/quota/grant
+  boundaries, actual process cancellation and independently installed consumers.
+
+Jobs are in-memory, default disabled, limited to trusted SDK hosts, and do not add
+installed DDS UI or a sandbox. See [development tools](docs/DEVTOOLS.md),
+[jobs](docs/JOBS.md) and [compatibility](docs/COMPATIBILITY.md).
+
 ## 0.3.2 — 2026-10-03
 
 - Harden the user workspace file API against hardlink aliases of excluded files

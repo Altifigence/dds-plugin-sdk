@@ -156,13 +156,14 @@ function inspectContents(contents, archived = false) {
     name: packageName, version: manifest.version, type: 'module',
     description: manifest.name, main: `./${entry}`, exports: `./${entry}`,
     license: manifest.license.includes('LicenseRef-') ? `SEE LICENSE IN ${licenseFile}` : manifest.license,
-    peerDependencies: {'@altifigence/dds-plugin-sdk': '>=0.3.0 <0.4.0'},
+    peerDependencies: {'@altifigence/dds-plugin-sdk': '>=0.4.0 <0.5.0'},
   };
   const metadataBytes = Buffer.from(`${JSON.stringify(metadata, null, 2)}\n`);
   if (archived) {
     // Only the generated inert npm metadata is accepted, including the tested
     // SDK line. Additional scripts or dependencies cannot be smuggled into it.
-    if (!contents.get('package.json').equals(metadataBytes)) fail('package.json must match the generated SDK metadata');
+    const previousMetadata = Buffer.from(`${JSON.stringify({...metadata, peerDependencies: {'@altifigence/dds-plugin-sdk': '>=0.3.0 <0.4.0'}}, null, 2)}\n`);
+    if (!contents.get('package.json').equals(metadataBytes) && !contents.get('package.json').equals(previousMetadata)) fail('package.json must match the generated SDK metadata');
   } else {
     contents.set('package.json', metadataBytes);
     size += metadataBytes.length;

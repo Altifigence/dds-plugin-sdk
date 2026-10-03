@@ -35,6 +35,19 @@ try {
   assert.equal(metadata.name, '@altifigence/dds-plugin-sdk');
   assert.equal(metadata.version, JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).version);
   assert.equal(Object.keys(metadata.dependencies ?? {}).length, 0);
+  const devCli = join(installed, 'bin', 'dds-plugin.mjs');
+  const scaffold = JSON.parse(run(process.execPath, [devCli, 'init', 'scaffold', '--id', 'packed-scaffold', '--publisher', 'example'], consumer));
+  assert.equal(scaffold.sdkVersion, metadata.version);
+  const scaffoldMetadata = JSON.parse(await readFile(join(consumer, 'scaffold', 'package.json'), 'utf8'));
+  assert.match(scaffoldMetadata.dependencies[metadata.name], new RegExp(`/v${metadata.version.replaceAll('.', '\\.')}\\/`));
+  const diagnosed = JSON.parse(run(process.execPath, [devCli, 'doctor', 'scaffold', '--json'], consumer));
+  assert.equal(diagnosed.ok, true);
+  for (const job of [false, true]) {
+    const output = run(process.execPath, [devCli, 'dev', 'scaffold', '--trust-local-code', '--command', 'greet', '--input', JSON.stringify({name:'Packed'}), ...(job ? ['--job'] : [])], consumer);
+    assert.ok(output.includes('Hello, Packed!')); assert.ok(output.includes('"ok": true'));
+  }
+  await cp(join(installed, 'examples', 'command-jobs'), join(consumer, 'job-example'), {recursive:true});
+  assert.match(run(process.execPath, ['job-example/run.mjs'], consumer), /pinned result file verified/);
   for (const entry of Object.values(metadata.exports)) {
     for (const file of typeof entry === 'string' ? [entry] : Object.values(entry)) {
       assert.ok(paths.includes(file.replace(/^\.\//, '')), `Export ${file} is absent from the archive`);
@@ -159,6 +172,7 @@ try {
   await cp(join(root, 'tests', 'types', 'core-v2.mts'), join(consumer, 'core-v2.mts'));
   await cp(join(root, 'tests', 'types', 'language.mts'), join(consumer, 'language.mts'));
   await cp(join(root, 'tests', 'types', 'workspace-project.mts'), join(consumer, 'workspace-project.mts'));
+  await cp(join(root, 'tests', 'types', 'jobs-devtools.mts'), join(consumer, 'jobs-devtools.mts'));
   await cp(join(root, 'tests', 'types', 'tsconfig.json'), join(consumer, 'tsconfig.json'));
   const typescript = join(root, 'node_modules', 'typescript', 'bin', 'tsc');
   run(process.execPath, [typescript, '--noEmit', '-p', 'tsconfig.json'], consumer);

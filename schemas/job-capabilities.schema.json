@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.4.0/schemas/job-capabilities.schema.json",
+  "title": "job-capabilities",
+  "type": "object",
+  "properties": {
+    "protocolVersion": {
+      "const": 1
+    },
+    "enabled": {
+      "type": "boolean"
+    },
+    "limits": {
+      "type": "object",
+      "properties": {
+        "concurrent": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4
+        },
+        "retained": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
+        },
+        "operations": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
+        },
+        "events": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 256
+        },
+        "eventBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65536
+        },
+        "messageBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2048
+        },
+        "artifacts": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16
+        },
+        "defaultTimeoutMs": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 300000
+        },
+        "maxTimeoutMs": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1800000
+        },
+        "retentionMs": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 900000
+        },
+        "pageSize": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64
+        }
+      },
+      "required": [
+        "concurrent",
+        "retained",
+        "operations",
+        "events",
+        "eventBytes",
+        "messageBytes",
+        "artifacts",
+        "defaultTimeoutMs",
+        "maxTimeoutMs",
+        "retentionMs",
+        "pageSize"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "protocolVersion",
+    "enabled",
+    "limits"
+  ],
+  "additionalProperties": false
+}
