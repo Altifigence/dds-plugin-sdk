@@ -10,6 +10,8 @@
 - Reject file/directory path conflicts during both packing and verification.
 - Add adversarial tests, a complete independent consumer example and EN/KO
   verification guidance. Hash checks do not authenticate publishers or scan malware.
+- Correct the theme metadata's current DDS popover-radius default to 16. The
+  serializer still preserves omitted metrics and explicit example overrides.
 
 Runtime/manifest/workspace contracts and `>=0.3.0 <0.4.0` plugin peers are
 unchanged. Existing 0.3.0 plugin archives remain usable without repacking.
