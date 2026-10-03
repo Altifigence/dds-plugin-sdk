@@ -6,6 +6,8 @@ const identifierPattern = /^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$/;
 const semverPattern = new RegExp(SEMVER_PATTERN);
 const uriPattern = /^[A-Za-z][A-Za-z0-9+.-]*:[^\s\u0000-\u001f\u007f]+$/;
 const permissions = ['document.read', 'diagnostics.publish'];
+const workspacePermissions = ['workspace.read', 'workspace.write', 'backend.invoke'];
+const allPermissions = [...permissions, ...workspacePermissions];
 
 function fail(path, message) {
   throw new PluginSdkError(ErrorCode.INVALID_CONTRACT, `${path}: ${message}`);
@@ -144,23 +146,44 @@ function diagnostic(value, path) {
 /** Validate and return an immutable copy; input may be a plain object or bounded JSON string. */
 export function parseManifest(value) {
   value = input(value, LIMITS.manifestBytes, 'manifest');
-  record(value, ['manifestVersion', 'id', 'name', 'publisher', 'version', 'protocolVersion', 'entry', 'capabilities', 'permissions', 'supportedHosts', 'license'], [], 'manifest');
-  if (value.manifestVersion !== 1) fail('manifest.manifestVersion', 'expected 1');
+  if (value === null || typeof value !== 'object') fail('manifest', 'expected a plain object');
+  const descriptor = Object.getOwnPropertyDescriptor(value, 'manifestVersion');
+  const manifestVersion = descriptor && 'value' in descriptor ? descriptor.value : undefined;
+  if (![1, 2].includes(manifestVersion)) fail('manifest.manifestVersion', 'expected 1 or 2');
+  record(value, ['manifestVersion', 'id', 'name', 'publisher', 'version', 'protocolVersion', 'entry', 'capabilities', 'permissions', 'supportedHosts', 'license', ...(manifestVersion === 2 ? ['runtime', 'source'] : [])], [], 'manifest');
   const entry = string(value.entry, 256, 'manifest.entry');
   if (!/^\.\/(?:[A-Za-z0-9_-]+\/)*[A-Za-z0-9_.-]+\.mjs$/.test(entry)) fail('manifest.entry', 'expected a relative .mjs module path');
-  return boundCopy(Object.freeze({
-    manifestVersion: 1,
+  const output = {
+    manifestVersion,
     id: string(value.id, 128, 'manifest.id', identifierPattern),
     name: string(value.name, 128, 'manifest.name'),
     publisher: string(value.publisher, 128, 'manifest.publisher', identifierPattern),
     version: string(value.version, 64, 'manifest.version', semverPattern),
     protocolVersion: version(value.protocolVersion, 'manifest.protocolVersion'),
     entry,
-    capabilities: Object.freeze(unique(array(value.capabilities, 1, 'manifest.capabilities', (v, p) => enumeration(v, ['diagnostics'], p), 1), 'manifest.capabilities')),
-    permissions: Object.freeze(unique(array(value.permissions, 2, 'manifest.permissions', (v, p) => enumeration(v, permissions, p)), 'manifest.permissions')),
-    supportedHosts: Object.freeze(unique(array(value.supportedHosts, 1, 'manifest.supportedHosts', (v, p) => enumeration(v, ['test-host'], p), 1), 'manifest.supportedHosts')),
-    license: string(value.license, 128, 'manifest.license', /^[A-Za-z0-9.+-]+$/),
-  }), LIMITS.manifestBytes, 'manifest');
+    capabilities: Object.freeze(unique(array(value.capabilities, manifestVersion === 1 ? 1 : 2, 'manifest.capabilities', (v, p) => enumeration(v, manifestVersion === 1 ? ['diagnostics'] : ['diagnostics', 'commands'], p), 1), 'manifest.capabilities')),
+    permissions: Object.freeze(unique(array(value.permissions, manifestVersion === 1 ? 2 : 5, 'manifest.permissions', (v, p) => enumeration(v, manifestVersion === 1 ? permissions : allPermissions, p)), 'manifest.permissions')),
+    supportedHosts: Object.freeze(unique(array(value.supportedHosts, manifestVersion === 1 ? 1 : 2, 'manifest.supportedHosts', (v, p) => enumeration(v, manifestVersion === 1 ? ['test-host'] : ['test-host', 'workspace-host'], p), 1), 'manifest.supportedHosts')),
+    license: manifestVersion === 1 ? string(value.license, 128, 'manifest.license', /^[A-Za-z0-9.+-]+$/) : parseLicenseExpression(value.license),
+  };
+  if (manifestVersion === 2) {
+    output.runtime = enumeration(value.runtime, ['ui', 'workspace'], 'manifest.runtime');
+    if (output.runtime === 'ui' && output.permissions.some(permission => workspacePermissions.includes(permission))) fail('manifest.permissions', 'UI plugins cannot request workspace or backend permissions');
+    record(value.source, ['visibility', 'licenseFile'], ['repository'], 'manifest.source');
+    const source = {
+      visibility: enumeration(value.source.visibility, ['open', 'closed'], 'manifest.source.visibility'),
+      licenseFile: parseWorkspacePath(typeof value.source.licenseFile === 'string' && value.source.licenseFile.startsWith('./') ? value.source.licenseFile.slice(2) : value.source.licenseFile),
+    };
+    if (Object.hasOwn(value.source, 'repository')) {
+      const repository = string(value.source.repository, 2048, 'manifest.source.repository');
+      let url;
+      try { url = new URL(repository); } catch { fail('manifest.source.repository', 'expected HTTPS URL'); }
+      if (!/^https:\/\/[^\s?#]+$/.test(repository) || url.protocol !== 'https:' || !url.hostname || url.username || url.password || url.search || url.hash) fail('manifest.source.repository', 'expected credential-free HTTPS repository URL');
+      source.repository = repository;
+    }
+    output.source = Object.freeze(source);
+  }
+  return boundCopy(Object.freeze(output), LIMITS.manifestBytes, 'manifest');
 }
 
 export function parseDocumentSnapshot(value) { return snapshot(value, 'snapshot', true); }
@@ -209,10 +232,158 @@ export function parseProviderSelector(value) {
 }
 
 export function parseGrants(value) {
-  return Object.freeze(unique(array(value, 2, 'grants', (v, p) => enumeration(v, permissions, p)), 'grants'));
+  return Object.freeze(unique(array(value, 5, 'grants', (v, p) => enumeration(v, allPermissions, p)), 'grants'));
 }
 
 export function parseScope(value) { return scope(value, 'scope'); }
+
+/** Validate syntax only; this does not decide whether a publisher may use a license. */
+export function parseLicenseExpression(value) {
+  string(value, 512, 'license');
+  const tokens = value.match(/DocumentRef-[A-Za-z0-9.-]+:LicenseRef-[A-Za-z0-9.-]+|[A-Za-z0-9][A-Za-z0-9.+-]*|[()]|\S/g) ?? [];
+  if (!tokens.length || tokens.length > 128) fail('license', 'invalid license expression');
+  let index = 0;
+  const identifier = token => typeof token === 'string' && !['AND', 'OR', 'WITH'].includes(token) &&
+    /^(?:DocumentRef-[A-Za-z0-9.-]+:LicenseRef-[A-Za-z0-9.-]+|LicenseRef-[A-Za-z0-9.-]+|[A-Za-z0-9][A-Za-z0-9.-]*\+?)$/.test(token) && token !== 'LicenseRef-';
+  function term(depth) {
+    if (depth > 16) fail('license', 'expression nesting limit exceeded');
+    if (tokens[index] === '(') {
+      index++; expression(depth + 1);
+      if (tokens[index++] !== ')') fail('license', 'unbalanced parentheses');
+    } else {
+      if (!identifier(tokens[index++])) fail('license', 'expected license identifier');
+      if (tokens[index] === 'WITH') {
+        index++;
+        if (!identifier(tokens[index++])) fail('license', 'expected exception identifier');
+      }
+    }
+  }
+  function expression(depth) {
+    term(depth);
+    while (['AND', 'OR'].includes(tokens[index])) { index++; term(depth); }
+  }
+  expression(0);
+  if (index !== tokens.length) fail('license', 'invalid license expression');
+  return value;
+}
+
+export function parseWorkspacePath(value, {allowRoot = false} = {}) {
+  if (allowRoot && value === '') return value;
+  string(value, 1024, 'path');
+  if (value.startsWith('/') || /[\\:\u0000-\u001f\u007f]/.test(value) || value.split('/').some(part => !part || part === '.' || part === '..')) fail('path', 'expected a workspace-relative slash path without traversal');
+  return value;
+}
+
+/** Copy bounded plain JSON data without invoking accessors or serializing caller objects. */
+export function parseJsonValue(value) {
+  let bytes = 0;
+  let nodes = 0;
+  function account(serialized) {
+    if (serialized.length > LIMITS.jsonBytes) throw new PluginSdkError(ErrorCode.BUDGET_EXCEEDED, 'JSON byte limit exceeded');
+    bytes += encoder.encode(serialized).length;
+    if (bytes > LIMITS.jsonBytes) throw new PluginSdkError(ErrorCode.BUDGET_EXCEEDED, 'JSON byte limit exceeded');
+  }
+  function visit(item, depth) {
+    if (++nodes > LIMITS.jsonNodes || depth > LIMITS.jsonDepth) throw new PluginSdkError(ErrorCode.BUDGET_EXCEEDED, 'JSON structural limit exceeded');
+    if (item === null || typeof item === 'boolean' || typeof item === 'number' && Number.isFinite(item)) { account(JSON.stringify(item)); return item; }
+    if (typeof item === 'string') {
+      if (item.length > LIMITS.jsonBytes) throw new PluginSdkError(ErrorCode.BUDGET_EXCEEDED, 'JSON string limit exceeded');
+      account(JSON.stringify(item)); return item;
+    }
+    if (Array.isArray(item)) {
+      const result = array(item, LIMITS.jsonArrayItems, 'json', child => visit(child, depth + 1));
+      account('[]'); if (result.length > 1) account(','.repeat(result.length - 1));
+      return Object.freeze(result);
+    }
+    if (!item || typeof item !== 'object' || ![Object.prototype, null].includes(Object.getPrototypeOf(item))) fail('json', 'expected finite plain JSON data');
+    const keys = Reflect.ownKeys(item);
+    if (keys.length > LIMITS.jsonObjectProperties) throw new PluginSdkError(ErrorCode.BUDGET_EXCEEDED, 'JSON property limit exceeded');
+    const output = {};
+    account('{}');
+    if (keys.length > 1) account(','.repeat(keys.length - 1));
+    for (const key of keys) {
+      if (typeof key !== 'string') fail('json', 'symbol fields are unsupported');
+      string(key, 128, 'json.key');
+      const descriptor = Object.getOwnPropertyDescriptor(item, key);
+      if (!descriptor || !('value' in descriptor) || !descriptor.enumerable) fail('json', 'expected enumerable data fields');
+      account(`${JSON.stringify(key)}:`);
+      Object.defineProperty(output, key, {value: visit(descriptor.value, depth + 1), enumerable: true});
+    }
+    return Object.freeze(output);
+  }
+  return visit(value, 0);
+}
+
+export function parseCommandDefinition(value) {
+  record(value, ['id', 'title'], ['description', 'parameters'], 'command');
+  const output = {id: string(value.id, 128, 'command.id', identifierPattern), title: string(value.title, 128, 'command.title')};
+  if (Object.hasOwn(value, 'description')) output.description = string(value.description, 2048, 'command.description');
+  if (Object.hasOwn(value, 'parameters')) output.parameters = Object.freeze(array(value.parameters, 32, 'command.parameters', (parameter, path) => {
+    record(parameter, ['name', 'label', 'type', 'required'], ['choices'], path);
+    if (typeof parameter.required !== 'boolean') fail(`${path}.required`, 'expected boolean');
+    const parsed = {
+      name: string(parameter.name, 128, `${path}.name`, identifierPattern), label: string(parameter.label, 128, `${path}.label`),
+      type: enumeration(parameter.type, ['string', 'number', 'boolean'], `${path}.type`), required: parameter.required,
+    };
+    if (Object.hasOwn(parameter, 'choices')) {
+      if (parsed.type !== 'string') fail(`${path}.choices`, 'choices require string type');
+      parsed.choices = Object.freeze(unique(array(parameter.choices, 32, `${path}.choices`, (choice, p) => string(choice, 256, p), 1), `${path}.choices`));
+    }
+    return Object.freeze(parsed);
+  }));
+  if (output.parameters && new Set(output.parameters.map(parameter => parameter.name)).size !== output.parameters.length) fail('command.parameters', 'duplicate parameter names');
+  return boundCopy(Object.freeze(output), LIMITS.commandBytes, 'command');
+}
+
+export function parseCommandInput(value, command) {
+  const input = parseJsonValue(value);
+  if (!command.parameters) return input;
+  if (!input || typeof input !== 'object' || Array.isArray(input)) fail('command.input', 'expected parameter object');
+  const allowed = command.parameters.map(parameter => parameter.name);
+  if (Object.keys(input).some(key => !allowed.includes(key))) fail('command.input', 'unexpected parameter');
+  for (const parameter of command.parameters) {
+    if (!Object.hasOwn(input, parameter.name)) { if (parameter.required) fail('command.input', 'required parameter missing'); continue; }
+    const value = input[parameter.name];
+    if (typeof value !== parameter.type || parameter.choices && !parameter.choices.includes(value)) fail('command.input', 'invalid parameter value');
+  }
+  return input;
+}
+
+// Internal port validators shared with the portable host.
+export function parseWorkspaceRead(value, path) {
+  record(value, ['path', 'content', 'revision'], [], 'workspace.readFile');
+  if (parseWorkspacePath(value.path) !== path) fail('workspace.readFile.path', 'result path mismatch');
+  return boundCopy(Object.freeze({path, content: parseFileContent(value.content), revision: string(value.revision, 128, 'workspace.revision')}), LIMITS.resultBytes, 'workspace.readFile');
+}
+export function parseWorkspaceWrite(value, path) {
+  record(value, ['path', 'revision'], [], 'workspace.writeFile');
+  if (parseWorkspacePath(value.path) !== path) fail('workspace.writeFile.path', 'result path mismatch');
+  return Object.freeze({path, revision: string(value.revision, 128, 'workspace.revision')});
+}
+export function parseWorkspaceList(value, directory) {
+  const result = Object.freeze(array(value, LIMITS.maxFiles, 'workspace.listFiles', (entry, path) => {
+    record(entry, ['path', 'kind'], ['revision', 'name', 'size'], path);
+    const name = parseWorkspacePath(entry.path);
+    if (directory && !name.startsWith(`${directory}/`)) fail(path, 'file is outside the requested directory');
+    const result = {path: name, kind: enumeration(entry.kind, ['file', 'directory'], `${path}.kind`)};
+    if (Object.hasOwn(entry, 'name')) {
+      result.name = string(entry.name, 1024, `${path}.name`);
+      if (result.name !== name.split('/').at(-1)) fail(path, 'name does not match path');
+    }
+    if (Object.hasOwn(entry, 'size')) result.size = integer(entry.size, Number.MAX_SAFE_INTEGER, `${path}.size`);
+    if (Object.hasOwn(entry, 'revision')) result.revision = string(entry.revision, 128, `${path}.revision`);
+    return Object.freeze(result);
+  }));
+  if (new Set(result.map(entry => entry.path)).size !== result.length) fail('workspace.listFiles', 'duplicate paths');
+  return boundCopy(result, LIMITS.resultBytes, 'workspace.listFiles');
+}
+export function parseFileContent(value) {
+  if (typeof value !== 'string') fail('workspace.content', 'expected text');
+  if (!value.isWellFormed()) fail('workspace.content', 'expected well-formed Unicode text');
+  if (value.length > LIMITS.documentBytes || encoder.encode(value).length > LIMITS.documentBytes) throw new PluginSdkError(ErrorCode.BUDGET_EXCEEDED, 'Workspace content byte limit exceeded');
+  return value;
+}
+export function parseExpectedRevision(value) { return value === null ? null : string(value, 128, 'expectedRevision'); }
 
 export function assertResultMatchesRequest(result, request) {
   if (result.requestId !== request.requestId || result.scope.projectId !== request.scope.projectId ||

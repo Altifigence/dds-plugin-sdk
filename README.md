@@ -1,11 +1,15 @@
 # DDS Plugin SDK
 
-Build diagnostics plugins for Digital Design Studio with a small ESM package,
-TypeScript declarations, versioned JSON contracts and a working local test host.
-The SDK has **zero runtime dependencies**.
+Build themes, diagnostics and workspace commands for Digital Design Studio with
+a small ESM package, TypeScript declarations and versioned contracts. Connect
+your own workspace and tools with the Node.js host and HTTP client. The SDK has
+**zero runtime dependencies**.
 
-Version **0.1.0** supports plugin development with the included test host on Node
-22 and 24. DDS Desktop and Cloud do not yet load these plugins.
+Version **0.2.0** supports Node 22 and 24. Manifest v1 diagnostic plugins remain
+compatible. Manifest v2 adds commands, permission-scoped workspace and backend
+APIs, and open-source or proprietary distribution metadata. Themes export to
+the XML format already supported by DDS. The workspace host runs trusted plugins
+in the operator's process; it is not an OS sandbox or a central Marketplace.
 
 ## Run your first plugin
 
@@ -38,7 +42,7 @@ mkdir my-dds-plugin
 cd my-dds-plugin
 npm init -y
 npm pkg set type=module
-npm install https://github.com/Altifigence/dds-plugin-sdk/releases/download/v0.1.0/altifigence-dds-plugin-sdk-0.1.0.tgz
+npm install --save-exact https://github.com/Altifigence/dds-plugin-sdk/releases/download/v0.2.0/altifigence-dds-plugin-sdk-0.2.0.tgz
 ```
 
 Copy the example's `plugin.mjs` and `run.mjs` into this directory, then run:
@@ -59,6 +63,11 @@ and the install command includes the release URL rather than an npm registry loo
 | `@altifigence/dds-plugin-sdk` | `definePlugin`, `createDiagnosticsResult`, bounded parsers, types and lifecycle helpers |
 | `@altifigence/dds-plugin-sdk/testing` | `createTestHost` for trusted local plugins |
 | `@altifigence/dds-plugin-sdk/schemas` | JSON Schema objects, loaded separately from the core API |
+| `@altifigence/dds-plugin-sdk/themes` | Validate a theme and export DDS XML without executing theme code |
+| `@altifigence/dds-plugin-sdk/workspace-node` | Serve an explicit project directory and operator-selected plugins/tools |
+| `@altifigence/dds-plugin-sdk/workspace-client` | Connect to the versioned workspace protocol with cancellation and identity checks |
+| `@altifigence/dds-plugin-sdk/publishing` | Node.js allowlist validation and deterministic plugin packaging |
+| `@altifigence/dds-plugin-sdk/consent` | Versioned notices, explicit local receipts and permission identity checks |
 
 [API reference](docs/api.md) explains the manifest, permissions, requests,
 ranges, cancellation and error codes. [Write a plugin test](docs/testing.md)
@@ -74,6 +83,53 @@ npm run benchmark  # bounded local measurements
 The developer test host executes trusted modules in the same process. Production
 hosts must provide their own code isolation and permission enforcement. The
 [host contract](docs/host-contract.md) gives the adapter requirements.
+
+## Make a theme
+
+Edit [Hello Ocean](examples/hello-theme/theme.json), then run:
+
+```sh
+npm run example:theme
+```
+
+The example writes `hello-theme.xml` and a light/dark browser preview. In DDS,
+open **Plugins → Install theme**, select the XML and choose **Apply**. See the
+[theme guide](docs/THEMES.md) for the exact palette, metrics and import paths.
+Themes contain visual tokens and request no file or backend access.
+
+## Keep the project and plugins in your environment
+
+The [workspace guide](docs/WORKSPACES.md) runs a project on your own WSL,
+container or server. The workspace protocol supports listing, reading and
+editing project files with revision checks, and invoking registered plugin
+commands in that same environment. A command can call an operator-defined
+backend function or a fixed executable with JSON input/output.
+
+Hosts require an explicit token and workspace identity. Use HTTPS for a remote
+server or loopback HTTP for local development. Operators choose the root,
+plugins and tools; clients cannot submit arbitrary module paths or shell
+commands. Each client must review and grant access before using a connection.
+See the [protocol](docs/workspace-protocol.md) for limits and cancellation.
+
+## Publish an open-source or proprietary plugin
+
+Copy [the publishable example](examples/publishable-plugin), set your own
+identity, license and disclosure, and list the files to distribute:
+
+```sh
+npx --no-install dds-plugin validate ./my-plugin
+npx --no-install dds-plugin pack ./my-plugin --out ./dist
+```
+
+The CLI produces a tarball and separate release metadata with its SHA-256.
+It does not execute the plugin, upload it, accept terms or grant access.
+Publish through your own GitHub Release, private registry or download channel.
+
+[Publishing](docs/PUBLISHING.md) covers package metadata and release steps.
+[Licensing](docs/LICENSING.md) explains the SDK's Apache-2.0 license, independently
+licensed plugins and third-party obligations. [Consent](docs/CONSENT.md)
+separates permission grants, plugin terms, notices and optional personal-data
+consent. The SDK does not require a proprietary click-through agreement.
 
 ## Contribute
 

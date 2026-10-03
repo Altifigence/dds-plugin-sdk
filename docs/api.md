@@ -1,156 +1,236 @@
-# API reference — 0.1.0
+# API reference — 0.2.0
 
-Import values and types from `@altifigence/dds-plugin-sdk`. All ranges use
-zero-based lines and UTF-16 code-unit offsets, as JavaScript strings do. Messages
-are plain text.
+Import portable values and types from `@altifigence/dds-plugin-sdk`. The core
+validates plain data, manages plugin lifetimes and dispatches diagnostics,
+commands and explicit host ports. It performs no Node filesystem, process or
+network operations. See [WORKSPACES](WORKSPACES.md) for the separate Node server
+and client, [THEMES](THEMES.md) for XML themes, and [PUBLISHING](PUBLISHING.md)
+and [CONSENT](CONSENT.md) for package review and acceptance.
 
-## Declare a plugin
+## Manifests and activation
 
-`definePlugin(manifest, activate)` validates and freezes a copy of the manifest.
-It returns `{manifest, activate}`. The host calls `activate(context)`; return a
-`Disposable` with `dispose()` or return nothing. Async activation is supported.
+`definePlugin(manifest, activate)` returns a frozen `{manifest, activate}` after
+validating an independent copy. The host calls `activate(context)`; return
+`undefined` or a `Disposable` with `dispose()`, synchronously or asynchronously.
+The host owns registration cleanup even if a plugin's disposer throws.
+
+The diagnostics protocol remains **1**. Manifest versions **1** and **2** are
+separate accepted shapes; the [manifest schema](../schemas/manifest.schema.json)
+contains both alternatives. Existing v1 plugins retain the original fields,
+single identifier `license`, diagnostics capability, two diagnostics
+permissions and `supportedHosts: ['test-host']`.
+
+Version 2 adds `runtime`, `source`, commands and workspace permissions:
 
 ```js
-import { createDiagnosticsResult, definePlugin } from '@altifigence/dds-plugin-sdk';
+import { definePlugin } from '@altifigence/dds-plugin-sdk';
 
 export default definePlugin({
-  manifestVersion: 1,
-  id: 'my-diagnostics',
-  name: 'My Diagnostics',
-  publisher: 'example',
-  version: '0.1.0',
-  protocolVersion: 1,
-  entry: './plugin.mjs',
-  capabilities: ['diagnostics'],
-  permissions: ['document.read', 'diagnostics.publish'],
-  supportedHosts: ['test-host'],
+  manifestVersion: 2,
+  id: 'example-workspace', name: 'Example Workspace', publisher: 'example',
+  version: '1.0.0', protocolVersion: 1, entry: './plugin.mjs',
+  runtime: 'workspace', capabilities: ['commands'],
+  permissions: ['workspace.read', 'workspace.write', 'backend.invoke'],
+  supportedHosts: ['test-host', 'workspace-host'],
   license: 'Apache-2.0',
-}, context => context.registerDiagnosticsProvider({languages: ['plaintext']}, {
-  provideDiagnostics(request, {signal}) {
-    signal.throwIfAborted();
-    return createDiagnosticsResult(request, []);
-  },
+  source: {visibility: 'open', licenseFile: './LICENSE',
+    repository: 'https://github.com/example/example-workspace'},
+}, context => context.registerCommand({
+  id: 'summarize', title: 'Summarize a saved file',
+  parameters: [{name: 'path', label: 'File path', type: 'string', required: true}],
+}, async (input, {signal}) => {
+  const file = await context.workspace.readFile(input.path, {signal});
+  return context.backends.invoke('summarize', {content: file.content}, {signal});
 }));
 ```
 
-All manifest fields in the example are required. Unknown fields, permissions,
-capabilities and hosts are rejected. IDs, publisher and language IDs use lower
-case letters, digits and `.`, `_`, `-` separators; IDs start with a letter.
-`version` follows SemVer, including optional prerelease/build suffixes.
-`entry` is a relative `.mjs` path without directory traversal. It is metadata:
-the test host takes an explicitly imported plugin and does not load `entry`.
-`license` is a single SPDX-style identifier; license eligibility is the plugin
-publisher's responsibility.
+Every field shown in this manifest is required except `source.repository`.
+IDs and publishers use lowercase letters/digits with `.`, `_`, `-` separators,
+starting with a letter; `version` follows SemVer. `entry` is a relative `.mjs`
+path without traversal. `createPluginHost()` receives an explicitly imported
+module and does not load that path.
 
-## Activation context
+V2 `runtime` is `ui` or `workspace`. UI manifests cannot request
+`workspace.read`, `workspace.write` or `backend.invoke`. Runtime is compatibility
+metadata, not an isolation mechanism. `source.visibility` is `open` or `closed`;
+`source.licenseFile` is a relative file path, canonicalized without leading `./`.
+An optional repository must use credential-free HTTPS without a query or hash.
+The parser validates metadata, not file existence or public repository access.
 
-| Member | Meaning |
+V2 `license` accepts bounded SPDX-style expression grammar, including `AND`,
+`OR`, `WITH`, parentheses and `LicenseRef-` identifiers. For example,
+`MIT OR Apache-2.0` or `LicenseRef-Proprietary`. `parseLicenseExpression()`
+checks syntax; it does not verify SPDX registry membership, copyright ownership,
+license eligibility or agreement acceptance. See [LICENSING](LICENSING.md).
+
+| Activation context member | Behavior |
 | --- | --- |
-| `host` | `{id: 'test-host', version: '0.1.0', protocolVersion: 1}` |
-| `pluginId` | Validated manifest ID |
-| `scope` | Opaque `{projectId, sessionId}` assigned by the host |
-| `grants` | Immutable subset of declared permissions granted by the host |
+| `host` | `{id: 'test-host' \| 'workspace-host', version: '0.2.0', protocolVersion: 1}` |
+| `pluginId`, `scope` | Manifest ID and opaque host `{projectId, sessionId}` |
+| `grants` | Frozen intersection of host grants and manifest permissions |
 | `signal` | Aborted on deactivation, host disposal or activation timeout |
-| `registerDiagnosticsProvider(selector, provider)` | Register and receive an idempotent `Disposable` |
+| `registerDiagnosticsProvider(selector, provider)` | Require declared diagnostics capability and both effective diagnostics grants |
+| `registerCommand(definition, handler)` | Require declared commands capability; return a registration `Disposable` |
+| `workspace` | Permission-checked saved-file read, list and CAS write APIs |
+| `backends` | Permission-checked invocation of named, host-configured handlers |
 
-Registering diagnostics requires both `document.read` and `diagnostics.publish`
-in the manifest **and** in the host's granted permissions. A declaration never
-grants itself authority. The context provides no file, process, network, account
-or workspace service API.
+`createPluginHost()` defaults to **no grants**. `createTestHost()` from
+`@altifigence/dds-plugin-sdk/testing` preserves its v1 compatibility defaults:
+`test-host` and both diagnostics grants. Permission declarations do not grant
+themselves access. A missing optional port returns `capability_unavailable`.
 
-A selector is `{languages: ['plaintext'], priority: 0}`. Priority is optional,
-defaults to zero and ranges from -100 to 100. The host selects one matching
-provider: highest priority first, then earliest still-active registration.
-Disposing the registration removes it and aborts its pending requests.
+## Commands and parameters
 
-## Diagnostics provider
+`context.registerCommand(definition, handler)` takes `{id, title,
+description?, parameters?}`. Each parameter is `{name, label, type, required,
+choices?}`; types are `string`, `number` or `boolean`. `choices` is a nonempty
+unique array available only for string parameters. A command supports at most
+32 parameters and each string choice has at most 256 code points.
 
-`provideDiagnostics(request, {signal})` returns a `DiagnosticsResult` or a promise
-of one. Check `signal` before work and between asynchronous steps. Late results
-are discarded even when a provider ignores the signal.
+If `parameters` is omitted, the input may be any bounded `JsonValue`. If present,
+including an empty array, input must be an object containing only the named
+parameters. Required values must be supplied, types must match and choices must
+match exactly. The SDK provides no parameter defaults or coercion.
 
 ```js
-// Host-supplied, immutable request
-{
-  protocolVersion: 1,
-  requestId: 'request-1',
-  scope: { projectId: 'example-project', sessionId: 'example-session' },
-  snapshot: {
-    uri: 'memory:///hello.txt',
-    languageId: 'plaintext',
-    modelVersion: 1,
-    workspaceRevision: 'example-1',
-    text: 'TODO',
-  },
-}
+const registration = context.registerCommand({
+  id: 'greet', title: 'Say hello',
+  parameters: [{name: 'name', label: 'Your name', type: 'string', required: true}],
+}, (input, {signal}) => {
+  signal.throwIfAborted();
+  return {message: `Hello, ${input.name}!`};
+});
 ```
 
-The snapshot contains only the supplied active document. A URI is an identity,
-not a grant to read that resource. `modelVersion` is a positive safe integer;
-`workspaceRevision` is an opaque nonempty string. Scope identifiers, request IDs
-and revisions have a maximum length of 128 Unicode code points.
+The host lists immutable metadata with `host.listCommands()` and calls
+`host.executeCommand(pluginId, commandId, input, {signal?, timeoutMs?})`.
+Handlers return `JsonValue` or a promise of it. Input and output are copied and
+bounded; class instances, functions, accessors, symbols, sparse arrays,
+non-finite numbers and cycles are rejected. Registration disposal aborts its
+pending calls. Language completion, hover and code actions are not implemented
+capabilities in 0.2.0.
 
-Use `createDiagnosticsResult(request, diagnostics)` to copy the identity into a
-validated immutable result. The result echoes protocol, request ID, scope, URI,
-language, model version and workspace revision; it omits document text.
+## Workspace and backend ports
+
+| Plugin method | Permission | Result |
+| --- | --- | --- |
+| `workspace.readFile(path, options?)` | `workspace.read` | `{path, content, revision}` |
+| `workspace.listFiles(path = '', options?)` | `workspace.read` | Array of `{path, kind: 'file' \| 'directory', revision?}` |
+| `workspace.writeFile(path, content, {expectedRevision, signal?, timeoutMs?})` | `workspace.write` | `{path, revision}` |
+| `backends.invoke(id, input, options?)` | `backend.invoke` | Bounded `JsonValue` |
+
+`options` means `{signal?, timeoutMs?}`. Paths use workspace-relative `/`
+separators without absolute roots, backslashes, colons, control characters,
+empty segments or `.`/`..`. Only listing accepts `''` for the root. The portable
+parser checks syntax; the host port owns containment, symlink policy and the
+actual allowed root. Listings have unique relative paths, at most 1,000 entries,
+and results must stay under a requested directory. File results must echo the
+requested path.
+
+Writes require an explicit compare-and-swap expectation:
+
+```js
+const saved = await context.workspace.readFile('notes.txt', {signal});
+const changed = await context.workspace.writeFile('notes.txt', 'Updated\n', {
+  expectedRevision: saved.revision, signal,
+});
+const created = await context.workspace.writeFile('new-note.txt', 'New\n', {
+  expectedRevision: null, signal,
+});
+```
+
+`null` means create an absent file only. An existing file requires the revision
+returned by a read. The port must enforce CAS and return `conflict` after a
+mismatch; the portable host cannot enforce a filesystem transaction itself.
+Core revisions are opaque strings of 1–128 code points. The supplied Node
+workspace uses SHA-256 of exact UTF-8 bytes and has a stricter path policy;
+see [WORKSPACES](WORKSPACES.md) and the [wire protocol](workspace-protocol.md).
+
+The host configures `backends: {name: handler}`. A handler receives
+`(input, {signal, pluginId, scope})` and returns JSON. The plugin chooses only a
+configured name; it cannot provide an executable, URL or shell command through
+this API. The Node adapter separately supports operator-configured tools.
+
+## Diagnostics
+
+A selector is `{languages: ['plaintext'], priority?: 0}`. Priority ranges from
+-100 to 100. Highest priority wins, followed by the earliest active registration.
+`provideDiagnostics(request, {signal})` returns a result or promise. The request
+contains `{protocolVersion: 1, requestId, scope, snapshot}`, with snapshot
+`{uri, languageId, modelVersion, workspaceRevision, text}`.
+
+The URI identifies supplied document text; it grants no access to that resource.
+`modelVersion` is a positive safe integer. Scope/request/revision strings have
+at most 128 Unicode code points. Use `createDiagnosticsResult(request, items)`
+to echo the identity without document text:
 
 ```js
 return createDiagnosticsResult(request, [{
-  range: { start: {line: 0, character: 0}, end: {line: 0, character: 4} },
-  severity: 'info',
-  message: 'Resolve this TODO.',
-  code: 'todo',             // optional, at most 128 code points
-  source: 'my-diagnostics', // optional, at most 128 code points
+  range: {start: {line: 0, character: 0}, end: {line: 0, character: 4}},
+  severity: 'info', message: 'Resolve this TODO.', code: 'todo', source: 'example',
 }]);
 ```
 
-Severity is `error`, `warning`, `info` or `hint`. The result parser checks range
-ordering; the host also checks that every endpoint fits the requested document.
-Line breaks are CRLF, LF or CR. No diagnostic can target another document.
+Positions use zero-based lines and UTF-16 code-unit offsets. Severity is `error`,
+`warning`, `info` or `hint`; messages are plain text. The host checks identity,
+ordered ranges and endpoints against the supplied CRLF/LF/CR document. Edits,
+document switches and revision changes invalidate pending results.
 
-## Parsers and budgets
+## Host methods and validators
 
-`parseManifest`, `parseDiagnosticsRequest` and `parseDiagnosticsResult` accept a
-plain data object or JSON string. `parseDocumentSnapshot` accepts a plain object.
-They return validated, deeply frozen copies and throw `PluginSdkError` on failure.
-Unknown fields, sparse arrays, accessors, symbols and custom prototypes are
-rejected. Pass plain JSON data rather than live application objects.
+`createPluginHost({hostId?, scope?, grants?, workspace?, backends?})` returns a
+trusted in-process `PluginHost`. `hostId` defaults to `test-host`; `scope`
+defaults to `example-project` / `example-session`. Methods are `activate`,
+`setDocument`, `requestDiagnostics`, `listPlugins`, `listCommands`,
+`executeCommand`, `deactivate` and `dispose`. See [host-contract](host-contract.md)
+and [testing](testing.md) for runnable host use.
+
+`parseManifest`, `parseDiagnosticsRequest` and `parseDiagnosticsResult` accept
+plain objects or JSON text. `parseDocumentSnapshot` and
+`parseCommandDefinition` accept plain data objects. `parseJsonValue` validates
+a JSON value rather than parsing text. `parseWorkspacePath` checks path syntax.
+All structured outputs are independent frozen copies. Runtime checks reject
+unexpected fields and unsupported object shapes without invoking getters or
+caller `toJSON` hooks.
 
 | Exported `LIMITS` value | Limit |
 | --- | --- |
-| `manifestBytes` | 16,384 UTF-8 JSON bytes |
+| `manifestBytes`, `commandBytes` | 16,384 compact UTF-8 JSON bytes each |
 | `requestBytes`, `resultBytes` | 1,600,000 UTF-8 JSON bytes each |
-| `documentBytes` | 262,144 UTF-8 bytes |
-| `maxDiagnostics` | 500 per result |
-| `messageLength` | 2,048 Unicode code points per message |
-| `maxRegistrations` | 32 providers in a registry, 32 active plugins in the test host |
-| `maxPendingRequests` | 64 per registry |
-| `defaultTimeoutMs` | 5,000 ms; also the test host's activation limit |
-| `maxTimeoutMs` | 30,000 ms for a diagnostics request |
+| `documentBytes`, `jsonBytes` | 262,144 UTF-8 bytes each |
+| `maxDiagnostics`, `messageLength` | 500 diagnostics; 2,048 code points per message |
+| `maxRegistrations`, `maxCommands` | 32 active plugins/providers/backend handlers; 64 commands per host |
+| `maxPendingRequests`, `maxFiles` | 64 per registry/host operation group; 1,000 listed entries |
+| `jsonDepth`, `jsonNodes` | Depth 16; 10,000 visited JSON nodes |
+| `jsonArrayItems`, `jsonObjectProperties` | 1,000 array items; 128 fields per object |
+| `defaultTimeoutMs`, `maxTimeoutMs` | 5,000 ms default/activation; 30,000 ms maximum request |
 
-Object input is checked against the same aggregate byte budget using the
-validated copy's compact JSON. JSON text also counts its original whitespace.
-The schemas under `schemas/` are JSON Schema 2020-12. Runtime validation additionally
-enforces aggregate UTF-8 byte budgets, range ordering and
-request/result identity. Use the runtime parsers at a host boundary.
+JSON text budgets count original whitespace. Object budgets use only validated
+copies. JSON Schema 2020-12 files under `schemas/` describe shapes; runtime
+parsers additionally enforce UTF-8 totals, license expression grammar,
+request/result identity, ranges and parameter semantics.
 
-## Errors
+## Cancellation and errors
 
-Catch `PluginSdkError` and inspect `error.code` using exported `ErrorCode` values.
+Check the supplied `AbortSignal` before work and between asynchronous steps.
+Cancellation settles a host request and discards late results. It cannot stop a
+blocking loop, undo a completed write or revoke ambient process APIs. Activation
+has a fixed 5-second deadline; request `timeoutMs` must be an integer 1–30,000.
 
-| Code | Action |
+Catch `PluginSdkError` and inspect `code`:
+
+| Code | Meaning |
 | --- | --- |
-| `invalid_contract` | Fix malformed fields, ranges, options or activation return value |
-| `permission_denied` | Request explicit host grants for the declared permissions |
-| `unsupported_host` | Select a supported host adapter |
-| `version_mismatch` | Match protocol version 1 |
-| `cancelled` | Stop work; the caller cancelled |
-| `stale_snapshot` | Request again with the current document |
-| `budget_exceeded` | Reduce input/output/concurrency, or finish within the timeout |
-| `disposed` | The plugin, registration or host was removed |
-| `provider_failed` | Inspect the provider locally; host errors omit exception details |
-| `provider_unavailable` | Register a provider matching the document language |
+| `invalid_contract` | Invalid fields, parameters, ranges, options or activation return |
+| `permission_denied` | A required effective grant is absent |
+| `unsupported_host`, `version_mismatch` | Host or diagnostics protocol incompatibility |
+| `cancelled`, `stale_snapshot` | Caller cancelled, or document identity changed |
+| `budget_exceeded` | Input/output/concurrency limit or timeout |
+| `disposed` | Plugin, registration or host removed |
+| `provider_failed`, `provider_unavailable` | Plugin failed, or no diagnostics provider matches |
+| `capability_unavailable` | No named command/backend or workspace port exists |
+| `conflict` | Host port rejected a stale file revision |
 
-`unsupported_host` is reserved for adapter compatibility checks; version 0.1.0
-accepts only `test-host` in manifests. Production host IDs require a future
-contract update and host acceptance.
+Plugin exception details are masked by the host. Trusted port `PluginSdkError`
+codes are preserved with a safe message. The Node wire protocol uses its own
+`WorkspaceError` vocabulary; see [workspace-protocol](workspace-protocol.md).

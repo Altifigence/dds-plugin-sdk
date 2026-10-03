@@ -1,0 +1,5 @@
+Hello Publisher example
+Copyright 2026 Altifigence
+
+This example is distributed under the Apache License, Version 2.0.
+It uses the separately licensed @altifigence/dds-plugin-sdk package.

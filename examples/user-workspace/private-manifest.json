@@ -1,0 +1,7 @@
+{
+  "manifestVersion":2,"id":"example.private-workspace","name":"Private user plugin",
+  "publisher":"example","version":"0.2.0","protocolVersion":1,"entry":"./plugin.mjs",
+  "runtime":"workspace","capabilities":["commands"],"permissions":["workspace.read"],
+  "supportedHosts":["workspace-host"],"license":"LicenseRef-Example-Proprietary",
+  "source":{"visibility":"closed","licenseFile":"./LICENSE"}
+}

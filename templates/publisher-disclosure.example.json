@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "publisher": "exampleco",
+  "pluginId": "exampleco.hello-diagnostics",
+  "pluginVersion": "1.0.0",
+  "license": "LicenseRef-ExampleCo-Proprietary",
+  "sourceVisibility": "closed",
+  "supportUrl": "https://example.com/plugins/hello-diagnostics/support",
+  "privacyNoticeUrl": "https://example.com/plugins/hello-diagnostics/privacy",
+  "dataUse": "Illustrative local plugin: reads the host-supplied active document to produce diagnostics for the selected project/session; does not deliberately store it or transmit it to a backend. Replace this explanation with the plugin's actual behavior and disclose the host's own handling separately.",
+  "backends": []
+}

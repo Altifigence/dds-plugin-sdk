@@ -1,0 +1,208 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.2.0/schemas/theme.schema.json",
+  "title": "DDS XML v2 theme input",
+  "$comment": "parseTheme additionally enforces the 64 KiB UTF-8 budget, trimmed name length in UTF-16 code units and XML 1.0 character validity.",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 65536,
+      "pattern": "^\\s*\\S(?:[\\s\\S]{0,78}\\S)?\\s*$",
+      "description": "1..80 UTF-16 code units after trimming; only XML 1.0 characters."
+    },
+    "colors": {
+      "type": "object",
+      "properties": {
+        "light": {
+          "$ref": "#/$defs/palette"
+        },
+        "dark": {
+          "$ref": "#/$defs/palette"
+        },
+        "tokens": {
+          "type": "object",
+          "properties": {
+            "light": {
+              "$ref": "#/$defs/tokens"
+            },
+            "dark": {
+              "$ref": "#/$defs/tokens"
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "metrics": {
+          "type": "object",
+          "properties": {
+            "panelRadius": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 24
+            },
+            "controlRadius": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 16
+            },
+            "popoverRadius": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 24
+            },
+            "popoverOpacity": {
+              "type": "number",
+              "minimum": 0.6,
+              "maximum": 1
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "light",
+        "dark"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "name",
+    "colors"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "color": {
+      "type": "string",
+      "minLength": 7,
+      "maxLength": 7,
+      "pattern": "^#[0-9a-fA-F]{6}$"
+    },
+    "palette": {
+      "type": "object",
+      "properties": {
+        "backdrop": {
+          "$ref": "#/$defs/color"
+        },
+        "navigation": {
+          "$ref": "#/$defs/color"
+        },
+        "tool": {
+          "$ref": "#/$defs/color"
+        },
+        "main": {
+          "$ref": "#/$defs/color"
+        },
+        "text": {
+          "$ref": "#/$defs/color"
+        },
+        "muted": {
+          "$ref": "#/$defs/color"
+        }
+      },
+      "required": [
+        "backdrop",
+        "navigation",
+        "tool",
+        "main",
+        "text",
+        "muted"
+      ],
+      "additionalProperties": false
+    },
+    "tokens": {
+      "type": "object",
+      "properties": {
+        "search": {
+          "$ref": "#/$defs/color"
+        },
+        "searchText": {
+          "$ref": "#/$defs/color"
+        },
+        "searchPlaceholder": {
+          "$ref": "#/$defs/color"
+        },
+        "searchBorder": {
+          "$ref": "#/$defs/color"
+        },
+        "selection": {
+          "$ref": "#/$defs/color"
+        },
+        "selectionText": {
+          "$ref": "#/$defs/color"
+        },
+        "tabActive": {
+          "$ref": "#/$defs/color"
+        },
+        "tabInactive": {
+          "$ref": "#/$defs/color"
+        },
+        "tabText": {
+          "$ref": "#/$defs/color"
+        },
+        "rail": {
+          "$ref": "#/$defs/color"
+        },
+        "panelBorder": {
+          "$ref": "#/$defs/color"
+        },
+        "popover": {
+          "$ref": "#/$defs/color"
+        },
+        "focus": {
+          "$ref": "#/$defs/color"
+        },
+        "success": {
+          "$ref": "#/$defs/color"
+        },
+        "warning": {
+          "$ref": "#/$defs/color"
+        },
+        "danger": {
+          "$ref": "#/$defs/color"
+        },
+        "info": {
+          "$ref": "#/$defs/color"
+        },
+        "aiBall": {
+          "$ref": "#/$defs/color"
+        },
+        "hintsBoxBackground": {
+          "$ref": "#/$defs/color"
+        },
+        "hintsBoxDetailsBackground": {
+          "$ref": "#/$defs/color"
+        },
+        "hintsBoxText": {
+          "$ref": "#/$defs/color"
+        },
+        "hintsBoxDetailsText": {
+          "$ref": "#/$defs/color"
+        },
+        "hintsBoxMutedText": {
+          "$ref": "#/$defs/color"
+        },
+        "hintsBoxSelectedBackground": {
+          "$ref": "#/$defs/color"
+        },
+        "hintsBoxSelectedText": {
+          "$ref": "#/$defs/color"
+        },
+        "hintsBoxHoverBackground": {
+          "$ref": "#/$defs/color"
+        },
+        "hintsBoxHoverText": {
+          "$ref": "#/$defs/color"
+        },
+        "gdsBackground": {
+          "$ref": "#/$defs/color"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    }
+  }
+}

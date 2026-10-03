@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "publisher": "example",
+  "pluginId": "hello-publisher",
+  "pluginVersion": "1.0.0",
+  "license": "Apache-2.0",
+  "sourceVisibility": "open",
+  "supportUrl": "https://github.com/Altifigence/dds-plugin-sdk/issues",
+  "dataUse": "This example uses the name entered for the greet command. It returns a greeting and does not read workspace files, contact another backend, or store the name.",
+  "backends": []
+}

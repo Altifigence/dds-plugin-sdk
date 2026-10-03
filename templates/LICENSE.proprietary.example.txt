@@ -1,0 +1,21 @@
+SAMPLE: publisher-owned plugin rights notice
+License identifier: LicenseRef-ExampleCo-Proprietary
+
+Copyright [YEAR] [RIGHTS HOLDER]. All rights reserved.
+
+This notice covers only material owned by [RIGHTS HOLDER] in [PLUGIN NAME].
+Any permission to use that material is provided by the separate license or
+individually agreed terms identified at [ACTUAL TERMS REFERENCE]. This sample
+does not itself grant use rights or form an executed agreement.
+
+The DDS Plugin SDK, included SDK material and separately licensed third-party
+components remain subject to their own licenses and notices. This notice does
+not replace those licenses or restrict rights they already grant.
+
+Replace the placeholders and identify the actual applicable terms before
+distribution. This example is not a complete enterprise license or a guarantee
+of legal suitability, and creates no purchase, payment or support promise.
+
+KO: 게시자 소유 자료의 권리보유 고지 예제입니다. 실제 이용허락은 명시된 별도
+라이선스 또는 개별 합의 조건에 따릅니다. SDK와 제3자 구성요소의 기존 권리를
+대체하지 않으며, 이 예제 자체는 체결된 계약이나 법률 적합성 보장이 아닙니다.
