@@ -48,6 +48,7 @@ test('HTTP jobs retain auth, plugin pin, generation and exact request boundaries
   assert.equal((await raw(server,'jobs.start',{...params,untrusted:'extra'})).error.code,'invalid_request');
   const unauth=createWorkspaceClient({url:server.url,token:'c'.repeat(64)});await assert.rejects(unauth.connect(),{code:'authentication_required'});unauth.dispose();
   assert.equal(calls,0);const job=await start(client);await terminal(client,job.jobId);
+  await assert.rejects(client.startCommandJob(manifest.id,'analyze',{},hash,{jobId:'invalid'}),{code:'invalid_contract'});
   await assert.rejects(start(client,{different:true},job.jobId),{code:'conflict'});assert.equal(calls,1);
   await assert.rejects(client.getJob(randomUUID()),{code:'unavailable'});
 });

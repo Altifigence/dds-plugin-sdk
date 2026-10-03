@@ -159,7 +159,7 @@ export function createWorkspaceClient({url, token, fetch: transport = globalThis
     listPlugins: options => request('plugins.list', {}, options),
     runCommand: (pluginId, commandId, input, artifactSha256, options) => request('commands.run', {pluginId, commandId, input, artifactSha256}, options),
     getJobCapabilities: options => request('jobs.capabilities', {}, options),
-    startCommandJob: (pluginId, commandId, input, artifactSha256, job, options) => request('jobs.start', {pluginId, commandId, input, artifactSha256, ...parseJobOptions(job)}, options),
+    startCommandJob: async (pluginId, commandId, input, artifactSha256, job, options) => request('jobs.start', {pluginId, commandId, input, artifactSha256, ...parseJobOptions(job)}, options),
     getJob: (jobId, options) => request('jobs.get', {jobId}, options),
     getJobEvents: (jobId, after = 0, options) => request('jobs.events', {jobId, after}, options),
     cancelJob: (jobId, options) => request('jobs.cancel', {jobId}, options),
