@@ -11,6 +11,7 @@ const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const aborted = signal => { if (signal?.aborted) throw signal.reason instanceof WorkspaceError ? signal.reason : workspaceFailure('cancelled', 'Workspace operation cancelled'); };
 const sameIdentity = (a, b) => a.dev === b.dev && a.ino === b.ino;
 const sameBytesState = (a, b) => sameIdentity(a,b) && a.size === b.size && a.mtimeNs === b.mtimeNs && a.ctimeNs === b.ctimeNs;
+const requireSingleLink = stat => { if (stat.nlink !== 1n) throw workspaceFailure('unsafe_path', 'Hardlinked workspace files are forbidden'); };
 const contained = (root, target) => target === root || !path.relative(root, target).startsWith(`..${path.sep}`) && path.relative(root, target) !== '..' && !path.isAbsolute(path.relative(root, target));
 function fileError(failure) {
   if (failure instanceof WorkspaceError) return failure;
@@ -51,11 +52,13 @@ export async function createNodeWorkspace({root, writable = true, manage = writa
     aborted(signal);
     const {target, stat} = await resolve(relative);
     if (!stat.isFile()) throw workspaceFailure('invalid_request', 'Expected a regular workspace file');
+    requireSingleLink(stat);
     if (stat.size > BigInt(WORKSPACE_LIMITS.fileBytes)) throw workspaceFailure('budget_exceeded', 'File content limit exceeded');
     const handle = await fs.open(target, flags.O_RDONLY | (flags.O_NOFOLLOW ?? 0));
     try {
       const opened = await handle.stat({bigint: true});
       if (!sameIdentity(opened, stat) || !opened.isFile()) throw workspaceFailure('conflict', 'Workspace file changed during read');
+      requireSingleLink(opened);
       const chunks = []; let total = 0;
       for (;;) {
         aborted(signal); const chunk = Buffer.allocUnsafe(Math.min(16_384, WORKSPACE_LIMITS.fileBytes + 1 - total));
@@ -67,6 +70,7 @@ export async function createNodeWorkspace({root, writable = true, manage = writa
       }
       const after = await handle.stat({bigint: true}), current = await fs.lstat(target, {bigint: true});
       if (!sameBytesState(opened, after) || current.isSymbolicLink() || !sameIdentity(opened, current)) throw workspaceFailure('conflict', 'Workspace file changed during read');
+      requireSingleLink(after); requireSingleLink(current);
       await checkRoot(); aborted(signal);
       const bytes = Buffer.concat(chunks);
       let content; try { content = new TextDecoder('utf-8', {fatal: true}).decode(bytes); } catch { throw workspaceFailure('invalid_request', 'Workspace file must be valid UTF-8'); }
@@ -101,6 +105,7 @@ export async function createNodeWorkspace({root, writable = true, manage = writa
             if (entry.isSymbolicLink() || !entry.isFile() && !entry.isDirectory()) continue;
             const verified = await resolve(filePath);
             if (!verified.stat.isFile() && !verified.stat.isDirectory()) continue;
+            if (verified.stat.isFile() && verified.stat.nlink !== 1n) continue;
             entries.push({path:filePath,name:entry.name,kind:verified.stat.isDirectory()?'directory':'file',...(verified.stat.isFile()?{size:Number(verified.stat.size)}:{})});
             if (entries.length > WORKSPACE_LIMITS.entries) throw workspaceFailure('budget_exceeded','Directory entry limit exceeded');
           }
@@ -116,6 +121,7 @@ export async function createNodeWorkspace({root, writable = true, manage = writa
         const {target,stat}=await resolve(relative,{allowMissing:true});
         const parent=await fs.lstat(path.dirname(target),{bigint:true});
         if(stat&&!stat.isFile())throw workspaceFailure('invalid_request','Expected a regular workspace file');
+        if(stat)requireSingleLink(stat);
         if(expectedRevision===null&&stat||expectedRevision!==null&&!stat)throw workspaceFailure('conflict','The file revision changed');
         if(stat&&(await rawRead(relative,signal)).revision!==expectedRevision)throw workspaceFailure('conflict','The file revision changed');
         const temporary=path.join(path.dirname(target),`.dds-write-${randomUUID()}`), bytes=Buffer.from(content,'utf8');
@@ -143,14 +149,14 @@ export async function createNodeWorkspace({root, writable = true, manage = writa
         const before=await rawRead(relative,signal);if(expectedRevision!==undefined&&before.revision!==expectedRevision)throw workspaceFailure('conflict','The file revision changed');
         const parent=await fs.lstat(path.dirname(destination.target),{bigint:true});await verifyParent(destination.target,parent);aborted(signal);
         await fs.link(source.target,destination.target);
-        try {const current=await fs.lstat(source.target,{bigint:true});if(current.isSymbolicLink()||!sameIdentity(current,source.stat))throw workspaceFailure('conflict','Workspace file identity changed');await fs.unlink(source.target);}
+        try {const current=await fs.lstat(source.target,{bigint:true});if(current.isSymbolicLink()||!sameIdentity(current,source.stat)||current.nlink!==2n)throw workspaceFailure('conflict','Workspace file identity changed');await fs.unlink(source.target);}
         catch(failure){await fs.unlink(destination.target).catch(()=>{});throw failure;}
         return Object.freeze({path:relative,newPath});
       },signal);
     },
     async remove(relative,{expectedRevision,signal}={}) {
       requireManage();if(expectedRevision!==undefined)requireSha256(expectedRevision);
-      return mutate(async()=>{const entry=await resolve(relative);if(entry.stat.isFile()){if(expectedRevision!==undefined&&(await rawRead(relative,signal)).revision!==expectedRevision)throw workspaceFailure('conflict','The file revision changed');aborted(signal);await fs.unlink(entry.target);}else if(entry.stat.isDirectory()){if(expectedRevision!==undefined)throw workspaceFailure('invalid_request','Directory removal has no file revision');aborted(signal);await fs.rmdir(entry.target);}else throw workspaceFailure('unsupported','Unsupported workspace entry');return Object.freeze({path:relative});},signal);
+      return mutate(async()=>{const entry=await resolve(relative);if(entry.stat.isFile()){requireSingleLink(entry.stat);if(expectedRevision!==undefined&&(await rawRead(relative,signal)).revision!==expectedRevision)throw workspaceFailure('conflict','The file revision changed');aborted(signal);await fs.unlink(entry.target);}else if(entry.stat.isDirectory()){if(expectedRevision!==undefined)throw workspaceFailure('invalid_request','Directory removal has no file revision');aborted(signal);await fs.rmdir(entry.target);}else throw workspaceFailure('unsupported','Unsupported workspace entry');return Object.freeze({path:relative});},signal);
     },
     dispose(){closed=true;},
   });
@@ -226,12 +232,12 @@ export async function createWorkspaceServer({workspace,root,workspaceId,name='Us
     const commands=pluginHost.listCommands();
     return pluginHost.listPlugins().map(manifest=>({manifest,...pins.get(manifest.id),commands:commands.filter(command=>command.pluginId===manifest.id)}));
   };
-  const description=()=>parseWorkspaceHello({hostId:'workspace-host',hostVersion:'0.3.1',protocolVersion:1,workspace:{id:workspaceId,name,generation},capabilities:{read:true,write:workspace.capabilities?.write===true,manage:workspace.capabilities?.manage===true,commands:pins.size>0},plugins:metadata(),notice:noticePayload});
+  const description=()=>parseWorkspaceHello({hostId:'workspace-host',hostVersion:'0.3.2',protocolVersion:1,workspace:{id:workspaceId,name,generation},capabilities:{read:true,write:workspace.capabilities?.write===true,manage:workspace.capabilities?.manage===true,commands:pins.size>0},plugins:metadata(),notice:noticePayload});
   let originalDescription;
   try{originalDescription=description();}catch(failure){pluginHost.dispose();workspace.dispose?.();throw safeOperationFailure(failure);}
   const originalMetadata=JSON.stringify({plugins:originalDescription.plugins,capabilities:originalDescription.capabilities});
   const checkedDescription=()=>{const current=description();if(JSON.stringify({plugins:current.plugins,capabilities:current.capabilities})!==originalMetadata)throw workspaceFailure('generation_mismatch','Workspace configuration changed; restart the host');return current;};
-  const pending=new Map();let closed=false;
+  const pending=new Map();let closed=false,receiving=0;
   const expectedToken=Buffer.from(sha256(Buffer.from(token)));
   const authenticated=req=>{const authorization=req.headers.authorization;if(typeof authorization!=='string'||!authorization.startsWith('Bearer ')||authorization.length>520)return false;const actual=Buffer.from(sha256(Buffer.from(authorization.slice(7))));return timingSafeEqual(actual,expectedToken);};
   const reply=(res,requestId,ok,result)=>{
@@ -256,6 +262,9 @@ export async function createWorkspaceServer({workspace,root,workspaceId,name='Us
     }
   }
   const server=createServer(async(req,res)=>{
+    // Check the raw count too: runtimes that truncate parsed headers must not
+    // silently discard security-relevant headers such as Origin.
+    if(req.rawHeaders.length>64){res.writeHead(431,{'connection':'close','cache-control':'no-store'});res.end();return;}
     const origin=req.headers.origin;
     if(origin!==undefined&&(typeof origin!=='string'||origin==='null'||!origins.has(origin))){res.writeHead(403,{'content-type':'application/json'});res.end('{"error":"origin denied"}');return;}
     if(origin){res.setHeader('access-control-allow-origin',origin);res.setHeader('vary','Origin');}
@@ -265,6 +274,11 @@ export async function createWorkspaceServer({workspace,root,workspaceId,name='Us
     if(req.headers['content-type']?.split(';')[0].trim().toLowerCase()!=='application/json'){res.writeHead(415);res.end();return;}
     if(req.headers['content-encoding']&&req.headers['content-encoding']!=='identity'){res.writeHead(415);res.end();return;}
     const declared=req.headers['content-length'];if(declared&&(!/^\d+$/.test(declared)||Number(declared)>WORKSPACE_LIMITS.wireBytes)){res.writeHead(413);res.end();return;}
+    // The execution queue is checked after JSON parsing. Bound uploads before
+    // buffering them as well, then release this slot before dispatch/cancel.
+    if(receiving>=WORKSPACE_LIMITS.receiving){res.writeHead(429,{'content-type':'application/json','cache-control':'no-store','connection':'close'});res.end('{"error":"request body capacity exceeded"}');return;}
+    receiving++;let receivingBody=true;
+    const releaseBody=()=>{if(receivingBody){receivingBody=false;receiving--;}};
     const controller=new AbortController();let requestId='invalid-request',registered=false,timer,bodyTimer;
     const onDisconnect=()=>{if(!res.writableEnded)controller.abort(workspaceFailure('cancelled','Workspace client disconnected'));};
     req.on('aborted',onDisconnect);res.on('close',onDisconnect);
@@ -272,7 +286,7 @@ export async function createWorkspaceServer({workspace,root,workspaceId,name='Us
       bodyTimer=setTimeout(()=>{controller.abort(workspaceFailure('budget_exceeded','Workspace request body timed out'));req.destroy();},timeoutMs);
       let bytes=0;const chunks=[];
       for await(const chunk of req){bytes+=chunk.length;if(bytes>WORKSPACE_LIMITS.wireBytes)throw workspaceFailure('budget_exceeded','Workspace request limit exceeded');chunks.push(chunk);}
-      clearTimeout(bodyTimer);
+      clearTimeout(bodyTimer);releaseBody();
       let text;try{text=new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(chunks));}catch{throw workspaceFailure('invalid_request','Request body must be UTF-8 JSON');}
       const request=parseWorkspaceRequest(text);requestId=request.requestId;
       if(closed)throw workspaceFailure('disposed','Workspace server is disposed');
@@ -287,9 +301,10 @@ export async function createWorkspaceServer({workspace,root,workspaceId,name='Us
         reply(res,requestId,true,parseWorkspaceMethodResult(request.method,result));
       }finally{controller.signal.removeEventListener('abort',rejectAbort);}
     }catch(failure){reply(res,requestId,false,safeOperationFailure(failure));}
-    finally{clearTimeout(bodyTimer);clearTimeout(timer);if(registered)pending.delete(requestId);req.off('aborted',onDisconnect);res.off('close',onDisconnect);}
+    finally{releaseBody();clearTimeout(bodyTimer);clearTimeout(timer);if(registered)pending.delete(requestId);req.off('aborted',onDisconnect);res.off('close',onDisconnect);}
   });
   server.headersTimeout=10_000;server.requestTimeout=10_000;server.maxHeadersCount=32;
+  server.maxConnections=WORKSPACE_LIMITS.connections;server.dropMaxConnection=true;server.maxRequestsPerSocket=128;
   try{await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,host,()=>{server.off('error',reject);resolve();});});}catch(failure){pluginHost.dispose();workspace.dispose?.();throw safeOperationFailure(failure);}
   const address=server.address();
   return Object.freeze({url:`http://${host.includes(':')?`[${host}]`:host}:${address.port}${WORKSPACE_PATH}`,workspaceId,generation,hello:checkedDescription,

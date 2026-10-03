@@ -49,8 +49,10 @@ Replies echo request identity:
 ```
 
 Errors never include host roots, bearer tokens, tool stderr or plugin stacks.
-HTTP 401/403 rejects authentication/origin; authenticated operation failures use
-the error envelope. Clients validate successful envelopes and method results.
+HTTP 401/403 rejects authentication/origin; HTTP 429 rejects upload admission
+when all 16 body slots are occupied. Authenticated operation failures use the
+error envelope. Clients validate successful envelopes and method results and
+cancel unread bodies after rejected status/headers or a deadline.
 
 ## Methods
 
@@ -68,13 +70,16 @@ the error envelope. Clients validate successful envelopes and method results.
 | `request.cancel` | `{requestId: 'target-request'}` | `{cancelled: boolean}` |
 
 Paths are relative POSIX paths. Absolute paths, backslashes, traversal, symlinks,
-protected components and invalid/control characters are rejected. Listings are
+multiply linked files, protected components, Windows device names and
+invalid Unicode/control characters are rejected. Listings are
 sorted and bounded, never recurse automatically, and never expose an absolute
 host root. Ordinary `.gitignore`, `.vscode/settings.json` and `.github/workflows`
 are supported. The exported `isProtectedWorkspaceComponent` predicate rejects
-case-insensitive `.git`, `.hg`, `.svn`, `.ssh`, `.aws`, `.azure`, `.npmrc`, `.pypirc`,
-`.env`/`.env.*`, `.dds-write-*`, `id_rsa`, `id_dsa`, `id_ecdsa`, `id_ed25519`, and
-filenames ending in `.pem`, `.key`, `.p12` or `.pfx`. Listings skip those entries;
+case-insensitive `.git`, `.hg`, `.svn`, `.ssh`, `.aws`, `.azure`, `.gnupg`, `.kube`,
+`.docker`, `.npmrc`, `.pypirc`, `.netrc`, `_netrc`, `.git-credentials`,
+`.env`/`.env.*`, `.dds-write-*`, `id_rsa`, `id_dsa`, `id_ecdsa`, `id_ed25519`,
+`id_ecdsa_sk`, `id_ed25519_sk`, and filenames ending in `.pem`, `.key`, `.p12` or
+`.pfx`. Listings skip those entries and hardlinked files;
 this explicit exclusion list is not a scanner for every secret. Trusted plugin code and
 tools retain their OS user's ambient access.
 
@@ -121,8 +126,12 @@ changed metadata/artifact pins require client revocation and fresh approval.
 Requests and replies are limited to 1,600,000 UTF-8 JSON bytes. File content is
 limited to 262,144 UTF-8 bytes and must be valid UTF-8. JSON command input/output
 is limited to 262,144 bytes, depth 16 and 10,000 nodes. The default request budget
-is five seconds, maximum thirty seconds; pending requests and files in a listing
-are bounded. Disconnect and cancellation abort the owned operation. Cancellation
+is five seconds, maximum thirty seconds. SDK 0.3.2 bounds simultaneous receiving
+bodies to 16, executing requests to 64, connections to 128, headers to 32 and
+requests per socket to 128. Body slots are released on every exit, separately
+from dispatch so pending operations do not consume upload slots needed for
+cancellation. A listing has at most 1,000 entries. Disconnect and cancellation
+abort the owned operation. Cancellation
 is scoped to the authenticated principal and generation and cannot cancel an
 unrelated server request. A timeout or disconnect does not prove that an already
 committed file write did not happen; reread before deciding what to do next.

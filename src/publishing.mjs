@@ -5,6 +5,7 @@ import path from 'node:path';
 import { gzipSync, gunzipSync, inflateRawSync } from 'node:zlib';
 import { parseManifest } from './index.mjs';
 import { containsKnownCredential } from './publication-policy.mjs';
+import { isPrivateFileComponent, WINDOWS_DEVICE_COMPONENT } from './patterns.mjs';
 
 const MAX_FILE = 4 * 1024 * 1024;
 const MAX_PACKAGE = 10 * 1024 * 1024;
@@ -13,8 +14,6 @@ const MAX_TAR = MAX_PACKAGE + MAX_FILES * 1024 + 1024;
 const MAX_ARCHIVE = 12 * 1024 * 1024;
 const MAX_RELEASE_METADATA = 256 * 1024;
 const utf8 = new TextDecoder('utf-8', {fatal: true});
-const forbidden = /^(?:\.git|\.hg|\.svn|node_modules|\.env(?:\..*)?|\.npmrc|\.pypirc|\.netrc|\.aws|\.azure|\.ssh|\.gnupg|\.kube|\.docker|id_rsa|id_ed25519)$/i;
-const secretExtension = /\.(?:pem|key|p12|pfx)$/i;
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 function fail(message) { throw new Error(`Plugin package: ${message}`); }
 function record(value, required, optional = []) {
@@ -30,8 +29,8 @@ function filePath(value) {
   if (typeof value !== 'string' || !value || value.length > 240 || !value.isWellFormed() || value.includes('\\') || /[\u0000-\u001f\u007f:*?"<>|]/.test(value) || path.posix.isAbsolute(value)) fail('expected a relative portable file path');
   const parts = value.split('/');
   for (const part of parts) {
-    if (!part || part === '.' || part === '..' || /[. ]$/.test(part) || /^(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\.|$)/i.test(part)) fail('unsafe file path');
-    if (forbidden.test(part) || secretExtension.test(part)) fail('private configuration or key material cannot be packaged');
+    if (!part || part === '.' || part === '..' || /[. ]$/.test(part) || WINDOWS_DEVICE_COMPONENT.test(part)) fail('unsafe file path');
+    if (isPrivateFileComponent(part) || /^node_modules$/i.test(part)) fail('private configuration or key material cannot be packaged');
   }
   return value;
 }

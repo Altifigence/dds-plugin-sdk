@@ -33,7 +33,7 @@ const receipt = await verifyPluginArchive(process.argv[2], {
 console.log(receipt.pluginId, receipt.pluginVersion, receipt.artifact.sha256);
 ```
 
-Save that code as `verify.mjs` in an ESM project with SDK 0.3.1 installed. Run it
+Save that code as `verify.mjs` in an ESM project with SDK 0.3.2 installed. Run it
 with the archive path, metadata path and independently obtained hash as its
 three arguments. The API returns a frozen report, and the CLI serializes it as
 JSON. The report contains the plugin
@@ -82,17 +82,20 @@ The receipt describes the bytes read during that call. If another process can
 change a download before installation or use, recheck the expected hash on the
 actual bytes being consumed. A report is not a grant to execute a mutable path.
 
-0.3.1 preserves the plugin peer range `>=0.3.0 <0.4.0` and existing runtime and
-workspace contracts. Existing 0.3.0 CLI packages can be verified unchanged.
+0.3.2 preserves the plugin peer range `>=0.3.0 <0.4.0` and existing runtime and
+workspace contracts. Existing 0.3.x CLI packages that satisfy the strengthened
+file policy can be verified unchanged. The verifier rejects additional private
+credential names and Windows device aliases; remove them and publish a new
+plugin version if needed. See [Security](../SECURITY.md).
 Archives made with 0.2.x CLI metadata need the migration described in
 [compatibility](COMPATIBILITY.md). This command verifies plugin packages, not the
 SDK's own npm release tarball.
 
 ## 한국어
 
-SDK **0.3.1**의 `dds-plugin verify`와 `verifyPluginArchive()`는 **0.3.x DDS
+SDK **0.3.2**의 `dds-plugin verify`와 `verifyPluginArchive()`는 **0.3.x DDS
 플러그인 packer**가 만든 `.tgz`와 외부 `.tgz.release.json`을 검사합니다.
-플러그인을 실행·설치하거나 파일을 압축 해제하지 않으며 네트워크 요청도 하지
+플러그인을 실행·설치하거나 파일을 디스크에 추출하지 않으며 네트워크 요청도 하지
 않습니다. 실행 명령과 API는 위 예제와 같습니다. 별도 위치의 메타데이터는
 `--metadata`, 신뢰하는 경로에서 따로 확인한 64자리 소문자 SHA-256은
 `--sha256` 또는 `expectedSha256`으로 전달합니다.
@@ -110,7 +113,9 @@ manifest·발행자 고지·진입 모듈·라이선스 및 생성된 npm 메타
 격리·설치 동의·DDS 제품 호환성 검증을 대신하지 않습니다. 실제 실행 시 파일이
 바뀔 수 있는 환경에서는 소비하는 바로 그 파일의 해시를 다시 확인해야 합니다.
 
-0.3.0에서 만든 플러그인 아카이브는 그대로 검증할 수 있고 peer 범위
-`>=0.3.0 <0.4.0`도 유지됩니다. 0.2.x 아카이브는 기존 마이그레이션 안내에 따라
+강화된 파일 정책을 만족하는 기존 0.3.x 플러그인 아카이브는 그대로 검증할 수 있고
+peer 범위 `>=0.3.0 <0.4.0`도 유지됩니다. 새로 제외한 자격증명 경로나 Windows
+장치명이 들어 있으면 해당 파일을 제거한 새 플러그인 버전을 발행하세요.
+0.2.x 아카이브는 기존 마이그레이션 안내에 따라
 새 플러그인 버전으로 검증·패키징하세요. 이 명령은 플러그인 아카이브용이며
 SDK 자체의 npm tarball을 검증하는 명령은 아닙니다.

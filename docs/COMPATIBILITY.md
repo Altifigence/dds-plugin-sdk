@@ -29,5 +29,12 @@ new plugin archives to `>=0.3.0 <0.4.0`; it does not infer compatibility from so
 archives do not need repacking for this update. The new download-verification
 command requires SDK 0.3.1 and verifies plugin packages, not SDK tarballs.
 
+0.3.2 is the security update for this line. Upgrade both workspace servers and
+clients: only an upgraded server supplies the stricter file policy and incoming
+request limits. Hardlinks, additional credential stores and Windows device
+aliases are now rejected. Ordinary files, APIs and protocol 1 remain compatible.
+An archive containing newly excluded files needs those files removed and a new
+plugin version. See [Security](../SECURITY.md) for migration and remaining limits.
+
 Use the [official guide](https://docs.altifigence.com/developers/plugin-sdk/),
 [host contract](host-contract.md) and [workspace guide](WORKSPACES.md) together.

@@ -4,6 +4,7 @@ import {spawnSync} from 'node:child_process';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {containsKnownCredential} from '../src/publication-policy.mjs';
+import {isPrivateFileComponent} from '../src/patterns.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const policy = JSON.parse(await readFile(path.join(root, 'PUBLIC_SURFACE.json'), 'utf8'));
@@ -16,12 +17,12 @@ function run(command, args) {
   return result.stdout;
 }
 const privateReference = /(?:github\.com[:/]altifigence-internal|@altifigence-internal\/|C:[/\\]alti[/\\]|C:[/\\]Users[/\\]user[/\\])/i;
-const prohibitedPath = /(?:^|\/)(?:\.env(?:\.[^/]*)?|\.npmrc|\.pypirc|\.netrc|\.aws|\.azure|\.ssh|\.gnupg|\.kube|\.docker|src-tauri|engines|internal)(?:\/|$)|\.(?:pem|key|p12|pfx)$/i;
+const prohibitedPath = name => name.split('/').some(part => isPrivateFileComponent(part) || /^(?:src-tauri|engines|internal)$/i.test(part));
 const tracked = run('git', ['ls-files', '--stage', '-z']).split('\0').filter(Boolean);
 for (const record of tracked) {
   const [entry, name] = record.split('\t');
   assert.ok(['100644', '100755'].includes(entry.split(' ')[0]), `Unexpected Git file mode: ${name}`);
-  assert.ok(!prohibitedPath.test(name), `Private file path: ${name}`);
+  assert.ok(!prohibitedPath(name), `Private file path: ${name}`);
   const bytes = await readFile(path.join(root, name));
   assert.ok(!containsKnownCredential(bytes), `Recognizable credential material: ${name}`);
   assert.ok(!privateReference.test(bytes.toString('utf8')), `Private implementation reference: ${name}`);
@@ -34,10 +35,10 @@ const canonicalRoot = await realpath(root);
 for (const name of actual) {
   const absolute = path.join(root, name);
   const info = await lstat(absolute);
-  assert.ok(info.isFile() && !info.isSymbolicLink(), `Not a regular package file: ${name}`);
+  assert.ok(info.isFile() && !info.isSymbolicLink() && info.nlink === 1, `Not an unlinked regular package file: ${name}`);
   const relative = path.relative(canonicalRoot, await realpath(absolute));
   assert.ok(relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative), `File outside package root: ${name}`);
-  assert.ok(!prohibitedPath.test(name), `Private package path: ${name}`);
+  assert.ok(!prohibitedPath(name), `Private package path: ${name}`);
   const bytes = await readFile(absolute);
   assert.ok(!containsKnownCredential(bytes) && !privateReference.test(bytes.toString('utf8')), `Private material in package file: ${name}`);
 }

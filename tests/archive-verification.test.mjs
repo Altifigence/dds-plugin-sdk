@@ -158,6 +158,11 @@ test('recomputed metadata cannot authorize extra/missing archive files or npm ex
 
 test('archive paths, links, special entries, duplicate names and header checksums are rejected', async t => {
   const f = await fixture(t);
+  for (const filename of ['package/COM\u00b9', 'package/LPT\u00b2.txt', 'package/CONIN$', 'package/CONOUT$', 'package/.git-credentials', 'package/_netrc', 'package/id_ecdsa_sk']) {
+    const list = entries(f.archive); setName(list[0], filename);
+    await installPair(f, build(list));
+    await assert.rejects(verifyPluginArchive(f.packed.archivePath), /unsafe file path|private configuration or key material/);
+  }
   for (const filename of ['../outside', 'package/../outside', 'package/C:stream', 'package/.env', 'package/CON', 'other/file']) {
     const list = entries(f.archive); setName(list[0], filename);
     await installPair(f, build(list));

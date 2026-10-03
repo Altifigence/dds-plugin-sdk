@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.3.2 — 2026-10-03
+
+- Harden the user workspace file API against hardlink aliases of excluded files
+  or files outside the selected root. Reads, writes, rename and removal reject
+  multiply linked files; listings omit them. Normal single-link files and CAS
+  behavior remain supported.
+- Share credential filename exclusions across workspace access, plugin
+  packaging/verification and the public-source guard. Add netrc/Git credential
+  stores, GnuPG/Kubernetes/Docker directories and additional SSH key names where
+  missing. Reject Windows superscript device aliases, console device names and
+  malformed Unicode workspace paths before I/O.
+- Admit at most 16 incoming HTTP request bodies before buffering; return HTTP
+  429 at capacity. Bound connections to 128 and requests per socket to 128.
+  Keep execution/cancellation limits separate and release upload slots on every
+  completion, rejection, disconnect and timeout. Check the raw header count.
+- Cancel unread rejected responses and stalled response streams on client
+  cancellation/deadline, including custom transports that ignore their signal.
+- Update the supported security-fix line and migration guidance. The 0.3.x
+  plugin peer range, manifest contracts and workspace protocol remain unchanged.
+  Previously accepted hardlinks and newly excluded paths are intentionally
+  rejected. This does not add publisher authentication, malware scanning or an
+  OS sandbox for trusted in-process plugins.
+
 ## 0.3.1 — 2026-10-03
 
 - Verify downloaded 0.3.x plugin archives and release metadata with the new
