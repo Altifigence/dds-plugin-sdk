@@ -105,6 +105,10 @@
     "src/workspace-protocol.d.mts",
     "src/workspace-protocol.mjs",
     "templates/LICENSE.proprietary.example.txt",
-    "templates/publisher-disclosure.example.json"
+    "templates/publisher-disclosure.example.json",
+    "docs/OBSERVATION.md",
+    "examples/workspace-observation/run.mjs",
+    "src/workspace-observation.mjs",
+    "src/workspace-observation.d.mts"
   ]
 }

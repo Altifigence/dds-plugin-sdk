@@ -1,6 +1,8 @@
 import {WORKSPACE_PATH, WORKSPACE_LIMITS, WorkspaceError, workspaceFailure, requireToken, parseWorkspaceRequest, parseWorkspaceReply, parseWorkspaceHello, parseWorkspaceMethodResult} from './workspace-protocol.mjs';
 import {parseJobOptions} from './jobs.mjs';
+import {registerObservationClient, watchWorkspaceJob, waitForWorkspaceJob} from './workspace-observation.mjs';
 export {createWorkspaceProject, applyTextEdits} from './workspace-project.mjs';
+export {WORKSPACE_OBSERVATION_LIMITS} from './workspace-observation.mjs';
 
 export function normalizeWorkspaceUrl(value) {
   if(typeof value!=='string'||value.length>2_048||/[\s\u0000-\u001f\u007f\\]/u.test(value))throw workspaceFailure('invalid_request','Invalid workspace server URL');
@@ -48,6 +50,7 @@ export function createWorkspaceClient({url, token, fetch: transport = globalThis
   token = requireToken(token);
   if (typeof transport !== 'function') throw workspaceFailure('invalid_request', 'A fetch transport is required');
   let binding, closed = false, sequence = 0, bindingSequence = 0;
+  let connectionController = new AbortController();
   const pending = new Set();
   const instance = globalThis.crypto.randomUUID();
   const budget = value => {
@@ -55,8 +58,10 @@ export function createWorkspaceClient({url, token, fetch: transport = globalThis
     return value;
   };
   budget(timeoutMs);
-  const revoke = () => {
+  const revoke = (reason = workspaceFailure('disposed', 'Workspace connection changed')) => {
     binding = undefined; bindingSequence++;
+    connectionController.abort(reason);
+    connectionController = new AbortController();
     for (const controller of pending) controller.abort(workspaceFailure('disposed', 'Workspace connection changed'));
   };
   async function send(envelope, signal) {
@@ -109,7 +114,8 @@ export function createWorkspaceClient({url, token, fetch: transport = globalThis
       if (method === 'fs.rename' && result.newPath !== params.newPath) throw workspaceFailure('invalid_request', 'Workspace reply path mismatch');
       if (method === 'fs.list' && result.entries.some(entry => entry.path.slice(0, entry.path.lastIndexOf('/') + 1) !== (params.path ? `${params.path}/` : ''))) throw workspaceFailure('invalid_request', 'Workspace listing scope mismatch');
       if (method === 'plugins.list' && JSON.stringify(result.plugins) !== JSON.stringify(captured.plugins)) {
-        revoke(); throw workspaceFailure('plugin_mismatch', 'Workspace plugin metadata changed; reconnect and obtain consent again');
+        const error = workspaceFailure('plugin_mismatch', 'Workspace plugin metadata changed; reconnect and obtain consent again');
+        revoke(error); throw error;
       }
       if (method.startsWith('jobs.') && method !== 'jobs.capabilities') {
         if (result.jobId !== params.jobId || result.scope.projectId !== captured.workspace.id || result.scope.sessionId !== captured.workspace.generation) throw workspaceFailure('invalid_request', 'Job reply identity mismatch');
@@ -127,7 +133,7 @@ export function createWorkspaceClient({url, token, fetch: transport = globalThis
     } catch (failure) {
       if (controller.signal.aborted) { if (method !== 'hello' && method !== 'request.cancel') void cancelRemote(requestId, captured); throw controller.signal.reason; }
       if (failure instanceof WorkspaceError) {
-        if (['workspace_mismatch', 'generation_mismatch', 'authentication_required', 'plugin_mismatch'].includes(failure.code)) revoke();
+        if (['workspace_mismatch', 'generation_mismatch', 'authentication_required', 'plugin_mismatch'].includes(failure.code)) revoke(failure);
         throw failure;
       }
       throw workspaceFailure('transport_failed', 'Workspace transport failed');
@@ -135,7 +141,7 @@ export function createWorkspaceClient({url, token, fetch: transport = globalThis
       clearTimeout(timer); signal?.removeEventListener('abort', onAbort); controller.signal.removeEventListener('abort', rejectAbort); pending.delete(controller);
     }
   }
-  return Object.freeze({
+  const client = Object.freeze({
     async connect(options) {
       revoke();
       const connectSequence = bindingSequence;
@@ -164,7 +170,11 @@ export function createWorkspaceClient({url, token, fetch: transport = globalThis
     getJobEvents: (jobId, after = 0, options) => request('jobs.events', {jobId, after}, options),
     cancelJob: (jobId, options) => request('jobs.cancel', {jobId}, options),
     readJobArtifact: (jobId, artifactId, options) => request('jobs.artifact', {jobId, artifactId}, options),
+    watchJob: (jobId, options) => watchWorkspaceJob(client, jobId, options),
+    waitForJob: (jobId, options) => waitForWorkspaceJob(client, jobId, options),
     disconnect() { revoke(); },
     dispose() { if (closed) return; revoke(); closed = true; token = ''; },
   });
+  registerObservationClient(client, () => connectionController.signal);
+  return client;
 }

@@ -1,4 +1,10 @@
-# API reference — 0.4.0
+# API reference — 0.5.0
+
+Workspace client helpers include connection-bound project edit sessions,
+`project.watchFiles(paths, options)`, `client.watchJob(jobId, options)` and
+`client.waitForJob(jobId, options)`. See [observation](OBSERVATION.md) for event
+shapes, TypeScript types, cancellation and budgets. These are client helpers
+over the existing workspace protocol; they grant no additional capability.
 
 For project scaffolding, inert diagnostics and supervised local execution, see
 [development tools](DEVTOOLS.md). For opt-in `startCommandJob`, `getJob`,
@@ -71,7 +77,7 @@ license eligibility or agreement acceptance. See [LICENSING](LICENSING.md).
 
 | Activation context member | Behavior |
 | --- | --- |
-| `host` | `{id: 'test-host' \| 'workspace-host', version: '0.4.0', protocolVersion: 1}` |
+| `host` | `{id: 'test-host' \| 'workspace-host', version: '0.5.0', protocolVersion: 1}` |
 | `pluginId`, `scope` | Manifest ID and opaque host `{projectId, sessionId}` |
 | `grants` | Frozen intersection of host grants and manifest permissions |
 | `signal` | Aborted on deactivation, host disposal or activation timeout |

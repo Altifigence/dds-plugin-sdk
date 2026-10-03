@@ -105,15 +105,15 @@ test('verifies open and proprietary releases without importing code, extracting 
   }
 });
 
-test('the previous 0.3 metadata is still verified exactly without broadening its declared peer range', async t => {
+for (const range of ['>=0.3.0 <0.4.0', '>=0.4.0 <0.5.0']) test(`previous ${range} metadata is verified without broadening its declared peer range`, async t => {
   const f = await fixture(t);
   const list = entries(f.archive), item = list.find(entry => name(entry) === 'package.json');
-  const metadata = JSON.parse(item.bytes); metadata.peerDependencies['@altifigence/dds-plugin-sdk'] = '>=0.3.0 <0.4.0';
+  const metadata = JSON.parse(item.bytes); metadata.peerDependencies['@altifigence/dds-plugin-sdk'] = range;
   item.bytes = Buffer.from(JSON.stringify(metadata, null, 2) + '\n');
   await installPair(f, build(list), receipt => reflectFiles(receipt, list));
   const receipt = await verifyPluginArchive(f.packed.archivePath);
   assert.equal(receipt.pluginId, 'verify-example');
-  assert.match(item.bytes.toString(), />=0\.3\.0 <0\.4\.0/);
+  assert.equal(JSON.parse(item.bytes).peerDependencies['@altifigence/dds-plugin-sdk'], range);
 });
 
 test('an independently pinned digest rejects a replaced but otherwise valid release', async t => {

@@ -11,9 +11,10 @@
 | Browser-only DDS host | Native workspace transport is unavailable |
 | Language providers | Diagnostics plus completion, hover, definition, references and document symbols in SDK hosts since 0.3.0; no released DDS editor bridge is implied |
 | Project edit sessions | Client helpers in 0.3.0 over unchanged workspace protocol v1, including 0.2.x servers |
-| Download verification | Node API/CLI since 0.3.1; 0.4.0 accepts exact 0.3.x and 0.4.x package metadata; no extraction, code execution or publisher authentication |
+| Download verification | Node API/CLI since 0.3.1; 0.5.0 accepts exact 0.3.x, 0.4.x and 0.5.x package metadata; no extraction, code execution or publisher authentication |
 | Development tools | `init`, `doctor`, `dev` since 0.4.0; local Node tools, explicit trusted-code execution |
 | Command jobs | Opt-in SDK host/client extension since 0.4.0; progress/logs/UTF-8 artifacts; v1 hello unchanged |
+| File and job observation | Client helpers since 0.5.0; existing file reads on 0.3.2/0.4 hosts, job reads on enabled 0.4 hosts; no new wire methods |
 
 This is a developer preview. Pin the exact package release and read the changelog
 before updating. SDK, protocol, plugin and DDS product versions are distinct.
@@ -53,3 +54,14 @@ previous `>=0.3.0 <0.4.0` metadata, but that does not make an old archive instal
 on 0.4: its publisher must validate against 0.4 and repack a new plugin version.
 Neither tool infers compatibility from code. DDS application/Windows releases
 remain separately versioned and are not changed by this SDK release.
+
+0.5.0 adds pull-driven observation without changing hello, workspace protocol,
+manifest or job contracts. File observers keep edit snapshots intact; job
+observers keep command execution separate from waiting and reconnecting.
+Existing 0.4 job clients and 0.3.2 file clients keep their original methods on a
+0.5 host. New clients fail directly when an old host lacks jobs; they never
+fall back to submitting a command. See [observation](OBSERVATION.md).
+
+New 0.5 plugin archives declare `>=0.5.0 <0.6.0`. Archive verification preserves
+the exact original 0.3/0.4 peer metadata; it does not make those archives
+installable on 0.5. Publishers must validate and repack a new plugin version.

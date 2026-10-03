@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.5.0 — 2026-10-03
+
+- Add `project.watchFiles()` for 1–16 explicit file paths, with initial,
+  created, changed and deleted revision events. Sampling never replaces an
+  edit session's retained snapshot or saves a draft.
+- Add `client.watchJob()` and `waitForJob()` over existing job requests, with
+  bounded event pages, dropped-event reporting and explicit cursor resumption.
+  Waiting never submits or cancels a command.
+- Bind observers to their client connection with one pending read, eight
+  shared slots, deadlines, AbortSignal support and deterministic disposal.
+  Preserve authentication/revocation errors and ignore late replies.
+- Keep workspace protocol v1 and 0.3.2 file / 0.4 job host compatibility.
+  New archives declare `>=0.5.0 <0.6.0`; verification accepts exact 0.3 and 0.4
+  metadata without broadening old peers. Validate and repack for 0.5 installs.
+- Include TypeScript declarations, an installed-package observation example
+  and lifecycle, event-order, draft-conflict and compatibility tests.
+
+This is a developer preview. SDK helpers do not add DDS product UI, durable jobs,
+recursive filesystem watchers or new permission grants.
+
 ## 0.4.0
 
 - Add `dds-plugin init`, `doctor` and `dev` plus Node APIs. Scaffolds pin the SDK

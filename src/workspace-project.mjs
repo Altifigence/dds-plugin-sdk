@@ -1,4 +1,5 @@
 import {copyWorkspaceJson, exactObject, requireFileContent, requireWorkspacePath, WORKSPACE_LIMITS, workspaceFailure} from './workspace-protocol.mjs';
+import {watchWorkspaceFiles} from './workspace-observation.mjs';
 
 /** Apply non-overlapping UTF-16 edits to one immutable text snapshot. No I/O. */
 export function applyTextEdits(content, value) {
@@ -107,6 +108,7 @@ export function createWorkspaceProject(client) {
   }
   return Object.freeze({
     get workspace() { assertCurrent(); return binding.workspace; },
+    watchFiles(paths, value) {assertCurrent(); return watchWorkspaceFiles(client, paths, value, controller.signal);},
     async listFiles(path = '', value) {
       requireWorkspacePath(path, true);
       const requestOptions = options(value);
