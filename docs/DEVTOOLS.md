@@ -17,11 +17,12 @@ npx --no-install dds-plugin init ../my-plugin --id my-plugin --publisher example
 cd ../my-plugin
 npm install --ignore-scripts
 npm run doctor
+npm test
 ```
 
 The destination must not exist and its parent must exist. `init` never replaces
 files, installs dependencies, runs scripts or imports code. It writes a command
-plugin, manifest, disclosure, explicit packaging file list, development
+plugin and test, manifest, disclosure, explicit packaging file list, development
 `package.json`, README, `.gitignore`, Apache-2.0 LICENSE and NOTICE. The generated
 SDK dependency is pinned to this release's GitHub archive. Use `--name` for the
 display name; IDs use lowercase identifiers such as `my-plugin`.

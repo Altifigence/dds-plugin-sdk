@@ -42,6 +42,7 @@ try {
   assert.match(scaffoldMetadata.dependencies[metadata.name], new RegExp(`/v${metadata.version.replaceAll('.', '\\.')}\\/`));
   const diagnosed = JSON.parse(run(process.execPath, [devCli, 'doctor', 'scaffold', '--json'], consumer));
   assert.equal(diagnosed.ok, true);
+  run(process.execPath, ['--test', 'plugin.test.mjs'], join(consumer, 'scaffold'));
   for (const job of [false, true]) {
     const output = run(process.execPath, [devCli, 'dev', 'scaffold', '--trust-local-code', '--command', 'greet', '--input', JSON.stringify({name:'Packed'}), ...(job ? ['--job'] : [])], consumer);
     assert.ok(output.includes('Hello, Packed!')); assert.ok(output.includes('"ok": true'));
