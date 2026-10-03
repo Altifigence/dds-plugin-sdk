@@ -9,6 +9,14 @@ export const LIMITS = Object.freeze({
   messageLength: 2_048,
   maxRegistrations: 32,
   maxPendingRequests: 64,
+  maxCommands: 64,
+  commandBytes: 16_384,
+  jsonBytes: 262_144,
+  jsonDepth: 16,
+  jsonNodes: 10_000,
+  jsonArrayItems: 1_000,
+  jsonObjectProperties: 128,
+  maxFiles: 1_000,
   defaultTimeoutMs: 5_000,
   maxTimeoutMs: 30_000,
 });
@@ -24,6 +32,8 @@ export const ErrorCode = Object.freeze({
   DISPOSED: 'disposed',
   PROVIDER_FAILED: 'provider_failed',
   PROVIDER_UNAVAILABLE: 'provider_unavailable',
+  CAPABILITY_UNAVAILABLE: 'capability_unavailable',
+  CONFLICT: 'conflict',
 });
 
 export class PluginSdkError extends Error {

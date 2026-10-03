@@ -1,0 +1,36 @@
+{
+  "name": "Hello Ocean",
+  "colors": {
+    "light": {
+      "backdrop": "#dbe8ef", "navigation": "#edf5f8", "tool": "#f3f8fb",
+      "main": "#ffffff", "text": "#183b4e", "muted": "#486477"
+    },
+    "dark": {
+      "backdrop": "#0c1922", "navigation": "#102430", "tool": "#17303e",
+      "main": "#1c3949", "text": "#e8f4fb", "muted": "#adcadb"
+    },
+    "tokens": {
+      "light": {
+        "search": "#e1eef4", "searchText": "#183b4e", "searchPlaceholder": "#486477", "searchBorder": "#8aaabc",
+        "selection": "#c9e5f4", "selectionText": "#133649", "tabActive": "#ffffff", "tabInactive": "#e1eef4",
+        "tabText": "#183b4e", "rail": "#dbe8ef", "panelBorder": "#acc8d8", "popover": "#f3f8fb", "focus": "#006d9e",
+        "success": "#137344", "warning": "#865a00", "danger": "#ae2d40", "info": "#006d9e", "aiBall": "#b7dfed",
+        "hintsBoxBackground": "#edf5f8", "hintsBoxDetailsBackground": "#ffffff", "hintsBoxText": "#183b4e",
+        "hintsBoxDetailsText": "#183b4e", "hintsBoxMutedText": "#486477", "hintsBoxSelectedBackground": "#c9e5f4",
+        "hintsBoxSelectedText": "#133649", "hintsBoxHoverBackground": "#dbe8ef", "hintsBoxHoverText": "#183b4e",
+        "gdsBackground": "#e4f0f5"
+      },
+      "dark": {
+        "search": "#214556", "searchText": "#e8f4fb", "searchPlaceholder": "#adcadb", "searchBorder": "#547b91",
+        "selection": "#2e5e77", "selectionText": "#ffffff", "tabActive": "#1c3949", "tabInactive": "#102430",
+        "tabText": "#e8f4fb", "rail": "#0c1922", "panelBorder": "#41667d", "popover": "#17303e", "focus": "#7ed3fa",
+        "success": "#79d6a2", "warning": "#f1d084", "danger": "#ff99aa", "info": "#7ed3fa", "aiBall": "#347894",
+        "hintsBoxBackground": "#17303e", "hintsBoxDetailsBackground": "#1c3949", "hintsBoxText": "#e8f4fb",
+        "hintsBoxDetailsText": "#e8f4fb", "hintsBoxMutedText": "#adcadb", "hintsBoxSelectedBackground": "#2e5e77",
+        "hintsBoxSelectedText": "#ffffff", "hintsBoxHoverBackground": "#214556", "hintsBoxHoverText": "#e8f4fb",
+        "gdsBackground": "#081722"
+      }
+    },
+    "metrics": { "panelRadius": 16, "controlRadius": 8, "popoverRadius": 12, "popoverOpacity": 0.9 }
+  }
+}

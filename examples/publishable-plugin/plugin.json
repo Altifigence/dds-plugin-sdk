@@ -1,0 +1,19 @@
+{
+  "manifestVersion": 2,
+  "id": "hello-publisher",
+  "name": "Hello Publisher",
+  "publisher": "example",
+  "version": "1.0.0",
+  "protocolVersion": 1,
+  "entry": "./plugin.mjs",
+  "runtime": "workspace",
+  "capabilities": ["commands"],
+  "permissions": [],
+  "supportedHosts": ["test-host", "workspace-host"],
+  "license": "Apache-2.0",
+  "source": {
+    "visibility": "open",
+    "repository": "https://github.com/Altifigence/dds-plugin-sdk",
+    "licenseFile": "LICENSE"
+  }
+}

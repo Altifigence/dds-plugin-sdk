@@ -1,1 +1,1 @@
-export const SCHEMAS: Readonly<Record<'manifest' | 'diagnostics-request' | 'diagnostics-result' | 'error', Readonly<Record<string, unknown>>>>;
+export const SCHEMAS: Readonly<Record<'manifest' | 'command' | 'json-value' | 'theme' | 'diagnostics-request' | 'diagnostics-result' | 'error', Readonly<Record<string, unknown>>>>;

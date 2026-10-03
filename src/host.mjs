@@ -1,0 +1,286 @@
+import { parseCommandDefinition, parseCommandInput, parseDiagnosticsRequest, parseDocumentSnapshot, parseExpectedRevision, parseFileContent, parseGrants, parseJsonValue, parseManifest, parseScope, parseWorkspaceList, parseWorkspacePath, parseWorkspaceRead, parseWorkspaceWrite } from './contracts.mjs';
+import { createDiagnosticsRegistry } from './lifecycle.mjs';
+import { ErrorCode, LIMITS, PluginSdkError } from './limits.mjs';
+
+const hostFailures = new WeakSet();
+const error = (code, message) => {
+  const failure = new PluginSdkError(code, message);
+  hostFailures.add(failure);
+  return failure;
+};
+
+/** Executes trusted local plugins in this process. This developer host is not a sandbox. */
+export function createPluginHost({hostId = 'test-host', scope = {projectId: 'example-project', sessionId: 'example-session'}, grants = [], workspace, backends = {}} = {}) {
+  if (!['test-host', 'workspace-host'].includes(hostId)) throw error(ErrorCode.UNSUPPORTED_HOST, 'Unknown plugin host');
+  scope = parseScope(scope);
+  grants = parseGrants(grants);
+  if (workspace !== undefined && (!workspace || typeof workspace !== 'object')) throw error(ErrorCode.INVALID_CONTRACT, 'Expected a workspace port');
+  if (!backends || typeof backends !== 'object' || Array.isArray(backends) || ![Object.prototype, null].includes(Object.getPrototypeOf(backends))) throw error(ErrorCode.INVALID_CONTRACT, 'Expected named backend handlers');
+  const backendMap = new Map();
+  for (const name of Reflect.ownKeys(backends)) {
+    const descriptor = Object.getOwnPropertyDescriptor(backends, name);
+    if (typeof name !== 'string' || !/^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$/.test(name) || name.length > 128 || !descriptor || !('value' in descriptor) || typeof descriptor.value !== 'function') throw error(ErrorCode.INVALID_CONTRACT, 'Invalid named backend handler');
+    backendMap.set(name, descriptor.value);
+  }
+  if (backendMap.size > LIMITS.maxRegistrations) throw error(ErrorCode.BUDGET_EXCEEDED, 'Backend handler limit exceeded');
+  let document;
+  let revision = 0;
+  let nextRequest = 0;
+  let disposed = false;
+  let commandCount = 0;
+  const plugins = new Map();
+  const pending = new Set();
+  const registry = createDiagnosticsRegistry({isCurrent(request) {
+    return !!document && request.scope.projectId === scope.projectId && request.scope.sessionId === scope.sessionId &&
+      ['uri', 'languageId', 'modelVersion', 'workspaceRevision', 'text'].every(key => request.snapshot[key] === document[key]);
+  }});
+
+  function assertOpen() { if (disposed) throw error(ErrorCode.DISPOSED, 'Plugin host is disposed'); }
+  function assertActive(state) { assertOpen(); if (!state.active || state.controller.signal.aborted) throw error(ErrorCode.DISPOSED, 'Plugin is deactivated'); }
+  function permit(state, permission) {
+    assertActive(state);
+    if (!state.grants.includes(permission)) throw error(ErrorCode.PERMISSION_DENIED, 'Required plugin permission was not granted');
+  }
+  function checkedOptions(options = {}) {
+    if (!options || typeof options !== 'object' || Array.isArray(options) || ![Object.prototype, null].includes(Object.getPrototypeOf(options))) throw error(ErrorCode.INVALID_CONTRACT, 'Expected request options');
+    for (const key of Reflect.ownKeys(options)) {
+      const descriptor = Object.getOwnPropertyDescriptor(options, key);
+      if (!['signal', 'timeoutMs', 'expectedRevision'].includes(key) || !descriptor || !('value' in descriptor) || !descriptor.enumerable) throw error(ErrorCode.INVALID_CONTRACT, 'Invalid request options');
+    }
+    const {signal, timeoutMs = LIMITS.defaultTimeoutMs} = options;
+    if (signal !== undefined && !(signal instanceof AbortSignal)) throw error(ErrorCode.INVALID_CONTRACT, 'Expected AbortSignal');
+    if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > LIMITS.maxTimeoutMs) throw error(ErrorCode.INVALID_CONTRACT, 'timeoutMs must be 1..30000');
+    return {signal, timeoutMs};
+  }
+  async function run(state, operation, options, {entry, validate = parseJsonValue, trusted = false} = {}) {
+    assertActive(state);
+    const {signal, timeoutMs} = checkedOptions(options);
+    if (signal?.aborted) throw error(ErrorCode.CANCELLED, 'Plugin operation cancelled');
+    if (pending.size >= LIMITS.maxPendingRequests) throw error(ErrorCode.BUDGET_EXCEEDED, 'Pending operation limit exceeded');
+    const controller = new AbortController();
+    pending.add(controller); entry?.pending.add(controller);
+    const abortCaller = () => controller.abort(error(ErrorCode.CANCELLED, 'Plugin operation cancelled'));
+    const abortPlugin = () => controller.abort(error(ErrorCode.DISPOSED, 'Plugin deactivated'));
+    signal?.addEventListener('abort', abortCaller, {once: true});
+    state.controller.signal.addEventListener('abort', abortPlugin, {once: true});
+    let onAbort;
+    const aborted = new Promise((_, reject) => {onAbort = () => reject(controller.signal.reason); controller.signal.addEventListener('abort', onAbort, {once: true});});
+    const timer = setTimeout(() => controller.abort(error(ErrorCode.BUDGET_EXCEEDED, 'Plugin operation timed out')), timeoutMs);
+    try {
+      const operationPromise = Promise.resolve().then(() => {
+        assertActive(state);
+        if (controller.signal.aborted) throw controller.signal.reason;
+        return operation(controller.signal);
+      }).catch(failure => {
+        if (controller.signal.aborted) throw controller.signal.reason;
+        if (hostFailures.has(failure)) throw failure;
+        if (trusted && failure && typeof failure === 'object') {
+          const mappings = {invalid_request: ErrorCode.INVALID_CONTRACT, unsafe_path: ErrorCode.INVALID_CONTRACT, unavailable: ErrorCode.CAPABILITY_UNAVAILABLE, not_found: ErrorCode.CAPABILITY_UNAVAILABLE};
+          const code = Object.getOwnPropertyDescriptor(failure, 'code');
+          if (code && 'value' in code) {
+            const mapped = Object.values(ErrorCode).includes(code.value) ? code.value : Object.hasOwn(mappings, code.value) ? mappings[code.value] : undefined;
+            if (mapped) throw error(mapped, 'Host port operation failed');
+          }
+        }
+        throw error(ErrorCode.PROVIDER_FAILED, 'Plugin operation failed');
+      });
+      const result = await Promise.race([operationPromise, aborted]);
+      assertActive(state);
+      if (controller.signal.aborted) throw controller.signal.reason;
+      return validate(result);
+    } finally {
+      clearTimeout(timer); signal?.removeEventListener('abort', abortCaller);
+      state.controller.signal.removeEventListener('abort', abortPlugin);
+      controller.signal.removeEventListener('abort', onAbort);
+      pending.delete(controller); entry?.pending.delete(controller);
+    }
+  }
+
+  function cleanup(state) {
+    if (!state.active) return;
+    state.active = false;
+    state.controller.abort(error(ErrorCode.DISPOSED, 'Plugin deactivated'));
+    for (const registration of state.registrations) registration.dispose();
+    state.registrations.clear();
+    // Host-owned registrations are always cleaned even if a plugin's disposer throws.
+    const disposable = state.disposable;
+    state.disposable = undefined;
+    if (disposable) {
+      try { disposable.dispose(); } catch { /* provider cleanup cannot restore host registrations */ }
+    }
+  }
+
+  async function activate(plugin) {
+    assertOpen();
+    const manifest = parseManifest(plugin?.manifest);
+    if (typeof plugin?.activate !== 'function') throw error(ErrorCode.INVALID_CONTRACT, 'Expected a plugin activation function');
+    if (!manifest.supportedHosts.includes(hostId)) throw error(ErrorCode.UNSUPPORTED_HOST, 'Plugin does not support this host');
+    if (plugins.has(manifest.id)) throw error(ErrorCode.INVALID_CONTRACT, 'Plugin ID is already active');
+    if (plugins.size >= LIMITS.maxRegistrations) throw error(ErrorCode.BUDGET_EXCEEDED, 'Active plugin limit exceeded');
+    const effectiveGrants = Object.freeze(grants.filter(grant => manifest.permissions.includes(grant)));
+    const state = {active: true, ready: false, manifest, grants: effectiveGrants, commands: new Map(), registrations: new Set(), controller: new AbortController(), disposable: undefined};
+    plugins.set(manifest.id, state);
+    const context = Object.freeze({
+      host: Object.freeze({id: hostId, version: '0.2.0', protocolVersion: 1}),
+      pluginId: manifest.id,
+      scope,
+      grants: effectiveGrants,
+      signal: state.controller.signal,
+      registerDiagnosticsProvider(selector, provider) {
+        assertOpen();
+        if (!state.active) throw error(ErrorCode.DISPOSED, 'Plugin is deactivated');
+        if (!manifest.capabilities.includes('diagnostics')) throw error(ErrorCode.PERMISSION_DENIED, 'Diagnostics capability was not declared');
+        if (!effectiveGrants.includes('document.read') || !effectiveGrants.includes('diagnostics.publish')) {
+          throw error(ErrorCode.PERMISSION_DENIED, 'Diagnostics require document.read and diagnostics.publish grants');
+        }
+        let registration;
+        try { registration = registry.register(manifest.id, selector, provider); }
+        catch (failure) {
+          throw error(failure instanceof PluginSdkError ? failure.code : ErrorCode.PROVIDER_FAILED, 'Diagnostics provider registration failed');
+        }
+        state.registrations.add(registration);
+        return Object.freeze({dispose() {
+          registration.dispose();
+          state.registrations.delete(registration);
+        }});
+      },
+      registerCommand(metadata, handler) {
+        assertActive(state);
+        if (!manifest.capabilities.includes('commands')) throw error(ErrorCode.PERMISSION_DENIED, 'Commands capability was not declared');
+        let command;
+        try { command = parseCommandDefinition(metadata); }
+        catch (failure) { throw error(failure instanceof PluginSdkError ? failure.code : ErrorCode.PROVIDER_FAILED, 'Command registration failed'); }
+        if (typeof handler !== 'function') throw error(ErrorCode.INVALID_CONTRACT, 'Expected a command handler');
+        if (state.commands.has(command.id)) throw error(ErrorCode.INVALID_CONTRACT, 'Command ID is already registered for this plugin');
+        if (commandCount >= LIMITS.maxCommands) throw error(ErrorCode.BUDGET_EXCEEDED, 'Command registration limit exceeded');
+        const entry = {command, handler, pending: new Set(), active: true};
+        state.commands.set(command.id, entry); commandCount++;
+        const registration = Object.freeze({dispose() {
+          if (!entry.active) return;
+          entry.active = false; state.commands.delete(command.id); commandCount--;
+          for (const controller of entry.pending) controller.abort(error(ErrorCode.DISPOSED, 'Command registration is disposed'));
+          state.registrations.delete(registration);
+        }});
+        state.registrations.add(registration);
+        return registration;
+      },
+      workspace: Object.freeze({
+        readFile(path, options = {}) {
+          permit(state, 'workspace.read'); path = parseWorkspacePath(path);
+          if (!workspace || typeof workspace.readFile !== 'function') throw error(ErrorCode.CAPABILITY_UNAVAILABLE, 'Workspace read port is unavailable');
+          return run(state, signal => workspace.readFile(path, Object.freeze({signal})), options, {validate: value => parseWorkspaceRead(value, path), trusted: true});
+        },
+        writeFile(path, content, options) {
+          permit(state, 'workspace.write'); path = parseWorkspacePath(path); content = parseFileContent(content);
+          if (!options || !Object.hasOwn(options, 'expectedRevision')) throw error(ErrorCode.INVALID_CONTRACT, 'expectedRevision is required for writes');
+          const expectedRevision = parseExpectedRevision(options.expectedRevision);
+          if (!workspace || typeof workspace.writeFile !== 'function') throw error(ErrorCode.CAPABILITY_UNAVAILABLE, 'Workspace write port is unavailable');
+          return run(state, signal => workspace.writeFile(path, content, Object.freeze({expectedRevision, signal})), options, {validate: value => parseWorkspaceWrite(value, path), trusted: true});
+        },
+        listFiles(path = '', options = {}) {
+          permit(state, 'workspace.read'); path = parseWorkspacePath(path, {allowRoot: true});
+          if (!workspace || typeof workspace.listFiles !== 'function') throw error(ErrorCode.CAPABILITY_UNAVAILABLE, 'Workspace list port is unavailable');
+          return run(state, signal => workspace.listFiles(path, Object.freeze({signal})), options, {validate: value => parseWorkspaceList(value, path), trusted: true});
+        },
+      }),
+      backends: Object.freeze({invoke(id, input, options = {}) {
+        permit(state, 'backend.invoke');
+        if (typeof id !== 'string' || !backendMap.has(id)) throw error(ErrorCode.CAPABILITY_UNAVAILABLE, 'Named backend is unavailable');
+        const value = parseJsonValue(input);
+        return run(state, signal => backendMap.get(id)(value, Object.freeze({signal, pluginId: manifest.id, scope})), options, {trusted: true});
+      }}),
+    });
+    const signal = state.controller.signal;
+    let onAbort;
+    const aborted = new Promise((_, reject) => {
+      onAbort = () => reject(signal.reason);
+      signal.addEventListener('abort', onAbort, {once: true});
+    });
+    const timer = setTimeout(() => state.controller.abort(error(ErrorCode.BUDGET_EXCEEDED, 'Plugin activation timed out')), LIMITS.defaultTimeoutMs);
+    const operation = Promise.resolve().then(() => {
+      if (signal.aborted) throw signal.reason;
+      return plugin.activate(context);
+    }).then(result => {
+      if (result !== undefined && (!result || typeof result.dispose !== 'function')) throw error(ErrorCode.INVALID_CONTRACT, 'Activation must return a Disposable or undefined');
+      if (!state.active || disposed || signal.aborted) {
+        if (result) { try { result.dispose(); } catch { /* host already closed */ } }
+        throw signal.reason ?? error(ErrorCode.DISPOSED, 'Plugin deactivated during activation');
+      }
+      return result;
+    });
+    try {
+      const result = await Promise.race([operation, aborted]);
+      // Disposal can run between the operation's resolution and this continuation.
+      if (!state.active || disposed || signal.aborted) {
+        if (result) { try { result.dispose(); } catch { /* host already closed */ } }
+        throw signal.reason ?? error(ErrorCode.DISPOSED, 'Plugin deactivated during activation');
+      }
+      state.disposable = result;
+      state.ready = true;
+      return Object.freeze({dispose() {
+        cleanup(state);
+        if (plugins.get(manifest.id) === state) plugins.delete(manifest.id);
+      }});
+    } catch (failure) {
+      cleanup(state);
+      if (plugins.get(manifest.id) === state) plugins.delete(manifest.id);
+      if (hostFailures.has(failure)) throw failure;
+      throw error(ErrorCode.PROVIDER_FAILED, 'Plugin activation failed');
+    } finally {
+      clearTimeout(timer);
+      signal.removeEventListener('abort', onAbort);
+    }
+  }
+
+  return Object.freeze({
+    activate,
+    setDocument(value) {
+      assertOpen();
+      const updated = parseDocumentSnapshot(value);
+      if (document && document.uri === updated.uri && document.workspaceRevision === updated.workspaceRevision &&
+          updated.modelVersion <= document.modelVersion &&
+          (updated.text !== document.text || updated.languageId !== document.languageId)) {
+        throw error(ErrorCode.INVALID_CONTRACT, 'Changed document requires a newer modelVersion or workspaceRevision');
+      }
+      registry.invalidate();
+      document = updated;
+      revision++;
+      return updated;
+    },
+    async requestDiagnostics(options = {}) {
+      assertOpen();
+      if (!document) throw error(ErrorCode.INVALID_CONTRACT, 'Set a document before requesting diagnostics');
+      const currentRevision = revision;
+      const result = await registry.request(parseDiagnosticsRequest({protocolVersion: 1, requestId: `request-${++nextRequest}`, scope, snapshot: document}), options);
+      if (currentRevision !== revision) throw error(ErrorCode.STALE_SNAPSHOT, 'Document changed while diagnostics were pending');
+      return result;
+    },
+    listPlugins() {assertOpen(); return Object.freeze([...plugins.values()].filter(state => state.ready && state.active).map(state => state.manifest));},
+    listCommands() {
+      assertOpen();
+      return Object.freeze([...plugins.values()].filter(state => state.ready && state.active).flatMap(state => [...state.commands.values()].map(entry => Object.freeze({pluginId: state.manifest.id, ...entry.command}))));
+    },
+    async executeCommand(pluginId, commandId, input, options = {}) {
+      assertOpen();
+      const state = plugins.get(pluginId);
+      if (!state || !state.active || !state.ready) throw error(ErrorCode.DISPOSED, 'Plugin is not active');
+      const entry = state.commands.get(commandId);
+      if (!entry) throw error(ErrorCode.CAPABILITY_UNAVAILABLE, 'Command is unavailable');
+      const value = parseCommandInput(input, entry.command);
+      return run(state, signal => entry.handler(value, Object.freeze({signal})), options, {entry});
+    },
+    deactivate(pluginId) {
+      assertOpen();
+      const state = plugins.get(pluginId);
+      if (state) { cleanup(state); plugins.delete(pluginId); }
+    },
+    dispose() {
+      if (disposed) return;
+      disposed = true;
+      for (const state of plugins.values()) cleanup(state);
+      plugins.clear();
+      registry.dispose();
+      document = undefined;
+    },
+  });
+}

@@ -3,7 +3,9 @@ import { ErrorCode, PluginSdkError } from './limits.mjs';
 
 export { ErrorCode, LIMITS, PluginSdkError, PROTOCOL_VERSION } from './limits.mjs';
 export { parseManifest, parseDocumentSnapshot, parseDiagnosticsRequest, parseDiagnosticsResult, createDiagnosticsResult } from './contracts.mjs';
+export { parseCommandDefinition, parseJsonValue, parseLicenseExpression, parseWorkspacePath } from './contracts.mjs';
 export { createDiagnosticsRegistry } from './lifecycle.mjs';
+export { createPluginHost } from './host.mjs';
 
 /** Declare an ESM plugin. Activation is performed by a host with explicit grants. */
 export function definePlugin(manifest, activate) {

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.1.0/schemas/error.schema.json",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.2.0/schemas/error.schema.json",
   "title": "error",
   "type": "object",
   "properties": {
@@ -15,7 +15,9 @@
         "budget_exceeded",
         "disposed",
         "provider_failed",
-        "provider_unavailable"
+        "provider_unavailable",
+        "capability_unavailable",
+        "conflict"
       ]
     },
     "message": {

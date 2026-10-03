@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dds-theme version="2" name="Hello Ocean">
+  <palette mode="light">
+    <color key="backdrop" value="#dbe8ef"/>
+    <color key="navigation" value="#edf5f8"/>
+    <color key="tool" value="#f3f8fb"/>
+    <color key="main" value="#ffffff"/>
+    <color key="text" value="#183b4e"/>
+    <color key="muted" value="#486477"/>
+  </palette>
+  <palette mode="dark">
+    <color key="backdrop" value="#0c1922"/>
+    <color key="navigation" value="#102430"/>
+    <color key="tool" value="#17303e"/>
+    <color key="main" value="#1c3949"/>
+    <color key="text" value="#e8f4fb"/>
+    <color key="muted" value="#adcadb"/>
+  </palette>
+  <tokens mode="light">
+    <color key="search" value="#e1eef4"/>
+    <color key="searchText" value="#183b4e"/>
+    <color key="searchPlaceholder" value="#486477"/>
+    <color key="searchBorder" value="#8aaabc"/>
+    <color key="selection" value="#c9e5f4"/>
+    <color key="selectionText" value="#133649"/>
+    <color key="tabActive" value="#ffffff"/>
+    <color key="tabInactive" value="#e1eef4"/>
+    <color key="tabText" value="#183b4e"/>
+    <color key="rail" value="#dbe8ef"/>
+    <color key="panelBorder" value="#acc8d8"/>
+    <color key="popover" value="#f3f8fb"/>
+    <color key="focus" value="#006d9e"/>
+    <color key="success" value="#137344"/>
+    <color key="warning" value="#865a00"/>
+    <color key="danger" value="#ae2d40"/>
+    <color key="info" value="#006d9e"/>
+    <color key="aiBall" value="#b7dfed"/>
+    <color key="hintsBoxBackground" value="#edf5f8"/>
+    <color key="hintsBoxDetailsBackground" value="#ffffff"/>
+    <color key="hintsBoxText" value="#183b4e"/>
+    <color key="hintsBoxDetailsText" value="#183b4e"/>
+    <color key="hintsBoxMutedText" value="#486477"/>
+    <color key="hintsBoxSelectedBackground" value="#c9e5f4"/>
+    <color key="hintsBoxSelectedText" value="#133649"/>
+    <color key="hintsBoxHoverBackground" value="#dbe8ef"/>
+    <color key="hintsBoxHoverText" value="#183b4e"/>
+    <color key="gdsBackground" value="#e4f0f5"/>
+  </tokens>
+  <tokens mode="dark">
+    <color key="search" value="#214556"/>
+    <color key="searchText" value="#e8f4fb"/>
+    <color key="searchPlaceholder" value="#adcadb"/>
+    <color key="searchBorder" value="#547b91"/>
+    <color key="selection" value="#2e5e77"/>
+    <color key="selectionText" value="#ffffff"/>
+    <color key="tabActive" value="#1c3949"/>
+    <color key="tabInactive" value="#102430"/>
+    <color key="tabText" value="#e8f4fb"/>
+    <color key="rail" value="#0c1922"/>
+    <color key="panelBorder" value="#41667d"/>
+    <color key="popover" value="#17303e"/>
+    <color key="focus" value="#7ed3fa"/>
+    <color key="success" value="#79d6a2"/>
+    <color key="warning" value="#f1d084"/>
+    <color key="danger" value="#ff99aa"/>
+    <color key="info" value="#7ed3fa"/>
+    <color key="aiBall" value="#347894"/>
+    <color key="hintsBoxBackground" value="#17303e"/>
+    <color key="hintsBoxDetailsBackground" value="#1c3949"/>
+    <color key="hintsBoxText" value="#e8f4fb"/>
+    <color key="hintsBoxDetailsText" value="#e8f4fb"/>
+    <color key="hintsBoxMutedText" value="#adcadb"/>
+    <color key="hintsBoxSelectedBackground" value="#2e5e77"/>
+    <color key="hintsBoxSelectedText" value="#ffffff"/>
+    <color key="hintsBoxHoverBackground" value="#214556"/>
+    <color key="hintsBoxHoverText" value="#e8f4fb"/>
+    <color key="gdsBackground" value="#081722"/>
+  </tokens>
+  <metrics>
+    <number key="panelRadius" value="16"/>
+    <number key="controlRadius" value="8"/>
+    <number key="popoverRadius" value="12"/>
+    <number key="popoverOpacity" value="0.9"/>
+  </metrics>
+</dds-theme>

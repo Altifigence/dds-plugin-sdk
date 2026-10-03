@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src 'none'; script-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Hello Ocean — DDS theme preview</title>
+<style>
+*{box-sizing:border-box}body{margin:0;padding:32px;background:#eef2f5;color:#173346;font:15px/1.5 system-ui,sans-serif}header{max-width:1320px;margin:0 auto 24px}h1{margin:0;font-size:28px}header p{max-width:780px}a{color:#00678e;font-weight:600}h2{margin:0 0 14px;font-size:18px}.previews{max-width:1320px;margin:auto;display:grid;grid-template-columns:1fr 1fr;gap:24px}.mode{padding:20px;background:var(--backdrop);color:var(--text);border-radius:var(--panelRadius)}.workspace{display:grid;grid-template-columns:130px minmax(0,1fr);border-radius:var(--controlRadius);overflow:hidden;border:1px solid var(--panelBorder);min-height:440px}aside{background:var(--navigation);padding:18px 10px}aside strong{padding:0 8px}.file{padding:7px 8px;margin:8px 0;border-radius:var(--controlRadius);font-size:13px}.selected{background:var(--selection);color:var(--selectionText)}main{background:var(--main);min-width:0}.tabs{display:flex;background:var(--tool);color:var(--tabText);font-size:12px}.tabs span{padding:12px 14px;background:var(--tabInactive)}.tabs .active{background:var(--tabActive)}.editor{padding:18px}label{display:block;font-size:12px;color:var(--muted)}input{margin-top:5px;width:100%;border:0;border-radius:var(--controlRadius);padding:10px;background:var(--search);color:var(--searchText);font:inherit}input::placeholder{color:var(--searchPlaceholder)}input:focus-visible{outline:2px solid var(--focus);outline-offset:2px}pre{margin:20px 0;font:12px/1.8 ui-monospace,monospace;white-space:pre-wrap}.muted{color:var(--muted)}.keyword{color:var(--info)}.hints{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--panelBorder);border-radius:var(--popoverRadius);overflow:hidden}.suggestions{padding:8px;background:var(--hintsBoxBackground);color:var(--hintsBoxText)}.suggestions div{padding:4px 8px}.hint-selected{background:var(--hintsBoxSelectedBackground);color:var(--hintsBoxSelectedText);border-radius:var(--controlRadius)}small{display:block;margin-top:8px;color:var(--hintsBoxMutedText);font-size:11px}.details{padding:12px;background:var(--hintsBoxDetailsBackground);color:var(--hintsBoxDetailsText)}.canvas{position:relative;height:70px;margin-top:16px;background:var(--gdsBackground);border-radius:var(--controlRadius);overflow:hidden}.canvas i{position:absolute;width:85px;height:32px;top:14px;left:20px;background:var(--info);opacity:.65}.canvas i+i{left:65px;top:28px;background:var(--success)}.canvas small{position:absolute;right:8px;bottom:4px;color:var(--muted)}.status{margin:14px 0 0;color:var(--success);font-size:12px}footer{max-width:1320px;margin:24px auto;color:#486477;font-size:13px}@media(max-width:1000px){.previews{grid-template-columns:1fr}}@media(max-width:480px){body{padding:16px}.mode{padding:14px}.workspace{grid-template-columns:1fr}aside{display:none}.editor{padding:12px}.tabs span{padding:10px}.hints{grid-template-columns:1fr}.details{display:none}}
+</style></head><body><header><h1>Hello Ocean</h1><p>A palette example for Digital Design Studio. Compare light and dark modes, search, editor tabs, HintsBox and the GDS canvas.</p><a href="hello-theme.xml" download>Download the XML theme</a></header><div class="previews"><section class="mode" style="--backdrop:#dbe8ef;--navigation:#edf5f8;--tool:#f3f8fb;--main:#ffffff;--text:#183b4e;--muted:#486477;--search:#e1eef4;--searchText:#183b4e;--searchPlaceholder:#486477;--selection:#c9e5f4;--selectionText:#133649;--tabActive:#ffffff;--tabInactive:#e1eef4;--tabText:#183b4e;--panelBorder:#acc8d8;--focus:#006d9e;--success:#137344;--info:#006d9e;--hintsBoxBackground:#edf5f8;--hintsBoxDetailsBackground:#ffffff;--hintsBoxText:#183b4e;--hintsBoxDetailsText:#183b4e;--hintsBoxMutedText:#486477;--hintsBoxSelectedBackground:#c9e5f4;--hintsBoxSelectedText:#133649;--gdsBackground:#e4f0f5;--panelRadius:16px;--controlRadius:8px;--popoverRadius:12px;--popoverOpacity:0.9" aria-labelledby="light">
+      <h2 id="light">Light</h2>
+      <div class="workspace">
+        <aside><strong>Project</strong><p class="file selected">adder.sv</p><p class="file">testbench.sv</p><p class="file muted">notes.md</p></aside>
+        <main><div class="tabs"><span class="active">adder.sv</span><span>testbench.sv</span></div>
+          <div class="editor"><label>Search<input placeholder="Search the project" aria-label="Search light preview"></label>
+            <pre><span class="muted">// A saved theme for your workspace</span>
+<span class="keyword">module</span> adder;
+  logic [7:0] result;
+<span class="keyword">endmodule</span></pre>
+            <div class="hints"><div class="suggestions"><div class="hint-selected">result</div><div>reset</div><small>HintsBox</small></div><div class="details">result<small>logic [7:0]<br>Suggestion details</small></div></div>
+            <div class="canvas" aria-label="GDS canvas sample"><i></i><i></i><small>GDS canvas</small></div>
+            <p class="status">✓ Saved XML v2 theme</p>
+          </div>
+        </main>
+      </div>
+    </section>
+<section class="mode" style="--backdrop:#0c1922;--navigation:#102430;--tool:#17303e;--main:#1c3949;--text:#e8f4fb;--muted:#adcadb;--search:#214556;--searchText:#e8f4fb;--searchPlaceholder:#adcadb;--selection:#2e5e77;--selectionText:#ffffff;--tabActive:#1c3949;--tabInactive:#102430;--tabText:#e8f4fb;--panelBorder:#41667d;--focus:#7ed3fa;--success:#79d6a2;--info:#7ed3fa;--hintsBoxBackground:#17303e;--hintsBoxDetailsBackground:#1c3949;--hintsBoxText:#e8f4fb;--hintsBoxDetailsText:#e8f4fb;--hintsBoxMutedText:#adcadb;--hintsBoxSelectedBackground:#2e5e77;--hintsBoxSelectedText:#ffffff;--gdsBackground:#081722;--panelRadius:16px;--controlRadius:8px;--popoverRadius:12px;--popoverOpacity:0.9" aria-labelledby="dark">
+      <h2 id="dark">Dark</h2>
+      <div class="workspace">
+        <aside><strong>Project</strong><p class="file selected">adder.sv</p><p class="file">testbench.sv</p><p class="file muted">notes.md</p></aside>
+        <main><div class="tabs"><span class="active">adder.sv</span><span>testbench.sv</span></div>
+          <div class="editor"><label>Search<input placeholder="Search the project" aria-label="Search dark preview"></label>
+            <pre><span class="muted">// A saved theme for your workspace</span>
+<span class="keyword">module</span> adder;
+  logic [7:0] result;
+<span class="keyword">endmodule</span></pre>
+            <div class="hints"><div class="suggestions"><div class="hint-selected">result</div><div>reset</div><small>HintsBox</small></div><div class="details">result<small>logic [7:0]<br>Suggestion details</small></div></div>
+            <div class="canvas" aria-label="GDS canvas sample"><i></i><i></i><small>GDS canvas</small></div>
+            <p class="status">✓ Saved XML v2 theme</p>
+          </div>
+        </main>
+      </div>
+    </section></div><footer>Illustrative preview. DDS applies the same named color data using its own components, accessibility settings and token defaults. To use it, install the XML in Plugins and choose Apply, or import it in Settings → Appearance.</footer></body></html>
