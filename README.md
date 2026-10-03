@@ -5,7 +5,7 @@
 [Releases](https://github.com/Altifigence/dds-plugin-sdk/releases) ·
 [CI](https://github.com/Altifigence/dds-plugin-sdk/actions/workflows/ci.yml)
 
-Build themes, diagnostics and workspace commands for Digital Design Studio with
+Build themes, language features and workspace commands for Digital Design Studio with
 a small ESM package, TypeScript declarations and versioned contracts. Connect
 your own workspace and tools with the Node.js host and HTTP client. The SDK has
 **zero runtime dependencies**.
@@ -15,7 +15,7 @@ application, private engines/services and production signing systems are outside
 this repository. Read the [public scope](docs/PUBLIC_SCOPE.md) and
 [compatibility table](docs/COMPATIBILITY.md) for exact boundaries.
 
-Version **0.2.1** supports Node 22 and 24. Manifest v1 diagnostic plugins remain
+Version **0.3.0** supports Node 22 and 24. Manifest v1 diagnostic plugins remain
 compatible. Manifest v2 adds commands, permission-scoped workspace and backend
 APIs, and open-source or proprietary distribution metadata. Themes export to
 the XML format already supported by DDS. The workspace host runs trusted plugins
@@ -52,7 +52,7 @@ mkdir my-dds-plugin
 cd my-dds-plugin
 npm init -y
 npm pkg set type=module
-npm install --save-exact https://github.com/Altifigence/dds-plugin-sdk/releases/download/v0.2.1/altifigence-dds-plugin-sdk-0.2.1.tgz
+npm install --save-exact https://github.com/Altifigence/dds-plugin-sdk/releases/download/v0.3.0/altifigence-dds-plugin-sdk-0.3.0.tgz
 ```
 
 Copy the example's `plugin.mjs` and `run.mjs` into this directory, then run:
@@ -70,12 +70,12 @@ and the install command includes the release URL rather than an npm registry loo
 
 | Import | Use |
 | --- | --- |
-| `@altifigence/dds-plugin-sdk` | `definePlugin`, `createDiagnosticsResult`, bounded parsers, types and lifecycle helpers |
+| `@altifigence/dds-plugin-sdk` | Plugin host, diagnostics and five language providers, bounded parsers, types and lifecycle helpers |
 | `@altifigence/dds-plugin-sdk/testing` | `createTestHost` for trusted local plugins |
 | `@altifigence/dds-plugin-sdk/schemas` | JSON Schema objects, loaded separately from the core API |
 | `@altifigence/dds-plugin-sdk/themes` | Validate a theme and export DDS XML without executing theme code |
 | `@altifigence/dds-plugin-sdk/workspace-node` | Serve an explicit project directory and operator-selected plugins/tools |
-| `@altifigence/dds-plugin-sdk/workspace-client` | Connect to the versioned workspace protocol with cancellation and identity checks |
+| `@altifigence/dds-plugin-sdk/workspace-client` | Authenticated client, connection-bound projects, CAS edit sessions and text edits |
 | `@altifigence/dds-plugin-sdk/publishing` | Node.js allowlist validation and deterministic plugin packaging |
 | `@altifigence/dds-plugin-sdk/consent` | Versioned notices, explicit local receipts and permission identity checks |
 
@@ -93,6 +93,13 @@ npm run benchmark  # bounded local measurements
 The developer test host executes trusted modules in the same process. Production
 hosts must provide their own code isolation and permission enforcement. The
 [host contract](docs/host-contract.md) gives the adapter requirements.
+
+## Add language features
+
+Run `npm run example:language` for completion, hover, definition, references and
+document symbols. The [language guide](docs/LANGUAGE.md) covers typed providers,
+explicit grants, plain-text results and stale-document cancellation. These are
+SDK host APIs; product editor support requires a separate DDS integration.
 
 ## Make a theme
 
@@ -120,6 +127,10 @@ server or loopback HTTP for local development. Operators choose the root,
 plugins and tools; clients cannot submit arbitrary module paths or shell
 commands. Each client must review and grant access before using a connection.
 See the [protocol](docs/workspace-protocol.md) for limits and cancellation.
+
+Use [project edit sessions](docs/PROJECTS.md) to retain a file revision, apply
+bounded text edits and recover from conflicts through explicit reload. Run
+`npm run example:project` for a complete temporary HTTP workspace example.
 
 ## Publish an open-source or proprietary plugin
 

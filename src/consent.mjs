@@ -9,7 +9,7 @@ const hashPattern = /^[a-f0-9]{64}$/;
 const idPattern = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 const semver = new RegExp(SEMVER_PATTERN);
 const placeholderPattern = /\{[^{}\r\n]+\}|\$\{|\{\{|<[^>\r\n]+>|\b(?:TODO|TBD|PLACEHOLDER|REPLACE_ME)\b/i;
-const permissionNames = ['document.read', 'diagnostics.publish', 'workspace.read', 'workspace.write', 'backend.invoke'];
+const permissionNames = ['document.read', 'diagnostics.publish', 'workspace.read', 'workspace.write', 'backend.invoke', 'language.provide'];
 const decisions = {
   pluginPermissionGrant: ['granted', 'denied', 'revoked'],
   noticeAcknowledgement: ['acknowledged', 'declined'],

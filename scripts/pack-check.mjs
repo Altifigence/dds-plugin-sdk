@@ -64,6 +64,10 @@ assert.equal(ErrorCode.CANCELLED, 'cancelled');
 assert.equal(typeof createDiagnosticsResult, 'function');
 `);
   run(process.execPath, ['smoke.mjs'], consumer);
+  await cp(join(installed, 'examples', 'hello-language'), join(consumer, 'language-example'), {recursive: true});
+  run(process.execPath, ['language-example/run.mjs'], consumer);
+  await cp(join(installed, 'examples', 'project-session'), join(consumer, 'project-example'), {recursive: true});
+  run(process.execPath, ['project-example/run.mjs'], consumer);
   // Package and install a real independent plugin. npm sees generated metadata;
   // the explicit SDK peer is already installed from the archive under test.
   await cp(join(installed, 'examples', 'publishable-plugin'), join(consumer, 'publishable-plugin'), {recursive: true});
@@ -148,6 +152,8 @@ try {
   await cp(join(root, 'tests', 'types', 'consumer.mts'), join(consumer, 'consumer.mts'));
   await cp(join(root, 'tests', 'types', 'public-apis.mts'), join(consumer, 'public-apis.mts'));
   await cp(join(root, 'tests', 'types', 'core-v2.mts'), join(consumer, 'core-v2.mts'));
+  await cp(join(root, 'tests', 'types', 'language.mts'), join(consumer, 'language.mts'));
+  await cp(join(root, 'tests', 'types', 'workspace-project.mts'), join(consumer, 'workspace-project.mts'));
   await cp(join(root, 'tests', 'types', 'tsconfig.json'), join(consumer, 'tsconfig.json'));
   const typescript = join(root, 'node_modules', 'typescript', 'bin', 'tsc');
   run(process.execPath, [typescript, '--noEmit', '-p', 'tsconfig.json'], consumer);

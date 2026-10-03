@@ -1,9 +1,10 @@
 import { LIMITS } from './limits.mjs';
 import { SEMVER_PATTERN } from './patterns.mjs';
 import { THEME_SCHEMA } from './themes.mjs';
+import { LANGUAGE_FEATURES } from './contracts.mjs';
 
 const schema = 'https://json-schema.org/draft/2020-12/schema';
-const base = 'https://github.com/Altifigence/dds-plugin-sdk/blob/v0.2.0/schemas/';
+const base = 'https://github.com/Altifigence/dds-plugin-sdk/blob/v0.3.0/schemas/';
 const text = maxLength => ({type: 'string', minLength: 1, maxLength});
 const integer = (maximum, minimum = 0) => ({type: 'integer', minimum, maximum});
 const object = (properties, required = Object.keys(properties)) => ({type: 'object', properties, required, additionalProperties: false});
@@ -35,8 +36,8 @@ const manifestV1 = object({
 });
 const manifestV2 = object({
   manifestVersion: {const: 2}, ...commonManifest, runtime: {enum: ['ui', 'workspace']},
-  capabilities: list({enum: ['diagnostics', 'commands']}, 2, 1, true),
-  permissions: list({enum: ['document.read', 'diagnostics.publish', 'workspace.read', 'workspace.write', 'backend.invoke']}, 5, 0, true),
+  capabilities: list({enum: ['diagnostics', 'commands', ...LANGUAGE_FEATURES]}, 7, 1, true),
+  permissions: list({enum: ['document.read', 'diagnostics.publish', 'workspace.read', 'workspace.write', 'backend.invoke', 'language.provide']}, 6, 0, true),
   supportedHosts: list({enum: ['test-host', 'workspace-host']}, 2, 1, true),
   license: {...text(512), pattern: '^[A-Za-z0-9.+:()\\s-]+$', 'x-licenseExpression': true, $comment: 'Runtime validates bounded SPDX-style expression grammar; this is not legal permission.'},
   source: object({
@@ -45,7 +46,7 @@ const manifestV2 = object({
     repository: {...text(2048), pattern: '^https://[^\\s?#]+$', format: 'uri', $comment: 'Runtime also rejects credentials.'},
   }, ['visibility', 'licenseFile']),
 });
-manifestV2.allOf = [{if: {properties: {runtime: {const: 'ui'}}}, then: {properties: {permissions: {items: {enum: ['document.read', 'diagnostics.publish']}}}}}];
+manifestV2.allOf = [{if: {properties: {runtime: {const: 'ui'}}}, then: {properties: {permissions: {items: {enum: ['document.read', 'diagnostics.publish', 'language.provide']}}}}}];
 const commandParameter = object({
   name: identifier(128), label: text(128), type: {enum: ['string', 'number', 'boolean']}, required: {type: 'boolean'},
   choices: list(text(256), 32, 1, true),
@@ -55,6 +56,15 @@ commandParameter.allOf = [{if: {required: ['choices']}, then: {properties: {type
 function define(name, body) {
   return {$schema: schema, $id: `${base}${name}.schema.json`, title: name, ...body};
 }
+
+const range = object({start: position, end: position});
+const location = object({path: {...text(1024), $comment: 'Runtime additionally enforces a relative, traversal-free workspace path.'}, range});
+const languageData = {
+  completion: list(object({label: text(256), insertText: {type: 'string', maxLength: 16_384}, detail: text(2048), range}, ['label', 'insertText']), LIMITS.maxLanguageItems),
+  hover: {oneOf: [{type: 'null'}, object({text: text(16_384), range}, ['text'])]},
+  definition: list(location, LIMITS.maxLanguageItems), references: list(location, LIMITS.maxLanguageItems),
+  'document-symbols': list(object({name: text(256), kind: {enum: ['module', 'namespace', 'class', 'interface', 'function', 'method', 'variable', 'constant', 'property', 'type']}, range, selectionRange: range, detail: text(2048)}, ['name', 'kind', 'range', 'selectionRange']), LIMITS.maxLanguageItems),
+};
 
 /** Standard JSON Schemas. Runtime validators additionally enforce UTF-8 budgets and range ordering. */
 export const SCHEMAS = Object.freeze({
@@ -79,6 +89,14 @@ export const SCHEMAS = Object.freeze({
     protocolVersion: {const: 1}, requestId: text(128), scope, snapshot: object(identity),
     diagnostics: list(diagnostic, LIMITS.maxDiagnostics),
   })),
+  'language-request': define('language-request', {oneOf: LANGUAGE_FEATURES.map(kind => object({
+    protocolVersion: {const: 1}, requestId: text(128), scope,
+    snapshot: object({...identity, text: {type: 'string', maxLength: LIMITS.documentBytes, 'x-maxUtf8Bytes': LIMITS.documentBytes}}),
+    kind: {const: kind}, ...(kind === 'document-symbols' ? {} : {position}), ...(kind === 'references' ? {includeDeclaration: {type: 'boolean'}} : {}),
+  }, ['protocolVersion', 'requestId', 'scope', 'snapshot', 'kind', ...(kind === 'document-symbols' ? [] : ['position'])]))}),
+  'language-result': define('language-result', {oneOf: LANGUAGE_FEATURES.map(kind => object({
+    protocolVersion: {const: 1}, requestId: text(128), scope, snapshot: object(identity), kind: {const: kind}, data: languageData[kind],
+  }))}),
   error: define('error', object({
     code: {enum: ['invalid_contract', 'permission_denied', 'unsupported_host', 'version_mismatch', 'cancelled', 'stale_snapshot', 'budget_exceeded', 'disposed', 'provider_failed', 'provider_unavailable', 'capability_unavailable', 'conflict']},
     message: text(LIMITS.messageLength),

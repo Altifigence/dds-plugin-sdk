@@ -1,7 +1,8 @@
 # Performance
 
 `npm run benchmark` measures five cold core imports in fresh Node processes,
-ten warmed validation batches, ten local provider batches and ten command batches. The input is a
+ten warmed validation batches, ten local provider batches and ten command batches. It also
+measures a one-item completion response and a single text edit in ten 100-call batches. The input is a
 3,400-byte synthetic text document with 100 TODO diagnostics per result. Run it
 from a quiet checkout with the pinned development dependency installed.
 
@@ -23,17 +24,19 @@ host pending slots even when the provider ignores its signal.
 
 ## Local reference measurement
 
-Measured SDK 0.2.0 on 2026-10-03 with Node 22.23.1, Windows x64 and the workload above:
+Measured SDK 0.3.0 on 2026-10-03 with Node 22.23.1, Windows x64 and the workload above:
 
 | Measurement | Observed value |
 | --- | --- |
-| Core ESM source, including transitive runtime modules | 47,473 bytes |
-| Core source gzip | 10,871 bytes |
-| Cold import median, five fresh processes | 6.79 ms |
-| Import heap delta median | 602,976 bytes |
-| Request validation median of ten 5,000-call batch means | 0.0161 ms/call |
-| Local 100-diagnostic round-trip median of ten 100-call batch means | 1.46 ms/call |
-| Local greeting command, median of ten 100-call batch means | 0.0166 ms/call |
+| Core ESM source, including transitive runtime modules | 56,867 bytes |
+| Core source gzip | 12,537 bytes |
+| Cold import median, five fresh processes | 6.55 ms |
+| Import heap delta median | 621,568 bytes |
+| Request validation median of ten 5,000-call batch means | 0.0173 ms/call |
+| Local 100-diagnostic round-trip median of ten 100-call batch means | 1.27 ms/call |
+| Local greeting command, median of ten 100-call batch means | 0.0156 ms/call |
+| One-item completion, 16-character teaching-language document | 0.0688 ms/call |
+| One text edit in the 3,400-byte input | 0.0297 ms/call |
 
 Run the command again to compare your machine and changes. Heap delta and timing
 vary with the runtime and concurrent work; these values are observations, not

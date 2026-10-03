@@ -146,7 +146,7 @@ async function inspect(directory) {
     name: packageName, version: manifest.version, type: 'module',
     description: manifest.name, main: `./${entry}`, exports: `./${entry}`,
     license: manifest.license.includes('LicenseRef-') ? `SEE LICENSE IN ${licenseFile}` : manifest.license,
-    peerDependencies: {'@altifigence/dds-plugin-sdk': manifest.manifestVersion === 2 ? '>=0.2.0 <0.3.0' : '>=0.1.0 <0.3.0'},
+    peerDependencies: {'@altifigence/dds-plugin-sdk': '>=0.3.0 <0.4.0'},
   };
   const metadataBytes = Buffer.from(`${JSON.stringify(metadata, null, 2)}\n`);
   contents.set('package.json', metadataBytes);

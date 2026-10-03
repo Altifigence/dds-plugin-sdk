@@ -5,6 +5,8 @@ export { ErrorCode, LIMITS, PluginSdkError, PROTOCOL_VERSION } from './limits.mj
 export { parseManifest, parseDocumentSnapshot, parseDiagnosticsRequest, parseDiagnosticsResult, createDiagnosticsResult } from './contracts.mjs';
 export { parseCommandDefinition, parseJsonValue, parseLicenseExpression, parseWorkspacePath } from './contracts.mjs';
 export { createDiagnosticsRegistry } from './lifecycle.mjs';
+export { createLanguageRegistry } from './lifecycle.mjs';
+export { LANGUAGE_FEATURES, parseLanguageRequest, parseLanguageResult, createLanguageResult } from './contracts.mjs';
 export { createPluginHost } from './host.mjs';
 
 /** Declare an ESM plugin. Activation is performed by a host with explicit grants. */

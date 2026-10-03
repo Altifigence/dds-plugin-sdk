@@ -1,10 +1,23 @@
-import { assertResultMatchesRequest, parseDiagnosticsRequest, parseDiagnosticsResult, parseProviderSelector } from './contracts.mjs';
+import { assertResultMatchesRequest, parseDiagnosticsRequest, parseDiagnosticsResult, parseProviderSelector, parseLanguageRequest, parseLanguageResult, assertLanguageResultMatchesRequest, LANGUAGE_FEATURES } from './contracts.mjs';
 import { ErrorCode, LIMITS, PluginSdkError } from './limits.mjs';
 
 const sdkError = (code, message) => new PluginSdkError(code, message);
 
 /** A trusted-host lifecycle primitive. It does not load or isolate plugin code. */
 export function createDiagnosticsRegistry({isCurrent = () => true} = {}) {
+  return createProviderRegistry({isCurrent, parseRequest: parseDiagnosticsRequest, parseResult: parseDiagnosticsResult, assertMatches: assertResultMatchesRequest, method: 'provideDiagnostics'});
+}
+
+export function createLanguageRegistry(kind, {isCurrent = () => true} = {}) {
+  if (!LANGUAGE_FEATURES.includes(kind)) throw sdkError(ErrorCode.INVALID_CONTRACT, 'Unknown language feature');
+  return createProviderRegistry({isCurrent, parseRequest(value) {
+    const request = parseLanguageRequest(value);
+    if (request.kind !== kind) throw sdkError(ErrorCode.INVALID_CONTRACT, 'Language feature does not match registry');
+    return request;
+  }, parseResult: parseLanguageResult, assertMatches: assertLanguageResultMatchesRequest, method: 'provide'});
+}
+
+function createProviderRegistry({isCurrent, parseRequest, parseResult, assertMatches, method}) {
   if (typeof isCurrent !== 'function') throw sdkError(ErrorCode.INVALID_CONTRACT, 'isCurrent must be a function');
   const registrations = new Set();
   const pending = new Set();
@@ -12,7 +25,7 @@ export function createDiagnosticsRegistry({isCurrent = () => true} = {}) {
   let sequence = 0;
 
   function assertOpen() {
-    if (disposed) throw sdkError(ErrorCode.DISPOSED, 'Diagnostics registry is disposed');
+    if (disposed) throw sdkError(ErrorCode.DISPOSED, 'Provider registry is disposed');
   }
 
   function abortEntry(entry, code, message) {
@@ -23,7 +36,7 @@ export function createDiagnosticsRegistry({isCurrent = () => true} = {}) {
     assertOpen();
     if (typeof pluginId !== 'string' || !pluginId.length || pluginId.length > 128) throw sdkError(ErrorCode.INVALID_CONTRACT, 'Expected a plugin ID');
     selector = parseProviderSelector(selector);
-    if (!provider || typeof provider.provideDiagnostics !== 'function') throw sdkError(ErrorCode.INVALID_CONTRACT, 'Expected provideDiagnostics function');
+    if (!provider || typeof provider[method] !== 'function') throw sdkError(ErrorCode.INVALID_CONTRACT, 'Expected provider function');
     if (registrations.size >= LIMITS.maxRegistrations) throw sdkError(ErrorCode.BUDGET_EXCEEDED, 'Provider registration limit exceeded');
     const entry = {pluginId, selector, provider, sequence: sequence++, pending: new Set()};
     registrations.add(entry);
@@ -38,41 +51,41 @@ export function createDiagnosticsRegistry({isCurrent = () => true} = {}) {
 
   async function request(value, {signal, timeoutMs = LIMITS.defaultTimeoutMs} = {}) {
     assertOpen();
-    const request = parseDiagnosticsRequest(value);
+    const request = parseRequest(value);
     if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > LIMITS.maxTimeoutMs) throw sdkError(ErrorCode.INVALID_CONTRACT, 'timeoutMs must be 1..30000');
     if (signal !== undefined && !(signal instanceof AbortSignal)) throw sdkError(ErrorCode.INVALID_CONTRACT, 'Expected AbortSignal');
-    if (signal?.aborted) throw sdkError(ErrorCode.CANCELLED, 'Diagnostics request cancelled');
+    if (signal?.aborted) throw sdkError(ErrorCode.CANCELLED, 'Provider request cancelled');
     if (!isCurrent(request)) throw sdkError(ErrorCode.STALE_SNAPSHOT, 'Requested document snapshot is no longer current');
     const entry = [...registrations]
       .filter(item => item.selector.languages.includes(request.snapshot.languageId))
       .sort((a, b) => b.selector.priority - a.selector.priority || a.sequence - b.sequence)[0];
-    if (!entry) throw sdkError(ErrorCode.PROVIDER_UNAVAILABLE, 'No diagnostics provider matches the document language');
+    if (!entry) throw sdkError(ErrorCode.PROVIDER_UNAVAILABLE, 'No Provider provider matches the document language');
     if (pending.size >= LIMITS.maxPendingRequests) throw sdkError(ErrorCode.BUDGET_EXCEEDED, 'Pending request limit exceeded');
     const controller = new AbortController();
     pending.add(controller);
     entry.pending.add(controller);
-    const abort = () => controller.abort(sdkError(ErrorCode.CANCELLED, 'Diagnostics request cancelled'));
+    const abort = () => controller.abort(sdkError(ErrorCode.CANCELLED, 'Provider request cancelled'));
     signal?.addEventListener('abort', abort, {once: true});
     let onAbort;
     const cancelled = new Promise((_, reject) => {
       onAbort = () => reject(controller.signal.reason);
       controller.signal.addEventListener('abort', onAbort, {once: true});
     });
-    const timer = setTimeout(() => controller.abort(sdkError(ErrorCode.BUDGET_EXCEEDED, 'Diagnostics request timed out')), timeoutMs);
+    const timer = setTimeout(() => controller.abort(sdkError(ErrorCode.BUDGET_EXCEEDED, 'Provider request timed out')), timeoutMs);
     try {
       const operation = Promise.resolve().then(() => {
         if (controller.signal.aborted) throw controller.signal.reason;
-        return entry.provider.provideDiagnostics(request, Object.freeze({signal: controller.signal}));
+        return entry.provider[method](request, Object.freeze({signal: controller.signal}));
       }).catch(error => {
         if (controller.signal.aborted) throw controller.signal.reason;
         // Do not expose provider exception messages, stack traces or private paths.
-        throw sdkError(ErrorCode.PROVIDER_FAILED, 'Diagnostics provider failed');
+        throw sdkError(ErrorCode.PROVIDER_FAILED, 'Provider provider failed');
       });
       const raw = await Promise.race([operation, cancelled]);
       if (controller.signal.aborted) throw controller.signal.reason;
       if (!isCurrent(request)) throw sdkError(ErrorCode.STALE_SNAPSHOT, 'Requested document snapshot is no longer current');
-      const result = parseDiagnosticsResult(raw);
-      assertResultMatchesRequest(result, request);
+      const result = parseResult(raw);
+      assertMatches(result, request);
       return result;
     } finally {
       clearTimeout(timer);
@@ -93,7 +106,7 @@ export function createDiagnosticsRegistry({isCurrent = () => true} = {}) {
     dispose() {
       if (disposed) return;
       disposed = true;
-      for (const entry of registrations) abortEntry(entry, ErrorCode.DISPOSED, 'Diagnostics registry is disposed');
+      for (const entry of registrations) abortEntry(entry, ErrorCode.DISPOSED, 'Provider registry is disposed');
       registrations.clear();
     },
   });

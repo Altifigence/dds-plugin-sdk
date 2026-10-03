@@ -7,7 +7,8 @@ const semverPattern = new RegExp(SEMVER_PATTERN);
 const uriPattern = /^[A-Za-z][A-Za-z0-9+.-]*:[^\s\u0000-\u001f\u007f]+$/;
 const permissions = ['document.read', 'diagnostics.publish'];
 const workspacePermissions = ['workspace.read', 'workspace.write', 'backend.invoke'];
-const allPermissions = [...permissions, ...workspacePermissions];
+const allPermissions = [...permissions, ...workspacePermissions, 'language.provide'];
+export const LANGUAGE_FEATURES = Object.freeze(['completion', 'hover', 'definition', 'references', 'document-symbols']);
 
 function fail(path, message) {
   throw new PluginSdkError(ErrorCode.INVALID_CONTRACT, `${path}: ${message}`);
@@ -161,8 +162,8 @@ export function parseManifest(value) {
     version: string(value.version, 64, 'manifest.version', semverPattern),
     protocolVersion: version(value.protocolVersion, 'manifest.protocolVersion'),
     entry,
-    capabilities: Object.freeze(unique(array(value.capabilities, manifestVersion === 1 ? 1 : 2, 'manifest.capabilities', (v, p) => enumeration(v, manifestVersion === 1 ? ['diagnostics'] : ['diagnostics', 'commands'], p), 1), 'manifest.capabilities')),
-    permissions: Object.freeze(unique(array(value.permissions, manifestVersion === 1 ? 2 : 5, 'manifest.permissions', (v, p) => enumeration(v, manifestVersion === 1 ? permissions : allPermissions, p)), 'manifest.permissions')),
+    capabilities: Object.freeze(unique(array(value.capabilities, manifestVersion === 1 ? 1 : 7, 'manifest.capabilities', (v, p) => enumeration(v, manifestVersion === 1 ? ['diagnostics'] : ['diagnostics', 'commands', ...LANGUAGE_FEATURES], p), 1), 'manifest.capabilities')),
+    permissions: Object.freeze(unique(array(value.permissions, manifestVersion === 1 ? 2 : 6, 'manifest.permissions', (v, p) => enumeration(v, manifestVersion === 1 ? permissions : allPermissions, p)), 'manifest.permissions')),
     supportedHosts: Object.freeze(unique(array(value.supportedHosts, manifestVersion === 1 ? 1 : 2, 'manifest.supportedHosts', (v, p) => enumeration(v, manifestVersion === 1 ? ['test-host'] : ['test-host', 'workspace-host'], p), 1), 'manifest.supportedHosts')),
     license: manifestVersion === 1 ? string(value.license, 128, 'manifest.license', /^[A-Za-z0-9.+-]+$/) : parseLicenseExpression(value.license),
   };
@@ -232,7 +233,7 @@ export function parseProviderSelector(value) {
 }
 
 export function parseGrants(value) {
-  return Object.freeze(unique(array(value, 5, 'grants', (v, p) => enumeration(v, allPermissions, p)), 'grants'));
+  return Object.freeze(unique(array(value, 6, 'grants', (v, p) => enumeration(v, allPermissions, p)), 'grants'));
 }
 
 export function parseScope(value) { return scope(value, 'scope'); }
@@ -385,12 +386,16 @@ export function parseFileContent(value) {
 }
 export function parseExpectedRevision(value) { return value === null ? null : string(value, 128, 'expectedRevision'); }
 
-export function assertResultMatchesRequest(result, request) {
+function assertIdentityMatches(result, request) {
   if (result.requestId !== request.requestId || result.scope.projectId !== request.scope.projectId ||
       result.scope.sessionId !== request.scope.sessionId ||
       ['uri', 'languageId', 'modelVersion', 'workspaceRevision'].some(key => result.snapshot[key] !== request.snapshot[key])) {
     throw new PluginSdkError(ErrorCode.STALE_SNAPSHOT, 'Result identity does not match the requested snapshot');
   }
+}
+
+export function assertResultMatchesRequest(result, request) {
+  assertIdentityMatches(result, request);
   const lines = request.snapshot.text.split(/\r\n|\n|\r/);
   for (const item of result.diagnostics) {
     for (const endpoint of [item.range.start, item.range.end]) {
@@ -399,4 +404,108 @@ export function assertResultMatchesRequest(result, request) {
       }
     }
   }
+}
+
+function range(value, path) {
+  record(value, ['start', 'end'], [], path);
+  const start = position(value.start, `${path}.start`);
+  const end = position(value.end, `${path}.end`);
+  if (comparePosition(start, end) > 0) fail(path, 'end precedes start');
+  return Object.freeze({start, end});
+}
+
+function comparePosition(a, b) { return a.line - b.line || a.character - b.character; }
+function inDocument(endpoint, text, path) {
+  const lines = Array.isArray(text) ? text : text.split(/\r\n|\n|\r/);
+  if (endpoint.line >= lines.length || endpoint.character > lines[endpoint.line].length) fail(path, 'position is outside the requested document');
+}
+function inDocumentRange(value, text) {
+  inDocument(value.start, text, 'range.start'); inDocument(value.end, text, 'range.end');
+}
+
+/** Language API v1: plain text only. Returned text is never HTML or a command. */
+export function parseLanguageRequest(value) {
+  value = input(value, LIMITS.requestBytes, 'request');
+  record(value, ['protocolVersion', 'requestId', 'scope', 'snapshot', 'kind'], ['position', 'includeDeclaration'], 'request');
+  const kind = enumeration(value.kind, LANGUAGE_FEATURES, 'request.kind');
+  const output = {
+    protocolVersion: version(value.protocolVersion, 'request.protocolVersion'),
+    requestId: string(value.requestId, 128, 'request.requestId'),
+    scope: scope(value.scope, 'request.scope'), snapshot: snapshot(value.snapshot, 'request.snapshot', true), kind,
+  };
+  if (kind === 'document-symbols') {
+    if (Object.hasOwn(value, 'position')) fail('request.position', 'document symbols do not take a position');
+  } else {
+    output.position = position(value.position, 'request.position');
+    inDocument(output.position, output.snapshot.text, 'request.position');
+  }
+  if (Object.hasOwn(value, 'includeDeclaration')) {
+    if (kind !== 'references' || typeof value.includeDeclaration !== 'boolean') fail('request.includeDeclaration', 'only references accept a boolean');
+    output.includeDeclaration = value.includeDeclaration;
+  }
+  return boundCopy(Object.freeze(output), LIMITS.requestBytes, 'request');
+}
+
+function completion(value, path) {
+  record(value, ['label', 'insertText'], ['detail', 'range'], path);
+  const output = {label: string(value.label, 256, `${path}.label`), insertText: parseFileContent(value.insertText)};
+  if (value.insertText !== '') string(value.insertText, 16_384, `${path}.insertText`);
+  if (Object.hasOwn(value, 'detail')) output.detail = string(value.detail, 2048, `${path}.detail`);
+  if (Object.hasOwn(value, 'range')) output.range = range(value.range, `${path}.range`);
+  return Object.freeze(output);
+}
+function hover(value, path) {
+  if (value === null) return null;
+  record(value, ['text'], ['range'], path);
+  const output = {text: string(value.text, 16_384, `${path}.text`)};
+  if (Object.hasOwn(value, 'range')) output.range = range(value.range, `${path}.range`);
+  return Object.freeze(output);
+}
+function location(value, path) {
+  record(value, ['path', 'range'], [], path);
+  return Object.freeze({path: parseWorkspacePath(value.path), range: range(value.range, `${path}.range`)});
+}
+function symbol(value, path) {
+  record(value, ['name', 'kind', 'range', 'selectionRange'], ['detail'], path);
+  const output = {
+    name: string(value.name, 256, `${path}.name`),
+    kind: enumeration(value.kind, ['module', 'namespace', 'class', 'interface', 'function', 'method', 'variable', 'constant', 'property', 'type'], `${path}.kind`),
+    range: range(value.range, `${path}.range`), selectionRange: range(value.selectionRange, `${path}.selectionRange`),
+  };
+  if (comparePosition(output.range.start, output.selectionRange.start) > 0 || comparePosition(output.selectionRange.end, output.range.end) > 0) fail(path, 'selectionRange must be inside range');
+  if (Object.hasOwn(value, 'detail')) output.detail = string(value.detail, 2048, `${path}.detail`);
+  return Object.freeze(output);
+}
+
+export function parseLanguageResult(value) {
+  value = input(value, LIMITS.resultBytes, 'result');
+  record(value, ['protocolVersion', 'requestId', 'scope', 'snapshot', 'kind', 'data'], [], 'result');
+  const kind = enumeration(value.kind, LANGUAGE_FEATURES, 'result.kind');
+  const readers = {completion, hover, definition: location, references: location, 'document-symbols': symbol};
+  return boundCopy(Object.freeze({
+    protocolVersion: version(value.protocolVersion, 'result.protocolVersion'),
+    requestId: string(value.requestId, 128, 'result.requestId'), scope: scope(value.scope, 'result.scope'),
+    snapshot: snapshot(value.snapshot, 'result.snapshot', false), kind,
+    data: kind === 'hover' ? hover(value.data, 'result.data') : Object.freeze(array(value.data, LIMITS.maxLanguageItems, 'result.data', readers[kind])),
+  }), LIMITS.resultBytes, 'result');
+}
+
+export function assertLanguageResultMatchesRequest(result, request) {
+  assertIdentityMatches(result, request);
+  if (result.kind !== request.kind) fail('result.kind', 'does not match request');
+  if (['definition', 'references'].includes(result.kind)) return; // Target contents require a separately authorized workspace read.
+  const entries = result.kind === 'hover' ? (result.data ? [result.data] : []) : result.data;
+  const lines = request.snapshot.text.split(/\r\n|\n|\r/);
+  for (const entry of entries) {
+    if (entry.range) inDocumentRange(entry.range, lines);
+    if (entry.selectionRange) inDocumentRange(entry.selectionRange, lines);
+  }
+}
+
+export function createLanguageResult(request, data) {
+  const valid = parseLanguageRequest(request);
+  const {text: _text, ...identity} = valid.snapshot;
+  const result = parseLanguageResult({protocolVersion: 1, requestId: valid.requestId, scope: valid.scope, snapshot: identity, kind: valid.kind, data});
+  assertLanguageResultMatchesRequest(result, valid);
+  return result;
 }

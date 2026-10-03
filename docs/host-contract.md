@@ -1,6 +1,6 @@
 # Implement and connect a plugin host
 
-SDK 0.2.0 supplies a portable host for trusted modules and a separate public
+SDK 0.3.0 supplies a portable host for trusted modules and a separate public
 Node workspace adapter. `createPluginHost()` dispatches explicit plugin API
 calls. The Node adapter scopes saved-file operations to an operator-selected
 root and can expose them through the authenticated workspace protocol. See
@@ -49,7 +49,9 @@ cannot declare workspace/backend permissions; v1 retains diagnostics-only
 compatibility. Runtime metadata does not relocate or isolate execution.
 
 Diagnostics registration requires both effective diagnostics grants and its
-capability. Commands require a declared commands capability. Workspace reads and
+capability. Language registration requires the specific feature capability plus
+`document.read` and `language.provide`; see [LANGUAGE](LANGUAGE.md).
+Commands require a declared commands capability. Workspace reads and
 lists require `workspace.read`; writes require `workspace.write`; backend calls
 require `backend.invoke`. Missing ports fail with `capability_unavailable`.
 The host validates all port results and applies cancellation, timeouts and JSON
