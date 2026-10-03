@@ -1,4 +1,6 @@
 import type {Json,WorkspaceMethod,WorkspaceHello,WorkspaceEntry,WorkspacePlugin} from './workspace-protocol.mjs';
+export {createWorkspaceProject, applyTextEdits} from './workspace-project.mjs';
+export type {TextEdit, EditSnapshot, WorkspaceEditSession, WorkspaceProject} from './workspace-project.mjs';
 export interface WorkspaceRequestOptions {readonly signal?:AbortSignal;readonly timeoutMs?:number;}
 export interface WorkspaceClient {
   readonly binding:WorkspaceHello|undefined;

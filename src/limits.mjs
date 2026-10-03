@@ -6,6 +6,7 @@ export const LIMITS = Object.freeze({
   resultBytes: 1_600_000,
   documentBytes: 262_144,
   maxDiagnostics: 500,
+  maxLanguageItems: 500,
   messageLength: 2_048,
   maxRegistrations: 32,
   maxPendingRequests: 64,

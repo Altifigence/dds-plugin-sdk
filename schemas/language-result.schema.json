@@ -1,0 +1,835 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.3.0/schemas/language-result.schema.json",
+  "title": "language-result",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "protocolVersion": {
+          "const": 1
+        },
+        "requestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "sessionId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "projectId",
+            "sessionId"
+          ],
+          "additionalProperties": false
+        },
+        "snapshot": {
+          "type": "object",
+          "properties": {
+            "uri": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048,
+              "pattern": "^[A-Za-z][A-Za-z0-9+.-]*:[^\\s\\u0000-\\u001f\\u007f]+$"
+            },
+            "languageId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
+            },
+            "modelVersion": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "workspaceRevision": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "uri",
+            "languageId",
+            "modelVersion",
+            "workspaceRevision"
+          ],
+          "additionalProperties": false
+        },
+        "kind": {
+          "const": "completion"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "insertText": {
+                "type": "string",
+                "maxLength": 16384
+              },
+              "detail": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2048
+              },
+              "range": {
+                "type": "object",
+                "properties": {
+                  "start": {
+                    "type": "object",
+                    "properties": {
+                      "line": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 262144
+                      },
+                      "character": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 262144
+                      }
+                    },
+                    "required": [
+                      "line",
+                      "character"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "end": {
+                    "type": "object",
+                    "properties": {
+                      "line": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 262144
+                      },
+                      "character": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 262144
+                      }
+                    },
+                    "required": [
+                      "line",
+                      "character"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "start",
+                  "end"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "label",
+              "insertText"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 0,
+          "maxItems": 500
+        }
+      },
+      "required": [
+        "protocolVersion",
+        "requestId",
+        "scope",
+        "snapshot",
+        "kind",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "protocolVersion": {
+          "const": 1
+        },
+        "requestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "sessionId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "projectId",
+            "sessionId"
+          ],
+          "additionalProperties": false
+        },
+        "snapshot": {
+          "type": "object",
+          "properties": {
+            "uri": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048,
+              "pattern": "^[A-Za-z][A-Za-z0-9+.-]*:[^\\s\\u0000-\\u001f\\u007f]+$"
+            },
+            "languageId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
+            },
+            "modelVersion": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "workspaceRevision": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "uri",
+            "languageId",
+            "modelVersion",
+            "workspaceRevision"
+          ],
+          "additionalProperties": false
+        },
+        "kind": {
+          "const": "hover"
+        },
+        "data": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 16384
+                },
+                "range": {
+                  "type": "object",
+                  "properties": {
+                    "start": {
+                      "type": "object",
+                      "properties": {
+                        "line": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 262144
+                        },
+                        "character": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 262144
+                        }
+                      },
+                      "required": [
+                        "line",
+                        "character"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "end": {
+                      "type": "object",
+                      "properties": {
+                        "line": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 262144
+                        },
+                        "character": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 262144
+                        }
+                      },
+                      "required": [
+                        "line",
+                        "character"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "start",
+                    "end"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "text"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "required": [
+        "protocolVersion",
+        "requestId",
+        "scope",
+        "snapshot",
+        "kind",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "protocolVersion": {
+          "const": 1
+        },
+        "requestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "sessionId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "projectId",
+            "sessionId"
+          ],
+          "additionalProperties": false
+        },
+        "snapshot": {
+          "type": "object",
+          "properties": {
+            "uri": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048,
+              "pattern": "^[A-Za-z][A-Za-z0-9+.-]*:[^\\s\\u0000-\\u001f\\u007f]+$"
+            },
+            "languageId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
+            },
+            "modelVersion": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "workspaceRevision": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "uri",
+            "languageId",
+            "modelVersion",
+            "workspaceRevision"
+          ],
+          "additionalProperties": false
+        },
+        "kind": {
+          "const": "definition"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024,
+                "$comment": "Runtime additionally enforces a relative, traversal-free workspace path."
+              },
+              "range": {
+                "type": "object",
+                "properties": {
+                  "start": {
+                    "type": "object",
+                    "properties": {
+                      "line": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 262144
+                      },
+                      "character": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 262144
+                      }
+                    },
+                    "required": [
+                      "line",
+                      "character"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "end": {
+                    "type": "object",
+                    "properties": {
+                      "line": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 262144
+                      },
+                      "character": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 262144
+                      }
+                    },
+                    "required": [
+                      "line",
+                      "character"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "start",
+                  "end"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "path",
+              "range"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 0,
+          "maxItems": 500
+        }
+      },
+      "required": [
+        "protocolVersion",
+        "requestId",
+        "scope",
+        "snapshot",
+        "kind",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "protocolVersion": {
+          "const": 1
+        },
+        "requestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "sessionId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "projectId",
+            "sessionId"
+          ],
+          "additionalProperties": false
+        },
+        "snapshot": {
+          "type": "object",
+          "properties": {
+            "uri": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048,
+              "pattern": "^[A-Za-z][A-Za-z0-9+.-]*:[^\\s\\u0000-\\u001f\\u007f]+$"
+            },
+            "languageId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
+            },
+            "modelVersion": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "workspaceRevision": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "uri",
+            "languageId",
+            "modelVersion",
+            "workspaceRevision"
+          ],
+          "additionalProperties": false
+        },
+        "kind": {
+          "const": "references"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024,
+                "$comment": "Runtime additionally enforces a relative, traversal-free workspace path."
+              },
+              "range": {
+                "type": "object",
+                "properties": {
+                  "start": {
+                    "type": "object",
+                    "properties": {
+                      "line": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 262144
+                      },
+                      "character": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 262144
+                      }
+                    },
+                    "required": [
+                      "line",
+                      "character"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "end": {
+                    "type": "object",
+                    "properties": {
+                      "line": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 262144
+                      },
+                      "character": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 262144
+                      }
+                    },
+                    "required": [
+                      "line",
+                      "character"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "start",
+                  "end"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "path",
+              "range"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 0,
+          "maxItems": 500
+        }
+      },
+      "required": [
+        "protocolVersion",
+        "requestId",
+        "scope",
+        "snapshot",
+        "kind",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "protocolVersion": {
+          "const": 1
+        },
+        "requestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "sessionId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "projectId",
+            "sessionId"
+          ],
+          "additionalProperties": false
+        },
+        "snapshot": {
+          "type": "object",
+          "properties": {
+            "uri": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048,
+              "pattern": "^[A-Za-z][A-Za-z0-9+.-]*:[^\\s\\u0000-\\u001f\\u007f]+$"
+            },
+            "languageId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
+            },
+            "modelVersion": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "workspaceRevision": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "uri",
+            "languageId",
+            "modelVersion",
+            "workspaceRevision"
+          ],
+          "additionalProperties": false
+        },
+        "kind": {
+          "const": "document-symbols"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "kind": {
+                "enum": [
+                  "module",
+                  "namespace",
+                  "class",
+                  "interface",
+                  "function",
+                  "method",
+                  "variable",
+                  "constant",
+                  "property",
+                  "type"
+                ]
+              },
+              "range": {
+                "type": "object",
+                "properties": {
+                  "start": {
+                    "type": "object",
+                    "properties": {
+                      "line": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 262144
+                      },
+                      "character": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 262144
+                      }
+                    },
+                    "required": [
+                      "line",
+                      "character"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "end": {
+                    "type": "object",
+                    "properties": {
+                      "line": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 262144
+                      },
+                      "character": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 262144
+                      }
+                    },
+                    "required": [
+                      "line",
+                      "character"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "start",
+                  "end"
+                ],
+                "additionalProperties": false
+              },
+              "selectionRange": {
+                "type": "object",
+                "properties": {
+                  "start": {
+                    "type": "object",
+                    "properties": {
+                      "line": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 262144
+                      },
+                      "character": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 262144
+                      }
+                    },
+                    "required": [
+                      "line",
+                      "character"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "end": {
+                    "type": "object",
+                    "properties": {
+                      "line": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 262144
+                      },
+                      "character": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 262144
+                      }
+                    },
+                    "required": [
+                      "line",
+                      "character"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "start",
+                  "end"
+                ],
+                "additionalProperties": false
+              },
+              "detail": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2048
+              }
+            },
+            "required": [
+              "name",
+              "kind",
+              "range",
+              "selectionRange"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 0,
+          "maxItems": 500
+        }
+      },
+      "required": [
+        "protocolVersion",
+        "requestId",
+        "scope",
+        "snapshot",
+        "kind",
+        "data"
+      ],
+      "additionalProperties": false
+    }
+  ]
+}

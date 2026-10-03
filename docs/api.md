@@ -1,7 +1,7 @@
-# API reference — 0.2.0
+# API reference — 0.3.0
 
 Import portable values and types from `@altifigence/dds-plugin-sdk`. The core
-validates plain data, manages plugin lifetimes and dispatches diagnostics,
+validates plain data, manages plugin lifetimes and dispatches diagnostics, language features,
 commands and explicit host ports. It performs no Node filesystem, process or
 network operations. See [WORKSPACES](WORKSPACES.md) for the separate Node server
 and client, [THEMES](THEMES.md) for XML themes, and [PUBLISHING](PUBLISHING.md)
@@ -65,11 +65,12 @@ license eligibility or agreement acceptance. See [LICENSING](LICENSING.md).
 
 | Activation context member | Behavior |
 | --- | --- |
-| `host` | `{id: 'test-host' \| 'workspace-host', version: '0.2.0', protocolVersion: 1}` |
+| `host` | `{id: 'test-host' \| 'workspace-host', version: '0.3.0', protocolVersion: 1}` |
 | `pluginId`, `scope` | Manifest ID and opaque host `{projectId, sessionId}` |
 | `grants` | Frozen intersection of host grants and manifest permissions |
 | `signal` | Aborted on deactivation, host disposal or activation timeout |
 | `registerDiagnosticsProvider(selector, provider)` | Require declared diagnostics capability and both effective diagnostics grants |
+| `registerLanguageProvider(kind, selector, provider)` | Require declared feature and effective `document.read` / `language.provide` grants |
 | `registerCommand(definition, handler)` | Require declared commands capability; return a registration `Disposable` |
 | `workspace` | Permission-checked saved-file read, list and CAS write APIs |
 | `backends` | Permission-checked invocation of named, host-configured handlers |
@@ -107,8 +108,10 @@ The host lists immutable metadata with `host.listCommands()` and calls
 Handlers return `JsonValue` or a promise of it. Input and output are copied and
 bounded; class instances, functions, accessors, symbols, sparse arrays,
 non-finite numbers and cycles are rejected. Registration disposal aborts its
-pending calls. Language completion, hover and code actions are not implemented
-capabilities in 0.2.0.
+pending calls. [Language providers](LANGUAGE.md) add completion, hover, definition,
+references and document symbols. Code actions and automatic edit application are
+not implemented. Client-side [project edit sessions](PROJECTS.md) save explicitly
+provided content or text edits with revision checks.
 
 ## Workspace and backend ports
 
@@ -181,7 +184,7 @@ document switches and revision changes invalidate pending results.
 `createPluginHost({hostId?, scope?, grants?, workspace?, backends?})` returns a
 trusted in-process `PluginHost`. `hostId` defaults to `test-host`; `scope`
 defaults to `example-project` / `example-session`. Methods are `activate`,
-`setDocument`, `requestDiagnostics`, `listPlugins`, `listCommands`,
+`setDocument`, `requestDiagnostics`, `requestLanguage`, `listPlugins`, `listCommands`,
 `executeCommand`, `deactivate` and `dispose`. See [host-contract](host-contract.md)
 and [testing](testing.md) for runnable host use.
 
@@ -198,7 +201,7 @@ caller `toJSON` hooks.
 | `manifestBytes`, `commandBytes` | 16,384 compact UTF-8 JSON bytes each |
 | `requestBytes`, `resultBytes` | 1,600,000 UTF-8 JSON bytes each |
 | `documentBytes`, `jsonBytes` | 262,144 UTF-8 bytes each |
-| `maxDiagnostics`, `messageLength` | 500 diagnostics; 2,048 code points per message |
+| `maxDiagnostics`, `maxLanguageItems`, `messageLength` | 500 diagnostics or language items; 2,048 code points per diagnostic message |
 | `maxRegistrations`, `maxCommands` | 32 active plugins/providers/backend handlers; 64 commands per host |
 | `maxPendingRequests`, `maxFiles` | 64 per registry/host operation group; 1,000 listed entries |
 | `jsonDepth`, `jsonNodes` | Depth 16; 10,000 visited JSON nodes |
@@ -227,7 +230,7 @@ Catch `PluginSdkError` and inspect `code`:
 | `cancelled`, `stale_snapshot` | Caller cancelled, or document identity changed |
 | `budget_exceeded` | Input/output/concurrency limit or timeout |
 | `disposed` | Plugin, registration or host removed |
-| `provider_failed`, `provider_unavailable` | Plugin failed, or no diagnostics provider matches |
+| `provider_failed`, `provider_unavailable` | Plugin failed, or no matching provider exists |
 | `capability_unavailable` | No named command/backend or workspace port exists |
 | `conflict` | Host port rejected a stale file revision |
 

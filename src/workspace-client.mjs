@@ -1,4 +1,5 @@
 import {WORKSPACE_PATH, WORKSPACE_LIMITS, WorkspaceError, workspaceFailure, requireToken, parseWorkspaceRequest, parseWorkspaceReply, parseWorkspaceHello, parseWorkspaceMethodResult} from './workspace-protocol.mjs';
+export {createWorkspaceProject, applyTextEdits} from './workspace-project.mjs';
 
 export function normalizeWorkspaceUrl(value) {
   if(typeof value!=='string'||value.length>2_048||/[\s\u0000-\u001f\u007f\\]/u.test(value))throw workspaceFailure('invalid_request','Invalid workspace server URL');

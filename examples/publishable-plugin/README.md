@@ -1,6 +1,6 @@
 # Package your own plugin
 
-Copy this directory into a new project, install SDK 0.2.0 from its official
+Copy this directory into a new project, install SDK 0.3.0 from its official
 GitHub Release, and edit `plugin.json`, `plugin.mjs` and `disclosure.json`.
 Set your own publisher, plugin ID, version, support URL and license.
 

@@ -5,6 +5,8 @@ import { gzipSync } from 'node:zlib';
 import { createPluginHost, parseDiagnosticsRequest } from '../src/index.mjs';
 import { createTestHost } from '../src/testing.mjs';
 import plugin from '../examples/hello-diagnostics/plugin.mjs';
+import languagePlugin from '../examples/hello-language/plugin.mjs';
+import {applyTextEdits} from '../src/workspace-project.mjs';
 
 const entry = new URL('../src/index.mjs', import.meta.url).href;
 const cold = [];
@@ -46,6 +48,19 @@ for (let batch = 0; batch < 10; batch++) {
   commandBatches.push((performance.now() - start) / 100);
 }
 commands.dispose();
+const language = createPluginHost({grants: ['document.read', 'language.provide']});
+await language.activate(languagePlugin);
+language.setDocument({...request.snapshot, languageId: 'dds-demo', text: 'let led = 1;\nled'});
+const languageBatches = [], editBatches = [];
+for (let batch = 0; batch < 10; batch++) {
+  const start = performance.now();
+  for (let i = 0; i < 100; i++) await language.requestLanguage('completion', {position: {line: 1, character: 1}});
+  languageBatches.push((performance.now() - start) / 100);
+  const editStart = performance.now();
+  for (let i = 0; i < 100; i++) applyTextEdits(text, [{range: {start: {line: 0, character: 0}, end: {line: 0, character: 5}}, text: 'Updated'}]);
+  editBatches.push((performance.now() - editStart) / 100);
+}
+language.dispose();
 const files = ['index.mjs', 'limits.mjs', 'patterns.mjs', 'contracts.mjs', 'lifecycle.mjs', 'host.mjs'];
 const runtime = Buffer.concat(await Promise.all(files.map(name => readFile(new URL(`../src/${name}`, import.meta.url)))));
 const packageVersion = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8')).version;
@@ -58,5 +73,7 @@ console.log(JSON.stringify({
   validation: {batchCount: batches.length, iterationsPerBatch: iterations, medianMsPerCall: median(batches)},
   localProviderRoundTrip: {batchCount: providerBatches.length, iterationsPerBatch: 100, medianMsPerCall: median(providerBatches)},
   localCommandRoundTrip: {batchCount: commandBatches.length, iterationsPerBatch: 100, medianMsPerCall: median(commandBatches)},
+  localCompletionRoundTrip: {batchCount: languageBatches.length, iterationsPerBatch: 100, medianMsPerCall: median(languageBatches)},
+  localTextEdit: {batchCount: editBatches.length, iterationsPerBatch: 100, medianMsPerCall: median(editBatches)},
   note: 'Synthetic local measurements; excludes process startup, DDS host integration, isolation, transport and UI. No latency guarantee.',
 }, null, 2));

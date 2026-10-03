@@ -20,6 +20,15 @@ const host = {id: 'workspace-host', version: '0.2.0', protocolVersion: 1};
 const invalid = error => error?.code === 'invalid_contract';
 const digest = text => createHash('sha256').update(text, 'utf8').digest('hex');
 const clone = value => structuredClone(value);
+
+test('language permission receipts require an explicit declared grant and stay bound to host version', async () => {
+  const languageManifest = {...manifest, capabilities: ['hover'], permissions: ['document.read', 'language.provide']};
+  const receipt = await grant({manifest: languageManifest, permissions: ['document.read', 'language.provide'], host: {...host, version: '0.3.0'}});
+  assert.equal(await isPermissionGranted(receipt, identity(receipt), 'language.provide', now), true);
+  assert.equal(await isPermissionGranted(receipt, {...identity(receipt), hostVersion: '0.2.0'}, 'language.provide', now), false);
+  const readOnly = await grant({manifest: languageManifest, permissions: ['document.read'], host: {...host, version: '0.3.0'}});
+  assert.equal(await isPermissionGranted(readOnly, identity(readOnly), 'language.provide', now), false);
+});
 async function grant(changes = {}) {
   return createPermissionGrant({manifest, artifactSha256: 'a'.repeat(64), ...scope, permissions: ['workspace.read'], notice: await createNotice(noticeInput), decision: 'granted', receiptId: 'grant-1', actorRef: 'local-user', occurredAt, expiresAt, host, ...changes});
 }

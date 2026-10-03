@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.2.0/schemas/manifest.schema.json",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.3.0/schemas/manifest.schema.json",
   "title": "manifest",
   "properties": {
     "id": {
@@ -180,11 +180,16 @@
           "items": {
             "enum": [
               "diagnostics",
-              "commands"
+              "commands",
+              "completion",
+              "hover",
+              "definition",
+              "references",
+              "document-symbols"
             ]
           },
           "minItems": 1,
-          "maxItems": 2,
+          "maxItems": 7,
           "uniqueItems": true
         },
         "permissions": {
@@ -195,11 +200,12 @@
               "diagnostics.publish",
               "workspace.read",
               "workspace.write",
-              "backend.invoke"
+              "backend.invoke",
+              "language.provide"
             ]
           },
           "minItems": 0,
-          "maxItems": 5,
+          "maxItems": 6,
           "uniqueItems": true
         },
         "supportedHosts": {
@@ -284,7 +290,8 @@
                 "items": {
                   "enum": [
                     "document.read",
-                    "diagnostics.publish"
+                    "diagnostics.publish",
+                    "language.provide"
                   ]
                 }
               }

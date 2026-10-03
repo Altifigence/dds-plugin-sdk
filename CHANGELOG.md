@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.3.0 — 2026-10-03
+
+- Add typed completion, hover, definition, references and document-symbol
+  providers with explicit `language.provide` permission and bounded plain data.
+- Reuse diagnostics lifecycle handling for cancellation, deadlines, selection,
+  immutable identities and stale/late-result rejection across language features.
+- Add connection-bound workspace projects, CAS edit sessions, explicit reload
+  after conflict or uncertain writes, and bounded UTF-16 text edits.
+- Include runnable language and HTTP project examples, schemas and EN/KO guides.
+- Pack new plugins with SDK peer requirement `>=0.3.0 <0.4.0`. Publishers must
+  validate/repack older archives whose peer range excluded 0.3.0.
+
+Existing manifest v1/v2 APIs and workspace protocol v1 remain supported. New
+language declarations require a 0.3.0 host and new explicit permission grants.
+This SDK release does not ship a DDS editor bridge or product update.
+
 ## 0.2.1 — 2026-10-03
 
 - Reject recognizable key/token material inside allowed plugin files and additional

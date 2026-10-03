@@ -1,7 +1,7 @@
 export const PROTOCOL_VERSION: 1;
 export const LIMITS: Readonly<{
   manifestBytes: number; requestBytes: number; resultBytes: number; documentBytes: number;
-  maxDiagnostics: number; messageLength: number; maxRegistrations: number; maxPendingRequests: number;
+  maxDiagnostics: number; maxLanguageItems: number; messageLength: number; maxRegistrations: number; maxPendingRequests: number;
   maxCommands: number; commandBytes: number; jsonBytes: number; jsonDepth: number; jsonNodes: number;
   jsonArrayItems: number; jsonObjectProperties: number; maxFiles: number;
   defaultTimeoutMs: number; maxTimeoutMs: number;
@@ -18,7 +18,7 @@ export class PluginSdkError extends Error {
   readonly code: PluginErrorCode;
   constructor(code: PluginErrorCode, message: string);
 }
-export type Permission = 'document.read' | 'diagnostics.publish' | 'workspace.read' | 'workspace.write' | 'backend.invoke';
+export type Permission = 'document.read' | 'diagnostics.publish' | 'workspace.read' | 'workspace.write' | 'backend.invoke' | 'language.provide';
 export interface PluginManifestV1 {
   readonly manifestVersion: 1;
   readonly id: string;
@@ -35,7 +35,7 @@ export interface PluginManifestV1 {
 export interface PluginManifestV2 extends Omit<PluginManifestV1, 'manifestVersion' | 'capabilities' | 'permissions' | 'supportedHosts'> {
   readonly manifestVersion: 2;
   readonly runtime: 'ui' | 'workspace';
-  readonly capabilities: readonly ('diagnostics' | 'commands')[];
+  readonly capabilities: readonly ('diagnostics' | 'commands' | LanguageFeature)[];
   readonly permissions: readonly Permission[];
   readonly supportedHosts: readonly HostId[];
   readonly source: {
@@ -115,6 +115,7 @@ export interface PluginContext {
   readonly grants: readonly Permission[];
   readonly signal: AbortSignal;
   registerDiagnosticsProvider(selector: ProviderSelector, provider: DiagnosticsProvider): Disposable;
+  registerLanguageProvider<K extends LanguageFeature>(kind: K, selector: ProviderSelector, provider: LanguageProvider<K>): Disposable;
   registerCommand(command: CommandDefinition, handler: CommandHandler): Disposable;
   readonly workspace: WorkspaceApi;
   readonly backends: BackendsApi;
@@ -149,6 +150,7 @@ export interface PluginHost extends Disposable {
   activate(plugin: Plugin): Promise<Disposable>;
   setDocument(snapshot: DocumentSnapshot): DocumentSnapshot;
   requestDiagnostics(options?: RequestOptions): Promise<DiagnosticsResult>;
+  requestLanguage<K extends LanguageFeature>(kind: K, input: LanguageInput<K>, options?: RequestOptions): Promise<LanguageResult<K>>;
   listCommands(): readonly RegisteredCommand[];
   executeCommand(pluginId: string, commandId: string, input: JsonValue, options?: RequestOptions): Promise<JsonValue>;
   listPlugins(): readonly PluginManifest[];
@@ -156,3 +158,42 @@ export interface PluginHost extends Disposable {
 }
 /** Executes trusted plugins in-process. Ports enforce file/backend authority; this is not a sandbox. */
 export function createPluginHost(options?: PluginHostOptions): PluginHost;
+
+export type LanguageFeature = 'completion' | 'hover' | 'definition' | 'references' | 'document-symbols';
+export const LANGUAGE_FEATURES: readonly LanguageFeature[];
+export type LanguageInput<K extends LanguageFeature> = K extends 'document-symbols'
+  ? {readonly position?: never; readonly includeDeclaration?: never}
+  : {readonly position: Position} & (K extends 'references' ? {readonly includeDeclaration?: boolean} : {readonly includeDeclaration?: never});
+export type LanguageRequest<K extends LanguageFeature = LanguageFeature> = K extends LanguageFeature
+  ? DiagnosticsRequest & {readonly kind: K} & LanguageInput<K> : never;
+/** Literal insertion and description text, never snippets, HTML or executable commands. */
+export interface CompletionItem {readonly label: string; readonly insertText: string; readonly detail?: string; readonly range?: Range;}
+export interface Hover {readonly text: string; readonly range?: Range;}
+/** Relative workspace path. Hosts must authorize access before opening the target. */
+export interface LanguageLocation {readonly path: string; readonly range: Range;}
+export interface DocumentSymbol {
+  readonly name: string; readonly kind: 'module' | 'namespace' | 'class' | 'interface' | 'function' | 'method' | 'variable' | 'constant' | 'property' | 'type';
+  readonly range: Range; readonly selectionRange: Range; readonly detail?: string;
+}
+export interface LanguageData {
+  readonly completion: readonly CompletionItem[];
+  readonly hover: Hover | null;
+  readonly definition: readonly LanguageLocation[];
+  readonly references: readonly LanguageLocation[];
+  readonly 'document-symbols': readonly DocumentSymbol[];
+}
+export type LanguageResult<K extends LanguageFeature = LanguageFeature> = K extends LanguageFeature
+  ? Omit<DiagnosticsResult, 'diagnostics'> & {readonly kind: K; readonly data: LanguageData[K]} : never;
+export interface LanguageProvider<K extends LanguageFeature> {
+  provide(request: LanguageRequest<K>, options: {readonly signal: AbortSignal}): LanguageResult<K> | Promise<LanguageResult<K>>;
+}
+export interface LanguageRegistry<K extends LanguageFeature> extends Disposable {
+  register(pluginId: string, selector: ProviderSelector, provider: LanguageProvider<K>): Disposable;
+  request(request: LanguageRequest<K>, options?: RequestOptions): Promise<LanguageResult<K>>;
+  invalidate(): void;
+}
+export function parseLanguageRequest(value: unknown): LanguageRequest;
+export function parseLanguageResult(value: unknown): LanguageResult;
+export function createLanguageResult<K extends LanguageFeature>(request: LanguageRequest<K>, data: LanguageData[K]): LanguageResult<K>;
+/** Trusted host primitive. Authorization and isolation are enforced by the host. */
+export function createLanguageRegistry<K extends LanguageFeature>(kind: K, options?: {readonly isCurrent?: (request: LanguageRequest<K>) => boolean}): LanguageRegistry<K>;

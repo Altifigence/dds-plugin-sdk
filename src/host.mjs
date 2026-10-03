@@ -1,5 +1,7 @@
 import { parseCommandDefinition, parseCommandInput, parseDiagnosticsRequest, parseDocumentSnapshot, parseExpectedRevision, parseFileContent, parseGrants, parseJsonValue, parseManifest, parseScope, parseWorkspaceList, parseWorkspacePath, parseWorkspaceRead, parseWorkspaceWrite } from './contracts.mjs';
 import { createDiagnosticsRegistry } from './lifecycle.mjs';
+import { createLanguageRegistry } from './lifecycle.mjs';
+import { LANGUAGE_FEATURES, parseLanguageRequest } from './contracts.mjs';
 import { ErrorCode, LIMITS, PluginSdkError } from './limits.mjs';
 
 const hostFailures = new WeakSet();
@@ -30,10 +32,12 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
   let commandCount = 0;
   const plugins = new Map();
   const pending = new Set();
-  const registry = createDiagnosticsRegistry({isCurrent(request) {
+  function isCurrent(request) {
     return !!document && request.scope.projectId === scope.projectId && request.scope.sessionId === scope.sessionId &&
       ['uri', 'languageId', 'modelVersion', 'workspaceRevision', 'text'].every(key => request.snapshot[key] === document[key]);
-  }});
+  }
+  const registry = createDiagnosticsRegistry({isCurrent});
+  const languages = new Map(LANGUAGE_FEATURES.map(kind => [kind, createLanguageRegistry(kind, {isCurrent})]));
 
   function assertOpen() { if (disposed) throw error(ErrorCode.DISPOSED, 'Plugin host is disposed'); }
   function assertActive(state) { assertOpen(); if (!state.active || state.controller.signal.aborted) throw error(ErrorCode.DISPOSED, 'Plugin is deactivated'); }
@@ -121,7 +125,7 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
     const state = {active: true, ready: false, manifest, grants: effectiveGrants, commands: new Map(), registrations: new Set(), controller: new AbortController(), disposable: undefined};
     plugins.set(manifest.id, state);
     const context = Object.freeze({
-      host: Object.freeze({id: hostId, version: '0.2.0', protocolVersion: 1}),
+      host: Object.freeze({id: hostId, version: '0.3.0', protocolVersion: 1}),
       pluginId: manifest.id,
       scope,
       grants: effectiveGrants,
@@ -142,6 +146,18 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
         return Object.freeze({dispose() {
           registration.dispose();
           state.registrations.delete(registration);
+        }});
+      },
+      registerLanguageProvider(kind, selector, provider) {
+        permit(state, 'document.read'); permit(state, 'language.provide');
+        if (!languages.has(kind)) throw error(ErrorCode.INVALID_CONTRACT, 'Unknown language feature');
+        if (!manifest.capabilities.includes(kind)) throw error(ErrorCode.PERMISSION_DENIED, 'Language capability was not declared');
+        let registration;
+        try { registration = languages.get(kind).register(manifest.id, selector, provider); }
+        catch (failure) { throw error(failure instanceof PluginSdkError ? failure.code : ErrorCode.PROVIDER_FAILED, 'Language provider registration failed'); }
+        state.registrations.add(registration);
+        return Object.freeze({dispose() {
+          registration.dispose(); state.registrations.delete(registration);
         }});
       },
       registerCommand(metadata, handler) {
@@ -243,6 +259,7 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
         throw error(ErrorCode.INVALID_CONTRACT, 'Changed document requires a newer modelVersion or workspaceRevision');
       }
       registry.invalidate();
+      for (const language of languages.values()) language.invalidate();
       document = updated;
       revision++;
       return updated;
@@ -253,6 +270,18 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
       const currentRevision = revision;
       const result = await registry.request(parseDiagnosticsRequest({protocolVersion: 1, requestId: `request-${++nextRequest}`, scope, snapshot: document}), options);
       if (currentRevision !== revision) throw error(ErrorCode.STALE_SNAPSHOT, 'Document changed while diagnostics were pending');
+      return result;
+    },
+    async requestLanguage(kind, input = {}, options = {}) {
+      assertOpen();
+      if (!document) throw error(ErrorCode.INVALID_CONTRACT, 'Set a document before requesting language features');
+      if (!languages.has(kind)) throw error(ErrorCode.INVALID_CONTRACT, 'Unknown language feature');
+      const value = parseJsonValue(input);
+      if (!value || Array.isArray(value) || typeof value !== 'object' || Object.keys(value).some(key => !['position', 'includeDeclaration'].includes(key))) throw error(ErrorCode.INVALID_CONTRACT, 'Expected language request input');
+      const request = parseLanguageRequest({protocolVersion: 1, requestId: `request-${++nextRequest}`, scope, snapshot: document, kind, ...value});
+      const currentRevision = revision;
+      const result = await languages.get(kind).request(request, options);
+      if (revision !== currentRevision) throw error(ErrorCode.STALE_SNAPSHOT, 'Document changed while language features were pending');
       return result;
     },
     listPlugins() {assertOpen(); return Object.freeze([...plugins.values()].filter(state => state.ready && state.active).map(state => state.manifest));},
@@ -280,6 +309,7 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
       for (const state of plugins.values()) cleanup(state);
       plugins.clear();
       registry.dispose();
+      for (const language of languages.values()) language.dispose();
       document = undefined;
     },
   });
