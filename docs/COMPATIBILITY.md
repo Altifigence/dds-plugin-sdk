@@ -11,6 +11,7 @@
 | Browser-only DDS host | Native workspace transport is unavailable |
 | Language providers | Diagnostics plus completion, hover, definition, references and document symbols in SDK hosts since 0.3.0; no released DDS editor bridge is implied |
 | Project edit sessions | Client helpers in 0.3.0 over unchanged workspace protocol v1, including 0.2.x servers |
+| Download verification | Node API/CLI since 0.3.1 for DDS 0.3.x plugin archives; no extraction, code execution or publisher authentication |
 
 This is a developer preview. Pin the exact package release and read the changelog
 before updating. SDK, protocol, plugin and DDS product versions are distinct.
@@ -23,6 +24,10 @@ permission. Existing API contracts remain supported in 0.3.0. Plugin archives
 created by the 0.2.x CLI have a peer range ending before 0.3.0: their publisher
 must validate and repack a new plugin version for this SDK. The 0.3.0 CLI pins
 new plugin archives to `>=0.3.0 <0.4.0`; it does not infer compatibility from source.
+
+0.3.1 keeps that same peer range and runtime contracts. Existing 0.3.0 plugin
+archives do not need repacking for this update. The new download-verification
+command requires SDK 0.3.1 and verifies plugin packages, not SDK tarballs.
 
 Use the [official guide](https://docs.altifigence.com/developers/plugin-sdk/),
 [host contract](host-contract.md) and [workspace guide](WORKSPACES.md) together.

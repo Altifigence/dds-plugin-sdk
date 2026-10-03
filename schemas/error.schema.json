@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.3.0/schemas/error.schema.json",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.3.1/schemas/error.schema.json",
   "title": "error",
   "type": "object",
   "properties": {
