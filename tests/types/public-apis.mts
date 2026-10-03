@@ -1,6 +1,6 @@
 import {createPluginHost, definePlugin, type PluginManifestV2} from '@altifigence/dds-plugin-sdk';
 import {parseTheme, serializeThemeXml} from '@altifigence/dds-plugin-sdk/themes';
-import {validatePluginPackage, packPlugin} from '@altifigence/dds-plugin-sdk/publishing';
+import {validatePluginPackage, packPlugin, verifyPluginArchive} from '@altifigence/dds-plugin-sdk/publishing';
 import {createWorkspaceClient} from '@altifigence/dds-plugin-sdk/workspace-client';
 import {createNodeWorkspace, createProcessBackend, createWorkspaceServer} from '@altifigence/dds-plugin-sdk/workspace-node';
 import {createNotice, createPermissionGrant, isPermissionGranted} from '@altifigence/dds-plugin-sdk/consent';
@@ -29,6 +29,14 @@ const palette = {backdrop: '#111111', navigation: '#222222', tool: '#333333', ma
 serializeThemeXml(parseTheme({name: 'Typed Theme', colors: {light: palette, dark: palette}}));
 void validatePluginPackage('/operator/plugin');
 void packPlugin('/operator/plugin', {out: '/operator/dist'});
+void verifyPluginArchive('/operator/download.tgz', {metadataPath: '/operator/release.json', expectedSha256: 'a'.repeat(64)}).then(receipt => {
+  const pinned: boolean = receipt.checksumPinned;
+  void pinned;
+  // @ts-expect-error a verification receipt cannot be altered to grant trust
+  receipt.artifact.sha256 = 'b'.repeat(64);
+});
+// @ts-expect-error verification never offers extraction or execution options
+void verifyPluginArchive('/operator/download.tgz', {extractTo: '/operator/plugins'});
 const client = createWorkspaceClient({url: 'https://workspace.example.org', token: 'operator-supplied-at-runtime-token'});
 void client.writeFile('example.txt', 'updated', 'a'.repeat(64));
 // @ts-expect-error expectedRevision is mandatory on a remote write

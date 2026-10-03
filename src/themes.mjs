@@ -15,7 +15,7 @@ export const THEME_TOKEN_COLOR_KEYS = Object.freeze([
 export const THEME_METRICS = Object.freeze({
   panelRadius: Object.freeze({ min: 0, max: 24, default: 14, integer: true }),
   controlRadius: Object.freeze({ min: 0, max: 16, default: 6, integer: true }),
-  popoverRadius: Object.freeze({ min: 0, max: 24, default: 12, integer: true }),
+  popoverRadius: Object.freeze({ min: 0, max: 24, default: 16, integer: true }),
   popoverOpacity: Object.freeze({ min: 0.6, max: 1, default: 0.72, integer: false }),
 });
 const modes = ['light', 'dark'];

@@ -53,7 +53,9 @@ are currently borderless.
 
 `colors.metrics` optionally accepts integer `panelRadius` (0–24), integer
 `controlRadius` (0–16), integer `popoverRadius` (0–24) and numeric
-`popoverOpacity` (0.6–1). Omitted metrics use DDS defaults: 14, 6, 12 and 0.72.
+`popoverOpacity` (0.6–1). The current DDS default values are 14, 6, 16 and 0.72.
+The SDK preserves omitted metrics so the target DDS release supplies its own
+defaults. Set all four explicitly when you want a reproducible appearance.
 Color values must be six-digit `#RRGGBB`; they are canonicalized to lowercase.
 Names are trimmed to 1–80 UTF-16 code units and must contain valid XML 1.0
 characters. JSON input and exported XML are each limited to 65,536 UTF-8 bytes.
@@ -69,6 +71,6 @@ alpha values, CSS variables, scripts and URLs in color values are rejected.
 Neither API performs I/O or creates a plugin execution grant. They throw
 `PluginSdkError` with `invalid_contract` or `budget_exceeded`.
 
-The interoperable contract was checked against DDS commit `b62cce4df`.
+The interoperable contract was checked against DDS commit `0f3e0d0189f1e23ce62205953bee04adbc9d54c9`.
 The SDK implementation and Hello Ocean assets are original Apache-2.0 work;
 the proprietary DDS theme parser, presets and renderer are not copied here.

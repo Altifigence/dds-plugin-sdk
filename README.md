@@ -15,7 +15,7 @@ application, private engines/services and production signing systems are outside
 this repository. Read the [public scope](docs/PUBLIC_SCOPE.md) and
 [compatibility table](docs/COMPATIBILITY.md) for exact boundaries.
 
-Version **0.3.0** supports Node 22 and 24. Manifest v1 diagnostic plugins remain
+Version **0.3.1** supports Node 22 and 24. Manifest v1 diagnostic plugins remain
 compatible. Manifest v2 adds commands, permission-scoped workspace and backend
 APIs, and open-source or proprietary distribution metadata. Themes export to
 the XML format already supported by DDS. The workspace host runs trusted plugins
@@ -52,7 +52,7 @@ mkdir my-dds-plugin
 cd my-dds-plugin
 npm init -y
 npm pkg set type=module
-npm install --save-exact https://github.com/Altifigence/dds-plugin-sdk/releases/download/v0.3.0/altifigence-dds-plugin-sdk-0.3.0.tgz
+npm install --save-exact https://github.com/Altifigence/dds-plugin-sdk/releases/download/v0.3.1/altifigence-dds-plugin-sdk-0.3.1.tgz
 ```
 
 Copy the example's `plugin.mjs` and `run.mjs` into this directory, then run:
@@ -76,7 +76,7 @@ and the install command includes the release URL rather than an npm registry loo
 | `@altifigence/dds-plugin-sdk/themes` | Validate a theme and export DDS XML without executing theme code |
 | `@altifigence/dds-plugin-sdk/workspace-node` | Serve an explicit project directory and operator-selected plugins/tools |
 | `@altifigence/dds-plugin-sdk/workspace-client` | Authenticated client, connection-bound projects, CAS edit sessions and text edits |
-| `@altifigence/dds-plugin-sdk/publishing` | Node.js allowlist validation and deterministic plugin packaging |
+| `@altifigence/dds-plugin-sdk/publishing` | Node.js allowlist validation, deterministic packaging and downloaded archive verification |
 | `@altifigence/dds-plugin-sdk/consent` | Versioned notices, explicit local receipts and permission identity checks |
 
 [API reference](docs/api.md) explains the manifest, permissions, requests,
@@ -152,7 +152,17 @@ licensed plugins and third-party obligations. [Consent](docs/CONSENT.md)
 separates permission grants, plugin terms, notices and optional personal-data
 consent. The SDK does not require a proprietary click-through agreement.
 
+## Verify a downloaded plugin
+
+Before using someone else's plugin archive, run
+[`dds-plugin verify`](docs/VERIFYING.md) with its release metadata and an
+independently obtained expected SHA-256. It checks bounded file contents and
+package structure without running or extracting code. This is not publisher
+authentication or malware scanning. Try `npm run example:verify` for a complete
+temporary package/verification example.
+
 ## Contribute
+
 
 See [CONTRIBUTING](CONTRIBUTING.md), [SECURITY](SECURITY.md) and
 [CHANGELOG](CHANGELOG.md). The SDK and included examples are licensed under

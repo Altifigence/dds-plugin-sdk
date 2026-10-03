@@ -125,7 +125,7 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
     const state = {active: true, ready: false, manifest, grants: effectiveGrants, commands: new Map(), registrations: new Set(), controller: new AbortController(), disposable: undefined};
     plugins.set(manifest.id, state);
     const context = Object.freeze({
-      host: Object.freeze({id: hostId, version: '0.3.0', protocolVersion: 1}),
+      host: Object.freeze({id: hostId, version: '0.3.1', protocolVersion: 1}),
       pluginId: manifest.id,
       scope,
       grants: effectiveGrants,

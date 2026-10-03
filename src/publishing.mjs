@@ -2,13 +2,16 @@ import { createHash } from 'node:crypto';
 import { constants } from 'node:fs';
 import { lstat, realpath, open, mkdir, writeFile, unlink } from 'node:fs/promises';
 import path from 'node:path';
-import { gzipSync } from 'node:zlib';
+import { gzipSync, gunzipSync, inflateRawSync } from 'node:zlib';
 import { parseManifest } from './index.mjs';
 import { containsKnownCredential } from './publication-policy.mjs';
 
 const MAX_FILE = 4 * 1024 * 1024;
 const MAX_PACKAGE = 10 * 1024 * 1024;
 const MAX_FILES = 256;
+const MAX_TAR = MAX_PACKAGE + MAX_FILES * 1024 + 1024;
+const MAX_ARCHIVE = 12 * 1024 * 1024;
+const MAX_RELEASE_METADATA = 256 * 1024;
 const utf8 = new TextDecoder('utf-8', {fatal: true});
 const forbidden = /^(?:\.git|\.hg|\.svn|node_modules|\.env(?:\..*)?|\.npmrc|\.pypirc|\.netrc|\.aws|\.azure|\.ssh|\.gnupg|\.kube|\.docker|id_rsa|id_ed25519)$/i;
 const secretExtension = /\.(?:pem|key|p12|pfx)$/i;
@@ -112,25 +115,33 @@ async function readRegular(root, relative, limit = MAX_FILE) {
 function json(bytes, label) {
   try { return JSON.parse(utf8.decode(bytes)); } catch { fail(`${label} must contain valid UTF-8 JSON`); }
 }
-async function inspect(directory) {
-  const requested = path.resolve(directory);
-  if (!(await lstat(requested)).isDirectory()) fail('package root must be a real directory');
-  const root = await realpath(requested);
-  const configuration = await readRegular(root, 'dds-package.json', 64 * 1024);
-  if (containsKnownCredential(configuration)) fail('recognizable credential material cannot be packaged');
+function packageFiles(configuration) {
+  if (configuration.length > 64 * 1024) fail('package configuration exceeds its byte limit');
   const config = json(configuration, 'dds-package.json');
   record(config, ['schemaVersion', 'files']);
   if (config.schemaVersion !== 1 || !Array.isArray(config.files) || config.files.length < 3 || config.files.length > MAX_FILES - 2) fail('invalid package file allowlist');
   const files = config.files.map(filePath);
   if (new Set(files.map(file => file.toLowerCase())).size !== files.length || files.some(file => ['dds-package.json', 'package.json'].includes(file.toLowerCase()))) fail('duplicate or generated configuration entry');
   if (!files.includes('plugin.json') || !files.includes('disclosure.json')) fail('include plugin.json and disclosure.json in the file allowlist');
-  const contents = new Map([['dds-package.json', configuration]]);
-  let size = configuration.length;
-  for (const file of [...files].sort()) {
-    const bytes = await readRegular(root, file);
+  const names = new Set([...files, 'dds-package.json', 'package.json'].map(file => file.toLowerCase()));
+  for (const name of names) {
+    const parts = name.split('/');
+    for (let count = 1; count < parts.length; count++) if (names.has(parts.slice(0, count).join('/'))) fail('file and directory paths conflict');
+  }
+  return files;
+}
+function inspectContents(contents, archived = false) {
+  const configuration = contents.get('dds-package.json');
+  if (!configuration) fail('include dds-package.json');
+  const files = packageFiles(configuration);
+  const expected = [...files, 'dds-package.json', ...(archived ? ['package.json'] : [])];
+  if (contents.size !== expected.length || expected.some(file => !contents.has(file))) fail('archive files must match the explicit allowlist');
+  let size = 0;
+  for (const [file, bytes] of contents) {
+    archiveParts(filePath(file));
+    if (bytes.length > MAX_FILE) fail('file exceeds its byte limit');
     if (containsKnownCredential(bytes)) fail('recognizable credential material cannot be packaged');
     if ((size += bytes.length) > MAX_PACKAGE) fail('package exceeds the 10 MiB uncompressed limit');
-    contents.set(file, bytes);
   }
   const manifestBytes = contents.get('plugin.json');
   const manifest = parseManifest(utf8.decode(manifestBytes));
@@ -149,13 +160,34 @@ async function inspect(directory) {
     peerDependencies: {'@altifigence/dds-plugin-sdk': '>=0.3.0 <0.4.0'},
   };
   const metadataBytes = Buffer.from(`${JSON.stringify(metadata, null, 2)}\n`);
-  contents.set('package.json', metadataBytes);
-  size += metadataBytes.length;
+  if (archived) {
+    // Only the generated inert npm metadata is accepted, including the tested
+    // SDK line. Additional scripts or dependencies cannot be smuggled into it.
+    if (!contents.get('package.json').equals(metadataBytes)) fail('package.json must match the generated SDK metadata');
+  } else {
+    contents.set('package.json', metadataBytes);
+    size += metadataBytes.length;
+  }
   if (size > MAX_PACKAGE) fail('package exceeds the 10 MiB uncompressed limit');
   for (const filename of contents.keys()) archiveParts(filename);
   const inventory = [...contents].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([name, bytes]) => Object.freeze({path: name, size: bytes.length, sha256: sha256(bytes)}));
   const report = Object.freeze({schemaVersion: 1, pluginId: manifest.id, pluginVersion: manifest.version, publisher: manifest.publisher, license: manifest.license, sourceVisibility: disclosed.sourceVisibility, manifestSha256: sha256(manifestBytes), disclosureSha256: sha256(contents.get('disclosure.json')), unpackedSize: size, files: Object.freeze(inventory)});
   return {manifest, contents, report};
+}
+async function inspect(directory) {
+  const requested = path.resolve(directory);
+  if (!(await lstat(requested)).isDirectory()) fail('package root must be a real directory');
+  const root = await realpath(requested);
+  const configuration = await readRegular(root, 'dds-package.json', 64 * 1024);
+  const files = packageFiles(configuration);
+  const contents = new Map([['dds-package.json', configuration]]);
+  let size = configuration.length;
+  for (const file of [...files].sort()) {
+    const bytes = await readRegular(root, file);
+    if ((size += bytes.length) > MAX_PACKAGE) fail('package exceeds the 10 MiB uncompressed limit');
+    contents.set(file, bytes);
+  }
+  return inspectContents(contents);
 }
 
 /** Inspect an explicit file allowlist without importing code or running scripts. */
@@ -200,4 +232,89 @@ export async function packPlugin(directory, options) {
   try { await writeFile(metadataPath, `${JSON.stringify(metadata, null, 2)}\n`, {flag: 'wx'}); }
   catch (error) { await unlink(archivePath); throw error; }
   return Object.freeze({...metadata, archivePath, metadataPath});
+}
+
+function archiveContents(archive) {
+  // DDS pack emits a single gzip member with a fixed ten-byte header. Reject
+  // optional names/comments, concatenated members and trailing input. Both
+  // decompression calls are bounded: gunzip checks the CRC/size trailer, and
+  // inflateRaw exposes the exact compressed-stream length on Node 22 and 24.
+  if (archive.length < 18 || archive[0] !== 31 || archive[1] !== 139 || archive[2] !== 8 || archive[3] !== 0) fail('expected a DDS gzip archive');
+  let tar;
+  try {
+    tar = gunzipSync(archive, {maxOutputLength: MAX_TAR});
+    const raw = inflateRawSync(archive.subarray(10), {info: true, maxOutputLength: MAX_TAR});
+    if (10 + raw.engine.bytesWritten + 8 !== archive.length) fail('gzip contains additional members or trailing input');
+  } catch { fail('invalid or oversized gzip archive'); }
+  if (tar.length % 512 || tar.length < 1024) fail('invalid tar length');
+  const contents = new Map();
+  const names = new Set();
+  let cursor = 0;
+  let total = 0;
+  while (cursor < tar.length - 1024) {
+    const header = tar.subarray(cursor, cursor + 512);
+    const field = (offset, length) => {
+      const bytes = header.subarray(offset, offset + length);
+      const end = bytes.indexOf(0);
+      try { return utf8.decode(end < 0 ? bytes : bytes.subarray(0, end)); }
+      catch { fail('invalid UTF-8 archive path'); }
+    };
+    const fullName = [field(345, 155), field(0, 100)].filter(Boolean).join('/');
+    if (!fullName.startsWith('package/')) fail('archive entry must be under package/');
+    const filename = filePath(fullName.slice(8));
+    const encodedSize = header.subarray(124, 136).toString('ascii');
+    if (!/^[0-7]{11}\x00$/.test(encodedSize)) fail('invalid archive file size');
+    const size = Number.parseInt(encodedSize, 8);
+    if (size > MAX_FILE || (total += size) > MAX_PACKAGE) fail('archive exceeds its byte limit');
+    // Comparing with the complete supported header checks its checksum, mode,
+    // regular-file type, owner, link fields, path encoding and reserved bytes.
+    if (!header.equals(tarHeader(filename, size))) fail('unsupported or invalid archive header');
+    if (names.has(filename.toLowerCase())) fail('duplicate archive entry');
+    if (contents.size >= MAX_FILES) fail('too many archive entries');
+    const start = cursor + 512;
+    const end = start + size;
+    const next = start + Math.ceil(size / 512) * 512;
+    if (next > tar.length - 1024 || tar.subarray(end, next).some(byte => byte !== 0)) fail('invalid archive padding or length');
+    names.add(filename.toLowerCase());
+    contents.set(filename, tar.subarray(start, end));
+    cursor = next;
+  }
+  if (cursor !== tar.length - 1024 || tar.subarray(cursor).some(byte => byte !== 0)) fail('archive must end with exactly two empty blocks');
+  return contents;
+}
+
+async function readInputFile(filename, limit) {
+  if (typeof filename !== 'string' || !filename.trim()) fail('supply a local file path');
+  const resolved = path.resolve(filename);
+  const root = await realpath(path.dirname(resolved));
+  return readRegular(root, path.basename(resolved), limit);
+}
+
+/** Verify downloaded bytes without extracting, importing or executing a plugin. */
+export async function verifyPluginArchive(archivePath, options = {}) {
+  record(options, [], ['metadataPath', 'expectedSha256']);
+  if (options.metadataPath !== undefined && (typeof options.metadataPath !== 'string' || !options.metadataPath.trim())) fail('supply a metadata file path');
+  if (options.expectedSha256 !== undefined && (typeof options.expectedSha256 !== 'string' || !/^[a-f0-9]{64}$/.test(options.expectedSha256))) fail('expectedSha256 must be 64 lowercase hexadecimal characters');
+  const archive = await readInputFile(archivePath, MAX_ARCHIVE);
+  const digest = sha256(archive);
+  if (options.expectedSha256 !== undefined && digest !== options.expectedSha256) fail('archive does not match expectedSha256');
+  const metadataPath = options.metadataPath ?? `${archivePath}.release.json`;
+  const metadata = json(await readInputFile(metadataPath, MAX_RELEASE_METADATA), 'release metadata');
+  const fields = ['schemaVersion', 'pluginId', 'pluginVersion', 'publisher', 'license', 'sourceVisibility', 'manifestSha256', 'disclosureSha256', 'unpackedSize', 'files', 'artifact'];
+  record(metadata, fields);
+  record(metadata.artifact, ['filename', 'size', 'sha256']);
+  if (metadata.artifact.size !== archive.length || metadata.artifact.sha256 !== digest) fail('archive does not match release metadata');
+  const {manifest, report} = inspectContents(archiveContents(archive), true);
+  if (metadata.artifact.filename !== releaseName(manifest)) fail('release filename does not match plugin identity');
+  for (const field of fields.filter(field => field !== 'files' && field !== 'artifact')) if (metadata[field] !== report[field]) fail('release metadata does not match packaged content');
+  if (!Array.isArray(metadata.files) || metadata.files.length !== report.files.length) fail('release file inventory does not match archive');
+  for (let index = 0; index < report.files.length; index++) {
+    const claimed = metadata.files[index];
+    record(claimed, ['path', 'size', 'sha256']);
+    if (['path', 'size', 'sha256'].some(field => claimed[field] !== report.files[index][field])) fail('release file inventory does not match archive');
+  }
+  const artifact = Object.freeze({filename: releaseName(manifest), size: archive.length, sha256: digest});
+  // This receipt describes the bytes read now, not a mutable path's future
+  // contents, a trusted publisher, an installation or a malware assessment.
+  return Object.freeze({...report, artifact, checksumPinned: options.expectedSha256 !== undefined});
 }

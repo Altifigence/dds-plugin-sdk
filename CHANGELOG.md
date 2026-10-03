@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.3.1 — 2026-10-03
+
+- Verify downloaded 0.3.x plugin archives and release metadata with the new
+  `verifyPluginArchive()` API and `dds-plugin verify` CLI without extracting or
+  executing code. Optionally pin an independently obtained SHA-256.
+- Bound compressed/decompressed input and recheck tar structure, explicit file
+  inventory, manifest/disclosure/license and inert generated npm metadata.
+- Reject file/directory path conflicts during both packing and verification.
+- Add adversarial tests, a complete independent consumer example and EN/KO
+  verification guidance. Hash checks do not authenticate publishers or scan malware.
+- Correct the theme metadata's current DDS popover-radius default to 16. The
+  serializer still preserves omitted metrics and explicit example overrides.
+
+Runtime/manifest/workspace contracts and `>=0.3.0 <0.4.0` plugin peers are
+unchanged. Existing 0.3.0 plugin archives remain usable without repacking.
+
 ## 0.3.0 — 2026-10-03
 
 - Add typed completion, hover, definition, references and document-symbol

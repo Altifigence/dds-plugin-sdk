@@ -14,3 +14,19 @@ export interface PackedPlugin extends PackageReport {
 export function validatePluginPackage(directory: string): Promise<PackageReport>;
 /** Node.js only. Does not overwrite an existing archive or metadata file. */
 export function packPlugin(directory: string, options: {readonly out: string}): Promise<PackedPlugin>;
+export interface VerifiedPluginArchive extends PackageReport {
+  readonly artifact: { readonly filename: string; readonly size: number; readonly sha256: string };
+  /** True only when the caller supplied a matching expectedSha256. Not publisher authentication. */
+  readonly checksumPinned: boolean;
+}
+/**
+ * Node.js only. Verifies a DDS 0.3.x CLI archive and its external release metadata
+ * without extracting or executing it. The receipt describes the bytes read now;
+ * it does not establish publisher identity, code safety or installation consent.
+ */
+export function verifyPluginArchive(archivePath: string, options?: {
+  /** Defaults to archivePath + '.release.json'. */
+  readonly metadataPath?: string;
+  /** A lowercase SHA-256 obtained independently from a trusted release channel. */
+  readonly expectedSha256?: string;
+}): Promise<VerifiedPluginArchive>;
