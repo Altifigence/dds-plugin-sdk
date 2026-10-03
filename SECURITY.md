@@ -1,7 +1,8 @@
 # Security
 
-The supported security-fix line is the latest 0.3.x release. Update workspace
-servers and clients to **0.3.2 or later**, using a current patched Node 22 or 24.
+The current development line is **0.4.x**. It retains the security fixes from
+0.3.2. Update workspace servers and clients together, using a current patched
+Node 22 or 24; do not use a pre-0.3.2 workspace host.
 Report an SDK
 validation, lifecycle or permission-boundary vulnerability through
 [private vulnerability reporting](https://github.com/Altifigence/dds-plugin-sdk/security/advisories/new).

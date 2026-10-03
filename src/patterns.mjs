@@ -6,3 +6,9 @@ export const WINDOWS_DEVICE_COMPONENT = /^(?:CON|CONIN\$|CONOUT\$|PRN|AUX|NUL|CO
 const privateComponent = /^(?:\.git(?:-credentials)?|\.hg|\.svn|\.env(?:\..*)?|\.npmrc|\.pypirc|\.netrc|_netrc|\.aws|\.azure|\.ssh|\.gnupg|\.kube|\.docker|id_(?:rsa|dsa|ecdsa(?:_sk)?|ed25519(?:_sk)?))$/i;
 const privateExtension = /\.(?:pem|key|p12|pfx)$/i;
 export const isPrivateFileComponent = value => typeof value !== 'string' || privateComponent.test(value) || privateExtension.test(value);
+
+/** The shared file policy for network workspace paths and job artifact references. */
+export function isSafeWorkspaceRelativePath(value) {
+  if (typeof value !== 'string' || !value || value.length > 1_024 || !value.isWellFormed() || value.startsWith('/') || value.includes('\\') || /[\u0000-\u001f\u007f:*?"<>|]/u.test(value)) return false;
+  return value.split('/').every(part => part && part !== '.' && part !== '..' && !isPrivateFileComponent(part) && !/^\.dds-write-/i.test(part) && !part.endsWith('.') && !part.endsWith(' ') && !WINDOWS_DEVICE_COMPONENT.test(part));
+}

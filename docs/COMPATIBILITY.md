@@ -11,7 +11,9 @@
 | Browser-only DDS host | Native workspace transport is unavailable |
 | Language providers | Diagnostics plus completion, hover, definition, references and document symbols in SDK hosts since 0.3.0; no released DDS editor bridge is implied |
 | Project edit sessions | Client helpers in 0.3.0 over unchanged workspace protocol v1, including 0.2.x servers |
-| Download verification | Node API/CLI since 0.3.1 for DDS 0.3.x plugin archives; no extraction, code execution or publisher authentication |
+| Download verification | Node API/CLI since 0.3.1; 0.4.0 accepts exact 0.3.x and 0.4.x package metadata; no extraction, code execution or publisher authentication |
+| Development tools | `init`, `doctor`, `dev` since 0.4.0; local Node tools, explicit trusted-code execution |
+| Command jobs | Opt-in SDK host/client extension since 0.4.0; progress/logs/UTF-8 artifacts; v1 hello unchanged |
 
 This is a developer preview. Pin the exact package release and read the changelog
 before updating. SDK, protocol, plugin and DDS product versions are distinct.
@@ -38,3 +40,16 @@ plugin version. See [Security](../SECURITY.md) for migration and remaining limit
 
 Use the [official guide](https://docs.altifigence.com/developers/plugin-sdk/),
 [host contract](host-contract.md) and [workspace guide](WORKSPACES.md) together.
+
+0.4.0 retains the 0.3.2 security boundaries, manifest versions, short-command APIs,
+language APIs and project edit sessions. Existing 0.3 clients can connect to 0.4
+servers and use their existing methods. Job methods are new: call
+`getJobCapabilities()` first and handle older-server rejection without fallback
+execution. Both sides must support 0.4 for jobs; hosts must explicitly enable it.
+
+The 0.4 packer generates `>=0.4.0 <0.5.0` peers, preventing job-dependent plugins
+from being installed automatically on 0.3. The archive verifier accepts the exact
+previous `>=0.3.0 <0.4.0` metadata, but that does not make an old archive installable
+on 0.4: its publisher must validate against 0.4 and repack a new plugin version.
+Neither tool infers compatibility from code. DDS application/Windows releases
+remain separately versioned and are not changed by this SDK release.

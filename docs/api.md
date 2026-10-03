@@ -1,4 +1,10 @@
-# API reference — 0.3.2
+# API reference — 0.4.0
+
+For project scaffolding, inert diagnostics and supervised local execution, see
+[development tools](DEVTOOLS.md). For opt-in `startCommandJob`, `getJob`,
+`getJobEvents`, `cancelJob`, `readJobArtifact`, job reporters and budgets, see
+[command jobs](JOBS.md). Existing handler options gain an optional `job` reporter;
+ordinary `executeCommand` behavior and short request deadlines are unchanged.
 
 Import portable values and types from `@altifigence/dds-plugin-sdk`. The core
 validates plain data, manages plugin lifetimes and dispatches diagnostics, language features,
@@ -65,7 +71,7 @@ license eligibility or agreement acceptance. See [LICENSING](LICENSING.md).
 
 | Activation context member | Behavior |
 | --- | --- |
-| `host` | `{id: 'test-host' \| 'workspace-host', version: '0.3.2', protocolVersion: 1}` |
+| `host` | `{id: 'test-host' \| 'workspace-host', version: '0.4.0', protocolVersion: 1}` |
 | `pluginId`, `scope` | Manifest ID and opaque host `{projectId, sessionId}` |
 | `grants` | Frozen intersection of host grants and manifest permissions |
 | `signal` | Aborted on deactivation, host disposal or activation timeout |

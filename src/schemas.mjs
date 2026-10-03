@@ -1,10 +1,11 @@
-import { LIMITS } from './limits.mjs';
+import { LIMITS, ErrorCode } from './limits.mjs';
+import {JOB_LIMITS, JOB_STATES} from './jobs.mjs';
 import { SEMVER_PATTERN } from './patterns.mjs';
 import { THEME_SCHEMA } from './themes.mjs';
 import { LANGUAGE_FEATURES } from './contracts.mjs';
 
 const schema = 'https://json-schema.org/draft/2020-12/schema';
-const base = 'https://github.com/Altifigence/dds-plugin-sdk/blob/v0.3.2/schemas/';
+const base = 'https://github.com/Altifigence/dds-plugin-sdk/blob/v0.4.0/schemas/';
 const text = maxLength => ({type: 'string', minLength: 1, maxLength});
 const integer = (maximum, minimum = 0) => ({type: 'integer', minimum, maximum});
 const object = (properties, required = Object.keys(properties)) => ({type: 'object', properties, required, additionalProperties: false});
@@ -67,7 +68,17 @@ const languageData = {
 };
 
 /** Standard JSON Schemas. Runtime validators additionally enforce UTF-8 budgets and range ordering. */
+const jobId = {...text(36), pattern: '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$'};
+const jobProgress = object({completed: integer(Number.MAX_SAFE_INTEGER), total: integer(Number.MAX_SAFE_INTEGER, 1), message: {...text(JOB_LIMITS.messageBytes), 'x-maxUtf8Bytes': JOB_LIMITS.messageBytes}}, ['completed', 'total']);
+const jobArtifact = object({id: text(128), path: {...text(1024), $comment: 'Runtime enforces the protected workspace file policy.'}, revision: {...text(64), pattern: '^[a-f0-9]{64}$'}, byteLength: integer(LIMITS.documentBytes), label: text(256)}, ['id', 'path', 'revision', 'byteLength']);
+const jobBase = {protocolVersion: {const: 1}, jobId, scope, pluginId: text(128), commandId: text(128), startedAt: integer(Number.MAX_SAFE_INTEGER), updatedAt: integer(Number.MAX_SAFE_INTEGER), timeoutMs: integer(JOB_LIMITS.maxTimeoutMs, 1), progress: {oneOf: [{type: 'null'}, jobProgress]}, artifacts: list(jobArtifact, JOB_LIMITS.artifacts), lastSequence: integer(Number.MAX_SAFE_INTEGER, 1)};
+const jobEvent = {oneOf: Object.entries({progress: jobProgress, artifact: jobArtifact, state: object({state: {enum: JOB_STATES}}), log: object({level: {enum: ['debug', 'info', 'warning', 'error']}, message: {...text(JOB_LIMITS.messageBytes), 'x-maxUtf8Bytes': JOB_LIMITS.messageBytes}})}).map(([kind, data]) => object({sequence: integer(Number.MAX_SAFE_INTEGER, 1), at: integer(Number.MAX_SAFE_INTEGER), kind: {const: kind}, data}))};
 export const SCHEMAS = Object.freeze({
+  'job-options': define('job-options', object({jobId, timeoutMs: integer(JOB_LIMITS.maxTimeoutMs, 1)}, ['jobId'])),
+  'job-snapshot': define('job-snapshot', {oneOf: [object({...jobBase, state: {const: 'running'}}), object({...jobBase, state: {const: 'succeeded'}, result: {$ref: `${base}json-value.schema.json`}}), object({...jobBase, state: {enum: ['failed', 'cancelled', 'timed_out']}, error: object({code: {enum: Object.values(ErrorCode)}})})], 'x-maxUtf8Bytes': LIMITS.jsonBytes, $comment: 'Runtime checks unique artifact IDs and cross-field time/progress ordering.'}),
+  'job-events': define('job-events', object({jobId, scope, after: integer(Number.MAX_SAFE_INTEGER), nextCursor: integer(Number.MAX_SAFE_INTEGER), dropped: integer(Number.MAX_SAFE_INTEGER), hasMore: {type: 'boolean'}, events: list(jobEvent, JOB_LIMITS.pageSize)})),
+  'job-artifact-content': define('job-artifact-content', object({jobId, scope, artifact: jobArtifact, content: {type: 'string', maxLength: LIMITS.documentBytes, 'x-maxUtf8Bytes': LIMITS.documentBytes}})),
+  'job-capabilities': define('job-capabilities', object({protocolVersion: {const: 1}, enabled: {type: 'boolean'}, limits: object(Object.fromEntries(Object.entries(JOB_LIMITS).map(([key, value]) => [key, integer(value, 1)])))})),
   theme: THEME_SCHEMA,
   manifest: define('manifest', {properties: commonManifest, oneOf: [manifestV1, manifestV2]}),
   command: define('command', object({

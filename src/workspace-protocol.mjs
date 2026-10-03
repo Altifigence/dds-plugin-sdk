@@ -1,9 +1,10 @@
 import {parseManifest, parseCommandDefinition} from './contracts.mjs';
-import {isPrivateFileComponent, WINDOWS_DEVICE_COMPONENT} from './patterns.mjs';
+import {isPrivateFileComponent, isSafeWorkspaceRelativePath} from './patterns.mjs';
+import {parseJobId, parseJobOptions, parseJobSnapshot, parseJobEvents, parseJobCapabilities, parseJobArtifactContent} from './jobs.mjs';
 export const WORKSPACE_PROTOCOL_VERSION = 1;
 export const WORKSPACE_PATH = '/dds/workspace/v1';
 export const WORKSPACE_LIMITS = Object.freeze({wireBytes: 1_600_000, fileBytes: 262_144, jsonBytes: 262_144, depth: 16, nodes: 10_000, entries: 1_000, plugins: 32, pending: 64, receiving: 16, connections: 128, defaultTimeoutMs: 5_000, maxTimeoutMs: 30_000});
-export const WORKSPACE_METHODS = Object.freeze(['hello', 'fs.list', 'fs.read', 'fs.write', 'fs.mkdir', 'fs.rename', 'fs.remove', 'plugins.list', 'commands.run', 'request.cancel']);
+export const WORKSPACE_METHODS = Object.freeze(['hello', 'fs.list', 'fs.read', 'fs.write', 'fs.mkdir', 'fs.rename', 'fs.remove', 'plugins.list', 'commands.run', 'request.cancel', 'jobs.capabilities', 'jobs.start', 'jobs.get', 'jobs.events', 'jobs.cancel', 'jobs.artifact']);
 export const WORKSPACE_ERROR_CODES = Object.freeze(['invalid_request', 'authentication_required', 'permission_denied', 'workspace_mismatch', 'generation_mismatch', 'not_found', 'conflict', 'unsafe_path', 'budget_exceeded', 'cancelled', 'disposed', 'plugin_mismatch', 'provider_failed', 'unsupported', 'unavailable', 'transport_failed']);
 const encoder = new TextEncoder();
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -36,13 +37,8 @@ export function isProtectedWorkspaceComponent(value) {
 }
 export function requireWorkspacePath(value, allowRoot = false) {
   if (allowRoot && value === '') return value;
-  if (typeof value !== 'string' || !value || value.length > 1_024 || !value.isWellFormed() || value.startsWith('/') || value.includes('\\') || /[\u0000-\u001f\u007f:*?"<>|]/u.test(value)) {
+  if (!isSafeWorkspaceRelativePath(value)) {
     throw workspaceFailure('unsafe_path', 'Invalid workspace path');
-  }
-  for (const part of value.split('/')) {
-    if (!part || part === '.' || part === '..' || isProtectedWorkspaceComponent(part) || part.endsWith('.') || part.endsWith(' ') || WINDOWS_DEVICE_COMPONENT.test(part)) {
-      throw workspaceFailure('unsafe_path', 'Invalid workspace path');
-    }
   }
   return value;
 }
@@ -119,7 +115,7 @@ export function parseWorkspaceRequest(value) {
   else { if (value.workspaceId !== undefined) requireUuid(value.workspaceId); if (value.generation !== undefined) requireUuid(value.generation); }
   const p = value.params;
   switch (value.method) {
-    case 'hello': case 'plugins.list': exactObject(p, []); break;
+    case 'hello': case 'plugins.list': case 'jobs.capabilities': exactObject(p, []); break;
     case 'fs.list': exactObject(p, ['path']); requireWorkspacePath(p.path, true); break;
     case 'fs.read': case 'fs.mkdir': exactObject(p, ['path']); requireWorkspacePath(p.path); break;
     case 'fs.write': exactObject(p, ['path', 'content', 'expectedRevision']); requireWorkspacePath(p.path); requireFileContent(p.content); if (p.expectedRevision !== null) requireSha256(p.expectedRevision); break;
@@ -127,6 +123,13 @@ export function parseWorkspaceRequest(value) {
     case 'fs.remove': exactObject(p, ['path'], ['expectedRevision']); requireWorkspacePath(p.path); if (p.expectedRevision !== undefined) requireSha256(p.expectedRevision); break;
     case 'commands.run': exactObject(p, ['pluginId', 'commandId', 'input', 'artifactSha256']); requireText(p.pluginId); requireText(p.commandId); requireSha256(p.artifactSha256); copyWorkspaceJson(p.input); break;
     case 'request.cancel': exactObject(p, ['requestId']); requireText(p.requestId); break;
+    case 'jobs.start':
+      exactObject(p, ['pluginId', 'commandId', 'input', 'artifactSha256', 'jobId'], ['timeoutMs']);
+      requireText(p.pluginId); requireText(p.commandId); requireSha256(p.artifactSha256); copyWorkspaceJson(p.input);
+      try {parseJobOptions({jobId: p.jobId, ...(p.timeoutMs === undefined ? {} : {timeoutMs: p.timeoutMs})});} catch {invalid();} break;
+    case 'jobs.get': case 'jobs.cancel': exactObject(p, ['jobId']); try {parseJobId(p.jobId);} catch {invalid();} break;
+    case 'jobs.events': exactObject(p, ['jobId', 'after']); try {parseJobId(p.jobId);} catch {invalid();} if (!Number.isSafeInteger(p.after) || p.after < 0) invalid(); break;
+    case 'jobs.artifact': exactObject(p, ['jobId', 'artifactId']); try {parseJobId(p.jobId);} catch {invalid();} requireText(p.artifactId); break;
   }
   return value;
 }
@@ -179,6 +182,15 @@ export function parseWorkspaceHello(value) {
 export function parseWorkspaceMethodResult(method, value) {
   value = wireInput(value);
   if (method === 'hello') return parseWorkspaceHello(value);
+  if (method.startsWith('jobs.')) {
+    try {
+      if (method === 'jobs.capabilities') return parseJobCapabilities(value);
+      if (method === 'jobs.events') return parseJobEvents(value);
+      if (method === 'jobs.artifact') return parseJobArtifactContent(value);
+      if (['jobs.start', 'jobs.get', 'jobs.cancel'].includes(method)) return parseJobSnapshot(value);
+    } catch {invalid();}
+    invalid();
+  }
   if (method === 'fs.list') {
     exactObject(value, ['entries']);
     if (!Array.isArray(value.entries) || value.entries.length > WORKSPACE_LIMITS.entries) invalid();

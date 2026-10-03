@@ -1,16 +1,14 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.4.0/schemas/diagnostics-request.schema.json",
-  "title": "diagnostics-request",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.4.0/schemas/job-artifact-content.schema.json",
+  "title": "job-artifact-content",
   "type": "object",
   "properties": {
-    "protocolVersion": {
-      "const": 1
-    },
-    "requestId": {
+    "jobId": {
       "type": "string",
       "minLength": 1,
-      "maxLength": 128
+      "maxLength": 36,
+      "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
     },
     "scope": {
       "type": "object",
@@ -32,52 +30,56 @@
       ],
       "additionalProperties": false
     },
-    "snapshot": {
+    "artifact": {
       "type": "object",
       "properties": {
-        "uri": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 2048,
-          "pattern": "^[A-Za-z][A-Za-z0-9+.-]*:[^\\s\\u0000-\\u001f\\u007f]+$"
-        },
-        "languageId": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 64,
-          "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
-        },
-        "modelVersion": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 9007199254740991
-        },
-        "workspaceRevision": {
+        "id": {
           "type": "string",
           "minLength": 1,
           "maxLength": 128
         },
-        "text": {
+        "path": {
           "type": "string",
-          "maxLength": 262144,
-          "x-maxUtf8Bytes": 262144
+          "minLength": 1,
+          "maxLength": 1024,
+          "$comment": "Runtime enforces the protected workspace file policy."
+        },
+        "revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "byteLength": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 262144
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
         }
       },
       "required": [
-        "uri",
-        "languageId",
-        "modelVersion",
-        "workspaceRevision",
-        "text"
+        "id",
+        "path",
+        "revision",
+        "byteLength"
       ],
       "additionalProperties": false
+    },
+    "content": {
+      "type": "string",
+      "maxLength": 262144,
+      "x-maxUtf8Bytes": 262144
     }
   },
   "required": [
-    "protocolVersion",
-    "requestId",
+    "jobId",
     "scope",
-    "snapshot"
+    "artifact",
+    "content"
   ],
   "additionalProperties": false
 }

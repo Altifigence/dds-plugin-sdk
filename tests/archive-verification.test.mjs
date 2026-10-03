@@ -105,6 +105,17 @@ test('verifies open and proprietary releases without importing code, extracting 
   }
 });
 
+test('the previous 0.3 metadata is still verified exactly without broadening its declared peer range', async t => {
+  const f = await fixture(t);
+  const list = entries(f.archive), item = list.find(entry => name(entry) === 'package.json');
+  const metadata = JSON.parse(item.bytes); metadata.peerDependencies['@altifigence/dds-plugin-sdk'] = '>=0.3.0 <0.4.0';
+  item.bytes = Buffer.from(JSON.stringify(metadata, null, 2) + '\n');
+  await installPair(f, build(list), receipt => reflectFiles(receipt, list));
+  const receipt = await verifyPluginArchive(f.packed.archivePath);
+  assert.equal(receipt.pluginId, 'verify-example');
+  assert.match(item.bytes.toString(), />=0\.3\.0 <0\.4\.0/);
+});
+
 test('an independently pinned digest rejects a replaced but otherwise valid release', async t => {
   const f = await fixture(t);
   await writeFile(path.join(f.root, 'plugin.mjs'), 'throw new Error("Different valid release bytes");');

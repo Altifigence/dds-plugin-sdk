@@ -5,6 +5,7 @@ import {createHash, randomUUID, timingSafeEqual} from 'node:crypto';
 import {createServer} from 'node:http';
 import {spawn} from 'node:child_process';
 import {createPluginHost} from './index.mjs';
+import {JOB_LIMITS} from './jobs.mjs';
 import {WORKSPACE_PATH, WORKSPACE_LIMITS, WORKSPACE_ERROR_CODES, WorkspaceError, workspaceFailure, requireText, requireUuid, requireSha256, requireToken, requireWorkspacePath, requireFileContent, copyWorkspaceJson, parseWorkspaceRequest, parseWorkspaceHello, parseWorkspaceMethodResult} from './workspace-protocol.mjs';
 
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -165,7 +166,7 @@ export async function createNodeWorkspace({root, writable = true, manage = writa
 /** Operator-pinned executable/arguments. No request-controlled shell or command line. */
 export function createProcessBackend({executable,args=[],cwd,env={},timeoutMs=WORKSPACE_LIMITS.defaultTimeoutMs,maxOutputBytes=WORKSPACE_LIMITS.jsonBytes}={}) {
   if(typeof executable!=='string'||!path.isAbsolute(executable)||typeof cwd!=='string'||!path.isAbsolute(cwd)||!Array.isArray(args)||args.length>64||args.some(arg=>typeof arg!=='string'||arg.length>4096||arg.includes('\0')))throw workspaceFailure('invalid_request','An absolute executable and workspace cwd are required');
-  if(!Number.isInteger(timeoutMs)||timeoutMs<1||timeoutMs>WORKSPACE_LIMITS.maxTimeoutMs||!Number.isInteger(maxOutputBytes)||maxOutputBytes<1||maxOutputBytes>WORKSPACE_LIMITS.jsonBytes)throw workspaceFailure('invalid_request','Invalid tool execution budget');
+  if(!Number.isInteger(timeoutMs)||timeoutMs<1||timeoutMs>JOB_LIMITS.maxTimeoutMs||!Number.isInteger(maxOutputBytes)||maxOutputBytes<1||maxOutputBytes>WORKSPACE_LIMITS.jsonBytes)throw workspaceFailure('invalid_request','Invalid tool execution budget');
   const environment={};
   for(const [key,value]of Object.entries(env)){if(!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)||typeof value!=='string'||value.includes('\0')||value.length>4096)throw workspaceFailure('invalid_request','Invalid tool environment');environment[key]=value;}
   args=Object.freeze([...args]);Object.freeze(environment);
@@ -212,8 +213,10 @@ function safeOperationFailure(failure) {
 }
 
 /** HTTP server for explicitly configured trusted plugins in the user environment. */
-export async function createWorkspaceServer({workspace,root,workspaceId,name='User workspace',token,plugins=[],pluginHost,grants=[],backends={},notice,host='127.0.0.1',port=0,writable=true,manage=writable,allowedOrigins=[],timeoutMs=WORKSPACE_LIMITS.defaultTimeoutMs}={}) {
+export async function createWorkspaceServer({workspace,root,workspaceId,name='User workspace',token,plugins=[],pluginHost,grants=[],backends={},jobs=false,notice,host='127.0.0.1',port=0,writable=true,manage=writable,allowedOrigins=[],timeoutMs=WORKSPACE_LIMITS.defaultTimeoutMs}={}) {
   requireUuid(workspaceId);requireText(name,128);requireText(host,253);token=requireToken(token);
+  if(typeof jobs!=='boolean')throw workspaceFailure('invalid_request','Invalid job capability');
+  const ownsPluginHost=pluginHost===undefined;
   if(!Number.isInteger(port)||port<0||port>65535||!Number.isInteger(timeoutMs)||timeoutMs<1||timeoutMs>WORKSPACE_LIMITS.maxTimeoutMs)throw workspaceFailure('invalid_request','Invalid workspace server configuration');
   if(!Array.isArray(allowedOrigins)||allowedOrigins.length>16)throw workspaceFailure('invalid_request','Invalid allowed origins');
   const origins=new Set(allowedOrigins.map(origin=>{let url;try{url=new URL(origin);}catch{throw workspaceFailure('invalid_request','Invalid allowed origin');}if(url.origin!==origin||!['https:','http:'].includes(url.protocol)||url.username||url.password)throw workspaceFailure('invalid_request','Invalid allowed origin');return origin;}));
@@ -223,7 +226,7 @@ export async function createWorkspaceServer({workspace,root,workspaceId,name='Us
   if(notice.sha256!==undefined&&notice.sha256!==noticePayload.sha256)throw workspaceFailure('invalid_request','Operator notice digest mismatch');
   workspace??=await createNodeWorkspace({root,writable,manage});
   const generation=randomUUID(),scope=Object.freeze({projectId:workspaceId,sessionId:generation});
-  pluginHost??=createPluginHost({hostId:'workspace-host',scope,grants,workspace,backends});
+  pluginHost??=createPluginHost({hostId:'workspace-host',scope,grants,workspace,backends,jobs});
   const pins=new Map();
   try{
     for(const item of plugins){const hash=requireSha256(item.artifactSha256);if(!item.plugin?.manifest?.id||pins.has(item.plugin.manifest.id))throw workspaceFailure('invalid_request','Duplicate or invalid configured plugin');if(item.licenseText!==undefined&&(typeof item.licenseText!=='string'||Buffer.byteLength(item.licenseText)>65536))throw workspaceFailure('invalid_request','Invalid plugin license text');await pluginHost.activate(item.plugin);pins.set(item.plugin.manifest.id,{artifactSha256:hash,...(item.licenseText===undefined?{}:{licenseText:item.licenseText})});}
@@ -232,7 +235,7 @@ export async function createWorkspaceServer({workspace,root,workspaceId,name='Us
     const commands=pluginHost.listCommands();
     return pluginHost.listPlugins().map(manifest=>({manifest,...pins.get(manifest.id),commands:commands.filter(command=>command.pluginId===manifest.id)}));
   };
-  const description=()=>parseWorkspaceHello({hostId:'workspace-host',hostVersion:'0.3.2',protocolVersion:1,workspace:{id:workspaceId,name,generation},capabilities:{read:true,write:workspace.capabilities?.write===true,manage:workspace.capabilities?.manage===true,commands:pins.size>0},plugins:metadata(),notice:noticePayload});
+  const description=()=>parseWorkspaceHello({hostId:'workspace-host',hostVersion:'0.4.0',protocolVersion:1,workspace:{id:workspaceId,name,generation},capabilities:{read:true,write:workspace.capabilities?.write===true,manage:workspace.capabilities?.manage===true,commands:pins.size>0},plugins:metadata(),notice:noticePayload});
   let originalDescription;
   try{originalDescription=description();}catch(failure){pluginHost.dispose();workspace.dispose?.();throw safeOperationFailure(failure);}
   const originalMetadata=JSON.stringify({plugins:originalDescription.plugins,capabilities:originalDescription.capabilities});
@@ -248,6 +251,7 @@ export async function createWorkspaceServer({workspace,root,workspaceId,name='Us
   };
   async function dispatch(request,signal) {
     const p=request.params;
+    if(request.method.startsWith('jobs.')&&request.method!=='jobs.capabilities'&&(!jobs||!ownsPluginHost))throw workspaceFailure('unsupported','Enable jobs on the server-owned plugin host');
     switch(request.method){
       case 'hello':return checkedDescription();
       case 'fs.list':return{entries:await workspace.listFiles(p.path,{signal})};
@@ -258,6 +262,12 @@ export async function createWorkspaceServer({workspace,root,workspaceId,name='Us
       case 'fs.remove':if(!workspace.capabilities?.manage||!workspace.remove)throw workspaceFailure('permission_denied','Workspace management is disabled');return workspace.remove(p.path,{expectedRevision:p.expectedRevision,signal});
       case 'plugins.list':return{plugins:checkedDescription().plugins};
       case 'commands.run':checkedDescription();if(pins.get(p.pluginId)?.artifactSha256!==p.artifactSha256)throw workspaceFailure('plugin_mismatch','Plugin artifact identity changed');return pluginHost.executeCommand(p.pluginId,p.commandId,p.input,{signal,timeoutMs});
+      case 'jobs.capabilities':checkedDescription();return ownsPluginHost?pluginHost.jobCapabilities():{protocolVersion:1,enabled:false,limits:JOB_LIMITS};
+      case 'jobs.start':checkedDescription();if(pins.get(p.pluginId)?.artifactSha256!==p.artifactSha256)throw workspaceFailure('plugin_mismatch','Plugin artifact identity changed');if(!pluginHost.startCommandJob)throw workspaceFailure('unsupported','Jobs are unavailable');return pluginHost.startCommandJob(p.pluginId,p.commandId,p.input,{jobId:p.jobId,...(p.timeoutMs===undefined?{}:{timeoutMs:p.timeoutMs})});
+      case 'jobs.get':checkedDescription();if(!pluginHost.getJob)throw workspaceFailure('unsupported','Jobs are unavailable');return pluginHost.getJob(p.jobId);
+      case 'jobs.events':checkedDescription();if(!pluginHost.getJobEvents)throw workspaceFailure('unsupported','Jobs are unavailable');return pluginHost.getJobEvents(p.jobId,p.after);
+      case 'jobs.cancel':checkedDescription();if(!pluginHost.cancelJob)throw workspaceFailure('unsupported','Jobs are unavailable');return pluginHost.cancelJob(p.jobId);
+      case 'jobs.artifact':checkedDescription();if(!pluginHost.readJobArtifact)throw workspaceFailure('unsupported','Jobs are unavailable');return pluginHost.readJobArtifact(p.jobId,p.artifactId,{signal});
       case 'request.cancel':{const target=pending.get(p.requestId);if(target)target.abort(workspaceFailure('cancelled','Workspace request cancelled'));return{cancelled:!!target};}
     }
   }

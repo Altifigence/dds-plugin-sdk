@@ -3,6 +3,7 @@ import { createDiagnosticsRegistry } from './lifecycle.mjs';
 import { createLanguageRegistry } from './lifecycle.mjs';
 import { LANGUAGE_FEATURES, parseLanguageRequest } from './contracts.mjs';
 import { ErrorCode, LIMITS, PluginSdkError } from './limits.mjs';
+import {createJobRegistry} from './job-registry.mjs';
 
 const hostFailures = new WeakSet();
 const error = (code, message) => {
@@ -12,7 +13,7 @@ const error = (code, message) => {
 };
 
 /** Executes trusted local plugins in this process. This developer host is not a sandbox. */
-export function createPluginHost({hostId = 'test-host', scope = {projectId: 'example-project', sessionId: 'example-session'}, grants = [], workspace, backends = {}} = {}) {
+export function createPluginHost({hostId = 'test-host', scope = {projectId: 'example-project', sessionId: 'example-session'}, grants = [], workspace, backends = {}, jobs = false} = {}) {
   if (!['test-host', 'workspace-host'].includes(hostId)) throw error(ErrorCode.UNSUPPORTED_HOST, 'Unknown plugin host');
   scope = parseScope(scope);
   grants = parseGrants(grants);
@@ -32,6 +33,7 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
   let commandCount = 0;
   const plugins = new Map();
   const pending = new Set();
+  const jobRegistry = createJobRegistry({scope, enabled: jobs});
   function isCurrent(request) {
     return !!document && request.scope.projectId === scope.projectId && request.scope.sessionId === scope.sessionId &&
       ['uri', 'languageId', 'modelVersion', 'workspaceRevision', 'text'].every(key => request.snapshot[key] === document[key]);
@@ -125,7 +127,7 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
     const state = {active: true, ready: false, manifest, grants: effectiveGrants, commands: new Map(), registrations: new Set(), controller: new AbortController(), disposable: undefined};
     plugins.set(manifest.id, state);
     const context = Object.freeze({
-      host: Object.freeze({id: hostId, version: '0.3.2', protocolVersion: 1}),
+      host: Object.freeze({id: hostId, version: '0.4.0', protocolVersion: 1}),
       pluginId: manifest.id,
       scope,
       grants: effectiveGrants,
@@ -298,6 +300,37 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
       const value = parseCommandInput(input, entry.command);
       return run(state, signal => entry.handler(value, Object.freeze({signal})), options, {entry});
     },
+    jobCapabilities() {assertOpen(); return jobRegistry.capabilities();},
+    startCommandJob(pluginId, commandId, input, options) {
+      assertOpen();
+      const state = plugins.get(pluginId);
+      if (!state || !state.active || !state.ready) throw error(ErrorCode.DISPOSED, 'Plugin is not active');
+      const entry = state.commands.get(commandId);
+      if (!entry) throw error(ErrorCode.CAPABILITY_UNAVAILABLE, 'Command is unavailable');
+      const value = parseCommandInput(input, entry.command);
+      return jobRegistry.start({pluginId, commandId, input: value, options, signal: state.controller.signal,
+        assertActive: () => {assertActive(state); if (state.commands.get(commandId) !== entry) throw error(ErrorCode.DISPOSED, 'Command is disposed');},
+        execute: (input, options) => entry.handler(input, Object.freeze(options)),
+        registerController: controller => {entry.pending.add(controller); return () => entry.pending.delete(controller);},
+        readFile: (path, signal, timeoutMs = LIMITS.defaultTimeoutMs) => {
+          permit(state, 'workspace.read');
+          if (!workspace || typeof workspace.readFile !== 'function') throw error(ErrorCode.CAPABILITY_UNAVAILABLE, 'Workspace read port is unavailable');
+          return run(state, signal => workspace.readFile(path, Object.freeze({signal})), {signal, timeoutMs}, {validate: value => parseWorkspaceRead(value, path), trusted: true});
+        },
+        invokeBackend: async (id, input, options) => {
+          permit(state, 'backend.invoke');
+          if (typeof id !== 'string' || !backendMap.has(id)) throw error(ErrorCode.CAPABILITY_UNAVAILABLE, 'Named backend is unavailable');
+          try {return await backendMap.get(id)(input, Object.freeze({...options, pluginId, scope}));}
+          catch {throw error(ErrorCode.PROVIDER_FAILED, 'Backend job failed');}
+        },
+      });
+    },
+    getJob(jobId) {assertOpen(); return jobRegistry.get(jobId);},
+    getJobEvents(jobId, after) {assertOpen(); return jobRegistry.events(jobId, after);},
+    cancelJob(jobId) {assertOpen(); return jobRegistry.cancel(jobId);},
+    readJobArtifact(jobId, artifactId, options = {}) {
+      assertOpen(); const {signal, timeoutMs} = checkedOptions(options); return jobRegistry.readArtifact(jobId, artifactId, signal, timeoutMs);
+    },
     deactivate(pluginId) {
       assertOpen();
       const state = plugins.get(pluginId);
@@ -305,6 +338,7 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
     },
     dispose() {
       if (disposed) return;
+      jobRegistry.dispose();
       disposed = true;
       for (const state of plugins.values()) cleanup(state);
       plugins.clear();

@@ -111,6 +111,13 @@ registration or import modules.
 
 ## DDS release boundary
 
+SDK 0.4.0 command jobs require `jobs: true`, use the same effective permissions,
+and have a separate bounded execution lifetime. Bind them to the host scope and
+generation, retain admission slots for unsettled work, abort on unload/close,
+and render progress/logs as text. The HTTP reference host owns its plugin host
+when enabling jobs. See [JOBS](JOBS.md) for terminal state, retention and result
+file rules. Dev child processes provide cleanup, not OS isolation.
+
 The public Node server/client and local tests demonstrate user-owned workspace
 operations. Native DDS connection controls belong to the DDS product and need
 their own release evidence. An SDK tarball or passing local host test does not

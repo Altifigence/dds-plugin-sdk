@@ -1,5 +1,13 @@
 # User workspace protocol 1
 
+SDK 0.4.0 adds optional `jobs.capabilities`, `jobs.start`, `jobs.get`,
+`jobs.events`, `jobs.cancel` and `jobs.artifact` methods on this authenticated
+endpoint. The hello payload and existing methods remain unchanged. Query
+capabilities first; older hosts reject these unknown methods. See
+[command jobs](JOBS.md) for parameter/result types, polling cursors, generation
+binding and independent execution deadlines. The JSON schemas are exported
+through `/schemas` and the validators/types through `/jobs`.
+
 The user runs the workspace server, plugin code and preinstalled tools in their
 own WSL, container or remote environment. DDS is a client. This API does not
 install packages, accept module paths, run shell strings or transfer DDS account

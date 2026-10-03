@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.3.2/schemas/command.schema.json",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.4.0/schemas/command.schema.json",
   "title": "command",
   "type": "object",
   "properties": {

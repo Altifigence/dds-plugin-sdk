@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.3.2/schemas/json-value.schema.json",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.4.0/schemas/json-value.schema.json",
   "title": "json-value",
   "$ref": "#/$defs/value",
   "x-maxUtf8Bytes": 262144,
