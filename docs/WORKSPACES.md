@@ -131,10 +131,13 @@ product approval are separate boundaries.
 Paths are relative slash paths. Ordinary `.gitignore`, `.vscode/settings.json`
 and `.github/workflows/build.yml` are supported. The shared
 `isProtectedWorkspaceComponent` predicate rejects (case insensitive) `.git`,
-`.hg`, `.svn`, `.ssh`, `.aws`, `.azure`, `.npmrc`, `.pypirc`, `.env`/`.env.*`,
-`.dds-write-*`, `id_rsa`, `id_dsa`, `id_ecdsa`, `id_ed25519`, and filenames ending
-in `.pem`, `.key`, `.p12` or `.pfx`. Traversal, invalid path characters and symlinks
-are also denied. Listing skips these entries and never recursively walks them.
+`.hg`, `.svn`, `.ssh`, `.aws`, `.azure`, `.gnupg`, `.kube`, `.docker`, `.npmrc`,
+`.pypirc`, `.netrc`, `_netrc`, `.git-credentials`, `.env`/`.env.*`, `.dds-write-*`,
+`id_rsa`, `id_dsa`, `id_ecdsa`, `id_ed25519`, `id_ecdsa_sk`, `id_ed25519_sk`, and
+filenames ending in `.pem`, `.key`, `.p12` or `.pfx`. Traversal, invalid Unicode
+or path characters, Windows device names (including superscript COM/LPT aliases
+and `CONIN$`/`CONOUT$`), symlinks and multiply linked files are also denied.
+Listing skips protected entries and hardlinks and never recursively walks them.
 This explicit list is not a scanner for every possible secret. Trusted modules
 and tools are still governed by their OS account.
 
@@ -150,7 +153,16 @@ nonrecursive. Read-only mode disables write and management even for a granted
 plugin. Close disposes configured plugin and workspace ports.
 
 Default timeout is 5 seconds, maximum 30 seconds. JSON data, request/reply bytes,
-directory entries and pending requests are bounded. Pass `signal` to cancel a
+directory entries and pending requests are bounded. At most 16 request bodies
+are received concurrently, before the 64-operation execution limit; excess
+uploads get HTTP 429. The server accepts at most 128 connections and 128 requests
+per socket. Completing or aborting an upload releases its slot. Clients cancel
+unread rejected responses and stalled streams on deadline or cancellation.
+Pass `signal` to cancel a
 client operation. Remote cancellation is best effort and only affects that
 configured principal's generation. See the protocol document for exact limits
 and error codes.
+
+These server and client protections require SDK 0.3.2 on their respective sides.
+Updating a client leaves an older server's policy unchanged. See
+[security upgrade guidance](../SECURITY.md) before moving an existing host.

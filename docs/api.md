@@ -1,4 +1,4 @@
-# API reference — 0.3.1
+# API reference — 0.3.2
 
 Import portable values and types from `@altifigence/dds-plugin-sdk`. The core
 validates plain data, manages plugin lifetimes and dispatches diagnostics, language features,
@@ -65,7 +65,7 @@ license eligibility or agreement acceptance. See [LICENSING](LICENSING.md).
 
 | Activation context member | Behavior |
 | --- | --- |
-| `host` | `{id: 'test-host' \| 'workspace-host', version: '0.3.1', protocolVersion: 1}` |
+| `host` | `{id: 'test-host' \| 'workspace-host', version: '0.3.2', protocolVersion: 1}` |
 | `pluginId`, `scope` | Manifest ID and opaque host `{projectId, sessionId}` |
 | `grants` | Frozen intersection of host grants and manifest permissions |
 | `signal` | Aborted on deactivation, host disposal or activation timeout |

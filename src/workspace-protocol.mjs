@@ -1,7 +1,8 @@
 import {parseManifest, parseCommandDefinition} from './contracts.mjs';
+import {isPrivateFileComponent, WINDOWS_DEVICE_COMPONENT} from './patterns.mjs';
 export const WORKSPACE_PROTOCOL_VERSION = 1;
 export const WORKSPACE_PATH = '/dds/workspace/v1';
-export const WORKSPACE_LIMITS = Object.freeze({wireBytes: 1_600_000, fileBytes: 262_144, jsonBytes: 262_144, depth: 16, nodes: 10_000, entries: 1_000, plugins: 32, pending: 64, defaultTimeoutMs: 5_000, maxTimeoutMs: 30_000});
+export const WORKSPACE_LIMITS = Object.freeze({wireBytes: 1_600_000, fileBytes: 262_144, jsonBytes: 262_144, depth: 16, nodes: 10_000, entries: 1_000, plugins: 32, pending: 64, receiving: 16, connections: 128, defaultTimeoutMs: 5_000, maxTimeoutMs: 30_000});
 export const WORKSPACE_METHODS = Object.freeze(['hello', 'fs.list', 'fs.read', 'fs.write', 'fs.mkdir', 'fs.rename', 'fs.remove', 'plugins.list', 'commands.run', 'request.cancel']);
 export const WORKSPACE_ERROR_CODES = Object.freeze(['invalid_request', 'authentication_required', 'permission_denied', 'workspace_mismatch', 'generation_mismatch', 'not_found', 'conflict', 'unsafe_path', 'budget_exceeded', 'cancelled', 'disposed', 'plugin_mismatch', 'provider_failed', 'unsupported', 'unavailable', 'transport_failed']);
 const encoder = new TextEncoder();
@@ -31,15 +32,15 @@ export function requireToken(value) {
 }
 /** Exact API exclusions, case-insensitive on every platform. Ordinary dotfiles are allowed. */
 export function isProtectedWorkspaceComponent(value) {
-  return typeof value !== 'string' || /^(?:\.git|\.hg|\.svn|\.ssh|\.aws|\.azure|\.npmrc|\.pypirc|id_rsa|id_dsa|id_ecdsa|id_ed25519)$/i.test(value) || /^\.env(?:\.|$)/i.test(value) || /^\.dds-write-/i.test(value) || /\.(?:pem|key|p12|pfx)$/i.test(value);
+  return isPrivateFileComponent(value) || /^\.dds-write-/i.test(value);
 }
 export function requireWorkspacePath(value, allowRoot = false) {
   if (allowRoot && value === '') return value;
-  if (typeof value !== 'string' || !value || value.length > 1_024 || value.startsWith('/') || value.includes('\\') || /[\u0000-\u001f\u007f:*?"<>|]/u.test(value)) {
+  if (typeof value !== 'string' || !value || value.length > 1_024 || !value.isWellFormed() || value.startsWith('/') || value.includes('\\') || /[\u0000-\u001f\u007f:*?"<>|]/u.test(value)) {
     throw workspaceFailure('unsafe_path', 'Invalid workspace path');
   }
   for (const part of value.split('/')) {
-    if (!part || part === '.' || part === '..' || isProtectedWorkspaceComponent(part) || part.endsWith('.') || part.endsWith(' ') || /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(part)) {
+    if (!part || part === '.' || part === '..' || isProtectedWorkspaceComponent(part) || part.endsWith('.') || part.endsWith(' ') || WINDOWS_DEVICE_COMPONENT.test(part)) {
       throw workspaceFailure('unsafe_path', 'Invalid workspace path');
     }
   }

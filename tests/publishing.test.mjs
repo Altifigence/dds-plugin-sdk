@@ -108,6 +108,19 @@ test('template disclosure, credentials and oversized archive inputs are rejected
   await writeFile(path.join(directory, 'dds-package.json'), JSON.stringify({...config, files: [...config.files, 'large.bin']}));
   await assert.rejects(validatePluginPackage(directory), /byte limit/);
 });
+
+test('portable device aliases and additional private credential names fail before any file is read', async t => {
+  const {directory, config} = await fixture(t);
+  for (const name of ['COM\u00b9', 'COM\u00b2.txt', 'LPT\u00b3', 'nested/CONIN$', 'CONOUT$.txt']) {
+    await writeFile(path.join(directory, 'dds-package.json'), JSON.stringify({...config, files: [...config.files, name]}));
+    await assert.rejects(validatePluginPackage(directory), /unsafe file path/);
+  }
+  for (const name of ['.git-credentials', '_netrc', 'id_dsa', 'id_ecdsa', 'id_ecdsa_sk', 'id_ed25519_sk']) {
+    await writeFile(path.join(directory, name), 'synthetic private fixture');
+    await writeFile(path.join(directory, 'dds-package.json'), JSON.stringify({...config, files: [...config.files, name]}));
+    await assert.rejects(validatePluginPackage(directory), /private configuration or key material/);
+  }
+});
 test('directory links cannot pull external contents into a release', async t => {
   const {directory, config} = await fixture(t);
   const outside = await fixture(t);

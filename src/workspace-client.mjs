@@ -23,6 +23,8 @@ async function readResponse(response, signal) {
   if (declared && (!/^\d+$/.test(declared) || Number(declared) > WORKSPACE_LIMITS.wireBytes)) throw workspaceFailure('budget_exceeded', 'Workspace response limit exceeded');
   if (!response.body) throw workspaceFailure('transport_failed', 'Workspace response is empty');
   const reader = response.body.getReader();
+  const onAbort = () => { void reader.cancel().catch(() => {}); };
+  signal.addEventListener('abort', onAbort, {once: true});
   const decoder = new TextDecoder('utf-8', {fatal: true});
   let total = 0, text = '';
   try {
@@ -36,7 +38,7 @@ async function readResponse(response, signal) {
     }
     return text + decoder.decode();
   } catch (failure) { await reader.cancel().catch(() => {}); throw failure; }
-  finally { reader.releaseLock(); }
+  finally { signal.removeEventListener('abort', onAbort); reader.releaseLock(); }
 }
 
 /** Explicitly configured user-host client. It never downloads or runs plugin code. */
@@ -59,12 +61,18 @@ export function createWorkspaceClient({url, token, fetch: transport = globalThis
   async function send(envelope, signal) {
     const request = parseWorkspaceRequest(envelope);
     const response = await transport(endpoint, {method: 'POST', redirect: 'error', credentials: 'omit', cache: 'no-store', headers: {'content-type': 'application/json', authorization: `Bearer ${token}`}, body: JSON.stringify(request), signal});
-    if (response.redirected || response.status >= 300 && response.status < 400) throw workspaceFailure('transport_failed', 'Workspace redirects are forbidden');
-    if (response.status === 401 || response.status === 403) throw workspaceFailure('authentication_required', 'Workspace server rejected authentication or origin');
-    if (!response.ok) throw workspaceFailure('transport_failed', 'Workspace server rejected the request');
-    const reply = parseWorkspaceReply(await readResponse(response, signal), request.requestId);
-    if (!reply.ok) throw workspaceFailure(reply.error.code, `Workspace request failed (${reply.error.code})`);
-    return parseWorkspaceMethodResult(request.method, reply.result);
+    try {
+      signal.throwIfAborted();
+      if (response.redirected || response.status >= 300 && response.status < 400) throw workspaceFailure('transport_failed', 'Workspace redirects are forbidden');
+      if (response.status === 401 || response.status === 403) throw workspaceFailure('authentication_required', 'Workspace server rejected authentication or origin');
+      if (!response.ok) throw workspaceFailure('transport_failed', 'Workspace server rejected the request');
+      const reply = parseWorkspaceReply(await readResponse(response, signal), request.requestId);
+      if (!reply.ok) throw workspaceFailure(reply.error.code, `Workspace request failed (${reply.error.code})`);
+      return parseWorkspaceMethodResult(request.method, reply.result);
+    } finally {
+      // Rejected status/headers must not leave an unread network body alive.
+      if (response.body) await response.body.cancel().catch(() => {});
+    }
   }
   async function cancelRemote(requestId, captured) {
     if (!captured || closed) return;

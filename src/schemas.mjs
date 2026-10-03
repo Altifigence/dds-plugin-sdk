@@ -4,7 +4,7 @@ import { THEME_SCHEMA } from './themes.mjs';
 import { LANGUAGE_FEATURES } from './contracts.mjs';
 
 const schema = 'https://json-schema.org/draft/2020-12/schema';
-const base = 'https://github.com/Altifigence/dds-plugin-sdk/blob/v0.3.1/schemas/';
+const base = 'https://github.com/Altifigence/dds-plugin-sdk/blob/v0.3.2/schemas/';
 const text = maxLength => ({type: 'string', minLength: 1, maxLength});
 const integer = (maximum, minimum = 0) => ({type: 'integer', minimum, maximum});
 const object = (properties, required = Object.keys(properties)) => ({type: 'object', properties, required, additionalProperties: false});

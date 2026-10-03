@@ -26,7 +26,7 @@ notes for the capabilities and hosts actually supported by that release.
    what data the plugin uses, which backend receives it, and how users can find
    updates and contact the publisher about security.
 4. List the plugin's distribution files explicitly in `dds-package.json`, then
-   validate and pack them with the SDK 0.3.1 CLI described below. Inspect the
+   validate and pack them with the SDK 0.3.2 CLI described below. Inspect the
    archive; do not list credentials, private project data or files that you do
    not intend to distribute.
 5. Publish the immutable versioned `.tgz`, its external `.release.json` and
@@ -44,10 +44,10 @@ file. Errors do not print the detected value. This is a conservative additional
 check, not a complete secret or malware scanner. Inspect your source and final
 archive; obfuscated credentials and confidential implementation may evade it.
 
-## Package format and SDK 0.3.1 CLI
+## Package format and SDK 0.3.2 CLI
 
 The CLI has been available since SDK 0.2.0; SDK 0.1.0 does not provide it.
-Use an installed 0.3.1 package containing the `dds-plugin` executable.
+Use an installed 0.3.2 package containing the `dds-plugin` executable.
 
 Prepare this layout:
 
@@ -152,7 +152,7 @@ separate from validating and packaging your own plugin.
 
 ## Select a distribution channel
 
-Before installing a downloaded plugin, use the SDK 0.3.1
+Before installing a downloaded plugin, use the SDK 0.3.2
 [`dds-plugin verify` command](VERIFYING.md) or `verifyPluginArchive()` API to
 check its archive and release metadata without running or extracting it.
 Supply an independently obtained expected SHA-256 when selecting exact release
