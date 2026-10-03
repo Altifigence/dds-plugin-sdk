@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.1 — 2026-10-03
+
+- Reject recognizable key/token material inside allowed plugin files and additional
+  SSH/cloud credential paths without echoing detected values.
+- Verify the SDK's exact public package inventory and source boundary in CI, with
+  negative tests for extra package files, private imports and credentials.
+- Document the independent SDK's public scope, host availability and official guides.
+
+The new checks are conservative safeguards, not complete secret or malware scans.
+Existing manifests, workspace protocol and plugin APIs remain compatible.
+
 ## 0.2.0 — 2026-10-03
 
 - Keep manifest v1 and diagnostics compatible; add manifest v2 with UI/workspace

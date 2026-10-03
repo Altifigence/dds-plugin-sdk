@@ -24,7 +24,7 @@ try {
   for (const required of ['LICENSE', 'NOTICE', 'README.md', 'src/index.mjs', 'src/index.d.mts', 'src/testing.mjs', 'schemas/manifest.schema.json', 'examples/hello-diagnostics/plugin.mjs', 'src/host.mjs', 'src/themes.mjs', 'src/workspace-node.mjs', 'src/workspace-client.mjs', 'src/consent.mjs', 'src/publishing.mjs', 'bin/dds-plugin.mjs', 'templates/LICENSE.proprietary.example.txt', 'examples/publishable-plugin/LICENSE']) {
     assert.ok(paths.includes(required), `Missing ${required} in package`);
   }
-  for (const path of paths) assert.match(path, /^(?:package\.json|README\.md|CHANGELOG\.md|CONTRIBUTING\.md|SECURITY\.md|LICENSE|NOTICE|(?:src|bin|schemas|docs|examples|templates)\/)/, `Unexpected public file ${path}`);
+  assert.deepEqual([...paths].sort(), JSON.parse(await readFile(join(root, 'PUBLIC_SURFACE.json'), 'utf8')).packageFiles.slice().sort(), 'Packed SDK must match the reviewed inventory');
   const consumer = join(temporary, 'consumer');
   await mkdir(consumer);
   await writeFile(join(consumer, 'package.json'), JSON.stringify({name: 'sdk-external-smoke', version: '1.0.0', private: true, type: 'module'}));
@@ -33,7 +33,7 @@ try {
   assert.equal(await realpath(installed), installed, 'Packed install must be a real directory, not a source symlink');
   const metadata = JSON.parse(await readFile(join(installed, 'package.json'), 'utf8'));
   assert.equal(metadata.name, '@altifigence/dds-plugin-sdk');
-  assert.equal(metadata.version, '0.2.0');
+  assert.equal(metadata.version, JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).version);
   assert.equal(Object.keys(metadata.dependencies ?? {}).length, 0);
   for (const entry of Object.values(metadata.exports)) {
     for (const file of typeof entry === 'string' ? [entry] : Object.values(entry)) {

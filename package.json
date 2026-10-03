@@ -1,26 +1,73 @@
 {
   "name": "@altifigence/dds-plugin-sdk",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Plugin, theme and user-owned workspace tools for Digital Design Studio",
   "type": "module",
   "license": "Apache-2.0",
-  "engines": { "node": ">=22 <23 || >=24 <25" },
-  "repository": { "type": "git", "url": "https://github.com/Altifigence/dds-plugin-sdk.git" },
-  "homepage": "https://github.com/Altifigence/dds-plugin-sdk#readme",
-  "bugs": { "url": "https://github.com/Altifigence/dds-plugin-sdk/issues" },
+  "engines": {
+    "node": ">=22 <23 || >=24 <25"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Altifigence/dds-plugin-sdk.git"
+  },
+  "homepage": "https://docs.altifigence.com/developers/plugin-sdk/",
+  "bugs": {
+    "url": "https://github.com/Altifigence/dds-plugin-sdk/issues"
+  },
   "exports": {
-    ".": { "types": "./src/index.d.mts", "import": "./src/index.mjs" },
-    "./testing": { "types": "./src/testing.d.mts", "import": "./src/testing.mjs" },
-    "./schemas": { "types": "./src/schemas.d.mts", "import": "./src/schemas.mjs" },
-    "./themes": { "types": "./src/themes.d.mts", "import": "./src/themes.mjs" },
-    "./workspace-node": { "types": "./src/workspace-node.d.mts", "import": "./src/workspace-node.mjs" },
-    "./workspace-client": { "types": "./src/workspace-client.d.mts", "import": "./src/workspace-client.mjs" },
-    "./publishing": { "types": "./src/publishing.d.mts", "import": "./src/publishing.mjs" },
-    "./consent": { "types": "./src/consent.d.mts", "import": "./src/consent.mjs" },
+    ".": {
+      "types": "./src/index.d.mts",
+      "import": "./src/index.mjs"
+    },
+    "./testing": {
+      "types": "./src/testing.d.mts",
+      "import": "./src/testing.mjs"
+    },
+    "./schemas": {
+      "types": "./src/schemas.d.mts",
+      "import": "./src/schemas.mjs"
+    },
+    "./themes": {
+      "types": "./src/themes.d.mts",
+      "import": "./src/themes.mjs"
+    },
+    "./workspace-node": {
+      "types": "./src/workspace-node.d.mts",
+      "import": "./src/workspace-node.mjs"
+    },
+    "./workspace-client": {
+      "types": "./src/workspace-client.d.mts",
+      "import": "./src/workspace-client.mjs"
+    },
+    "./publishing": {
+      "types": "./src/publishing.d.mts",
+      "import": "./src/publishing.mjs"
+    },
+    "./consent": {
+      "types": "./src/consent.d.mts",
+      "import": "./src/consent.mjs"
+    },
     "./package.json": "./package.json"
   },
-  "bin": { "dds-plugin": "./bin/dds-plugin.mjs" },
-  "files": ["src/", "bin/", "schemas/", "examples/", "docs/", "templates/", "README.md", "CHANGELOG.md", "CONTRIBUTING.md", "SECURITY.md", "LICENSE", "NOTICE"],
+  "bin": {
+    "dds-plugin": "./bin/dds-plugin.mjs"
+  },
+  "files": [
+    "src/",
+    "bin/",
+    "schemas/",
+    "examples/",
+    "docs/",
+    "templates/",
+    "README.md",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "LICENSE",
+    "NOTICE",
+    "PUBLIC_SURFACE.json"
+  ],
   "scripts": {
     "test": "node --test tests/*.test.mjs",
     "test:types": "tsc --noEmit -p tests/types/tsconfig.json",
@@ -29,8 +76,11 @@
     "example": "node examples/hello-diagnostics/run.mjs",
     "example:theme": "node examples/hello-theme/export.mjs",
     "pack:check": "node scripts/pack-check.mjs",
+    "public:check": "node scripts/check-public-surface.mjs",
     "benchmark": "node scripts/benchmark.mjs",
-    "check": "npm run schemas:check && npm test && npm run test:types && npm run example && npm run pack:check"
+    "check": "npm run public:check && npm run schemas:check && npm test && npm run test:types && npm run example && npm run pack:check"
   },
-  "devDependencies": { "typescript": "5.9.3" }
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
 }

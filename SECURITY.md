@@ -23,6 +23,8 @@ process privileges. File checks protect the API path; they do not isolate the
 host from a hostile administrator or another process that can modify the root.
 
 Packaging reads only explicitly listed files and blocks common private key and
-configuration names. This is not a complete secret scanner. Inspect the archive
+configuration names plus recognizable key/token content. Public package inventory
+and source checks are described in [Public scope](docs/PUBLIC_SCOPE.md).
+These are not complete secret scanners. Inspect the archive
 before publishing. Consent receipts are unsigned local records; consumers must
 protect storage, verify the current identity and implement revocation themselves.

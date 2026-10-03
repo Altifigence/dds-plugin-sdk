@@ -124,3 +124,29 @@ test('validation rejects paths and release names that cannot be packed portably'
   const longIdentity = await fixture(t, {publisher: 'p'.repeat(105), id: 'i'.repeat(105), version: `1.0.0+${'x'.repeat(50)}`});
   await assert.rejects(validatePluginPackage(longIdentity.directory), /release filename limit/);
 });
+
+test('credentials in allowed source files fail without echoing the value or creating a release', async t => {
+  const {directory} = await fixture(t);
+  const candidates = [
+    ['-----BEGIN ', 'PRIVATE KEY-----'].join(''),
+    ['gh', 'p_', 'a'.repeat(36)].join(''),
+    ['github_', 'pat_', 'b'.repeat(40)].join(''),
+    ['AK', 'IA', 'Z'.repeat(16)].join(''),
+  ];
+  for (const value of candidates) {
+    await writeFile(path.join(directory, 'plugin.mjs'), `export const accidental = ${JSON.stringify(value)};`);
+    const safeFailure = error => /recognizable credential/.test(error.message) && !error.message.includes(value);
+    await assert.rejects(validatePluginPackage(directory), safeFailure);
+    await assert.rejects(packPlugin(directory, {out:path.join(directory, 'dist')}), safeFailure);
+  }
+  await writeFile(path.join(directory, 'plugin.mjs'), 'export const message = "request a token through the host";');
+  assert.equal((await validatePluginPackage(directory)).pluginId, 'hello');
+});
+
+test('cloud and SSH credential directories cannot be allowed into a package', async t => {
+  const {directory, config} = await fixture(t);
+  for (const name of ['.aws/credentials', '.azure/accessTokens.json', '.ssh/config', '.gnupg/keyring', '.kube/config', '.docker/config.json', '.netrc']) {
+    await writeFile(path.join(directory, 'dds-package.json'), JSON.stringify({...config, files:[...config.files, name]}));
+    await assert.rejects(validatePluginPackage(directory), /private configuration/);
+  }
+});
