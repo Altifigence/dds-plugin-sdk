@@ -1,0 +1,8 @@
+DDS Plugin SDK
+Copyright 2026 Altifigence
+
+This distribution includes original SDK contracts, validators, lifecycle helpers,
+a local developer host, examples and documentation.
+
+No third-party runtime dependencies or EDA tool binaries are bundled. Development
+tools installed separately retain their own licenses and notices.

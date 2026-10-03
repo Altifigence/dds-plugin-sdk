@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.1.0/schemas/error.schema.json",
+  "title": "error",
+  "type": "object",
+  "properties": {
+    "code": {
+      "enum": [
+        "invalid_contract",
+        "permission_denied",
+        "unsupported_host",
+        "version_mismatch",
+        "cancelled",
+        "stale_snapshot",
+        "budget_exceeded",
+        "disposed",
+        "provider_failed",
+        "provider_unavailable"
+      ]
+    },
+    "message": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+    }
+  },
+  "required": [
+    "code",
+    "message"
+  ],
+  "additionalProperties": false
+}
