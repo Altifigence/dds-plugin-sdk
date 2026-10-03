@@ -8,7 +8,9 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const npmCli = process.env.npm_execpath;
 if (!npmCli) throw new Error('Run this check with npm run pack:check');
-const temporary = await mkdtemp(join(tmpdir(), 'dds-sdk-consumer-'));
+// Windows runners can expose TEMP through an 8.3 alias (for example RUNNER~1).
+// Canonicalize our fresh parent before checking that npm installed real files.
+const temporary = await realpath(await mkdtemp(join(tmpdir(), 'dds-sdk-consumer-')));
 
 function run(command, args, cwd) {
   const result = spawnSync(command, args, {cwd, encoding: 'utf8', timeout: 120_000, maxBuffer: 2_000_000});
