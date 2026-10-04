@@ -12,7 +12,7 @@ Install the released SDK in a tools directory, then create a sibling project:
 mkdir dds-tools
 cd dds-tools
 npm init -y
-npm install --ignore-scripts --save-exact https://github.com/Altifigence/dds-plugin-sdk/releases/download/v0.5.0/altifigence-dds-plugin-sdk-0.5.0.tgz
+npm install --ignore-scripts --save-exact https://github.com/Altifigence/dds-plugin-sdk/releases/download/v0.6.0/altifigence-dds-plugin-sdk-0.6.0.tgz
 npx --no-install dds-plugin init ../my-plugin --id my-plugin --publisher example
 cd ../my-plugin
 npm install --ignore-scripts
@@ -38,7 +38,7 @@ npx --no-install dds-plugin doctor .
 npx --no-install dds-plugin doctor . --json
 ```
 
-Checks cover the Node major version, local SDK 0.5.x resolution, manifest,
+Checks cover the Node major version, local SDK 0.6.x resolution, manifest,
 disclosure, license, allowlisted files and example publisher metadata. Each check
 has `id`, `status`, `message` and an optional suggested `fix`. Errors set exit
 status 1; warnings alone do not. Doctor reads metadata and file bytes. It never

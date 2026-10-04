@@ -11,10 +11,11 @@
 | Browser-only DDS host | Native workspace transport is unavailable |
 | Language providers | Diagnostics plus completion, hover, definition, references and document symbols in SDK hosts since 0.3.0; no released DDS editor bridge is implied |
 | Project edit sessions | Client helpers in 0.3.0 over unchanged workspace protocol v1, including 0.2.x servers |
-| Download verification | Node API/CLI since 0.3.1; 0.5.0 accepts exact 0.3.x, 0.4.x and 0.5.x package metadata; no extraction, code execution or publisher authentication |
+| Download verification | Node API/CLI since 0.3.1; 0.6.0 accepts exact 0.3.x, 0.4.x, 0.5.x and 0.6.x package metadata; no extraction, code execution or publisher authentication |
 | Development tools | `init`, `doctor`, `dev` since 0.4.0; local Node tools, explicit trusted-code execution |
 | Command jobs | Opt-in SDK host/client extension since 0.4.0; progress/logs/UTF-8 artifacts; v1 hello unchanged |
-| File and job observation | Client helpers since 0.5.0; existing file reads on 0.3.2/0.4 hosts, job reads on enabled 0.4 hosts; no new wire methods |
+| File and job observation | Client helpers since 0.5.0; 0.6 uses revision reads when supported; job reads need enabled 0.4+ hosts |
+| File revision / conditional read | Optional methods since 0.6.0; bounded full-read fallback on old hosts; v1 hello unchanged |
 
 This is a developer preview. Pin the exact package release and read the changelog
 before updating. SDK, protocol, plugin and DDS product versions are distinct.
@@ -65,3 +66,12 @@ fall back to submitting a command. See [observation](OBSERVATION.md).
 New 0.5 plugin archives declare `>=0.5.0 <0.6.0`. Archive verification preserves
 the exact original 0.3/0.4 peer metadata; it does not make those archives
 installable on 0.5. Publishers must validate and repack a new plugin version.
+
+0.6.0 adds optional file discovery, revision-only reads and conditional reads.
+Known pre-0.6 SDK hosts use the original file read without probing. Other hosts
+may explicitly return unsupported discovery; malformed replies and access or
+transport failures never trigger fallback. See [file revisions](FILE_REVISIONS.md).
+
+New 0.6 archives declare `>=0.6.0 <0.7.0`. Verification also preserves exact
+0.3/0.4/0.5 metadata, without widening peers; publishers must validate and repack
+for 0.6. SDK and DDS product releases remain separate.

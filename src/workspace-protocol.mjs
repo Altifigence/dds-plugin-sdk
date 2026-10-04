@@ -4,7 +4,7 @@ import {parseJobId, parseJobOptions, parseJobSnapshot, parseJobEvents, parseJobC
 export const WORKSPACE_PROTOCOL_VERSION = 1;
 export const WORKSPACE_PATH = '/dds/workspace/v1';
 export const WORKSPACE_LIMITS = Object.freeze({wireBytes: 1_600_000, fileBytes: 262_144, jsonBytes: 262_144, depth: 16, nodes: 10_000, entries: 1_000, plugins: 32, pending: 64, receiving: 16, connections: 128, defaultTimeoutMs: 5_000, maxTimeoutMs: 30_000});
-export const WORKSPACE_METHODS = Object.freeze(['hello', 'fs.list', 'fs.read', 'fs.write', 'fs.mkdir', 'fs.rename', 'fs.remove', 'plugins.list', 'commands.run', 'request.cancel', 'jobs.capabilities', 'jobs.start', 'jobs.get', 'jobs.events', 'jobs.cancel', 'jobs.artifact']);
+export const WORKSPACE_METHODS = Object.freeze(['hello', 'fs.list', 'fs.read', 'fs.capabilities', 'fs.revision', 'fs.readIfChanged', 'fs.write', 'fs.mkdir', 'fs.rename', 'fs.remove', 'plugins.list', 'commands.run', 'request.cancel', 'jobs.capabilities', 'jobs.start', 'jobs.get', 'jobs.events', 'jobs.cancel', 'jobs.artifact']);
 export const WORKSPACE_ERROR_CODES = Object.freeze(['invalid_request', 'authentication_required', 'permission_denied', 'workspace_mismatch', 'generation_mismatch', 'not_found', 'conflict', 'unsafe_path', 'budget_exceeded', 'cancelled', 'disposed', 'plugin_mismatch', 'provider_failed', 'unsupported', 'unavailable', 'transport_failed']);
 const encoder = new TextEncoder();
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -115,9 +115,10 @@ export function parseWorkspaceRequest(value) {
   else { if (value.workspaceId !== undefined) requireUuid(value.workspaceId); if (value.generation !== undefined) requireUuid(value.generation); }
   const p = value.params;
   switch (value.method) {
-    case 'hello': case 'plugins.list': case 'jobs.capabilities': exactObject(p, []); break;
+    case 'hello': case 'plugins.list': case 'jobs.capabilities': case 'fs.capabilities': exactObject(p, []); break;
     case 'fs.list': exactObject(p, ['path']); requireWorkspacePath(p.path, true); break;
-    case 'fs.read': case 'fs.mkdir': exactObject(p, ['path']); requireWorkspacePath(p.path); break;
+    case 'fs.read': case 'fs.revision': case 'fs.mkdir': exactObject(p, ['path']); requireWorkspacePath(p.path); break;
+    case 'fs.readIfChanged': exactObject(p, ['path', 'knownRevision']); requireWorkspacePath(p.path); if (p.knownRevision !== null) requireSha256(p.knownRevision); break;
     case 'fs.write': exactObject(p, ['path', 'content', 'expectedRevision']); requireWorkspacePath(p.path); requireFileContent(p.content); if (p.expectedRevision !== null) requireSha256(p.expectedRevision); break;
     case 'fs.rename': exactObject(p, ['path', 'newPath'], ['expectedRevision']); requireWorkspacePath(p.path); requireWorkspacePath(p.newPath); if (p.expectedRevision !== undefined) requireSha256(p.expectedRevision); break;
     case 'fs.remove': exactObject(p, ['path'], ['expectedRevision']); requireWorkspacePath(p.path); if (p.expectedRevision !== undefined) requireSha256(p.expectedRevision); break;
@@ -202,7 +203,17 @@ export function parseWorkspaceMethodResult(method, value) {
       if (entry.revision !== undefined) requireSha256(entry.revision);
     }
   } else if (method === 'fs.read') { exactObject(value, ['path', 'content', 'revision']); requireWorkspacePath(value.path); requireFileContent(value.content); requireSha256(value.revision); }
-  else if (method === 'fs.write') { exactObject(value, ['path', 'revision']); requireWorkspacePath(value.path); requireSha256(value.revision); }
+  else if (method === 'fs.capabilities') {
+    exactObject(value, ['protocolVersion', 'revision', 'conditionalRead']);
+    if (value.protocolVersion !== 1 || typeof value.revision !== 'boolean' || typeof value.conditionalRead !== 'boolean') invalid();
+  }
+  else if (method === 'fs.readIfChanged') {
+    if (value?.notModified === true) exactObject(value, ['path', 'revision', 'notModified']);
+    else if (value?.notModified === false) {exactObject(value, ['path', 'revision', 'notModified', 'content']); requireFileContent(value.content);}
+    else invalid();
+    requireWorkspacePath(value.path); requireSha256(value.revision);
+  }
+  else if (method === 'fs.write' || method === 'fs.revision') { exactObject(value, ['path', 'revision']); requireWorkspacePath(value.path); requireSha256(value.revision); }
   else if (method === 'fs.rename') { exactObject(value, ['path', 'newPath']); requireWorkspacePath(value.path); requireWorkspacePath(value.newPath); }
   else if (method === 'fs.mkdir' || method === 'fs.remove') { exactObject(value, ['path']); requireWorkspacePath(value.path); }
   else if (method === 'request.cancel') { exactObject(value, ['cancelled']); if (typeof value.cancelled !== 'boolean') invalid(); }

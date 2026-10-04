@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.6.0 — 2026-10-04
+
+- Add optional file capability discovery, revision-only reads and conditional
+  reads. Unchanged conditional replies omit content. Existing v1 hello, file
+  read/write, manifest and job contracts remain unchanged.
+- Use revision reads for file observers on supporting hosts, with bounded full
+  reads on known pre-0.6 SDK hosts or explicitly unsupported discovery. Errors
+  and malformed replies never cause silent downgrade. Connection changes clear
+  discovery; cancellation and protected-file bounds remain enforced.
+- Add TypeScript declarations, three JSON schemas and a repeatable HTTP body
+  bandwidth benchmark. Server reads and hashes still run for every sample.
+- New plugin archives declare `>=0.6.0 <0.7.0`; verification accepts exact
+  0.3/0.4/0.5 metadata without widening peer ranges. Validate and repack for 0.6.
+
 ## 0.5.0 — 2026-10-03
 
 - Add `project.watchFiles()` for 1–16 explicit file paths, with initial,

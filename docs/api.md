@@ -1,4 +1,4 @@
-# API reference — 0.5.0
+# API reference — 0.6.0
 
 Workspace client helpers include connection-bound project edit sessions,
 `project.watchFiles(paths, options)`, `client.watchJob(jobId, options)` and
@@ -77,7 +77,7 @@ license eligibility or agreement acceptance. See [LICENSING](LICENSING.md).
 
 | Activation context member | Behavior |
 | --- | --- |
-| `host` | `{id: 'test-host' \| 'workspace-host', version: '0.5.0', protocolVersion: 1}` |
+| `host` | `{id: 'test-host' \| 'workspace-host', version: '0.6.0', protocolVersion: 1}` |
 | `pluginId`, `scope` | Manifest ID and opaque host `{projectId, sessionId}` |
 | `grants` | Frozen intersection of host grants and manifest permissions |
 | `signal` | Aborted on deactivation, host disposal or activation timeout |
@@ -249,3 +249,11 @@ Catch `PluginSdkError` and inspect `code`:
 Plugin exception details are masked by the host. Trusted port `PluginSdkError`
 codes are preserved with a safe message. The Node wire protocol uses its own
 `WorkspaceError` vocabulary; see [workspace-protocol](workspace-protocol.md).
+
+## File revisions and conditional reads
+
+`WorkspaceClient` adds `getFileCapabilities(options?)`, `getFileRevision(path, options?)`
+and `readFileIfChanged(path, knownRevision, options?)` in 0.6.0. An unchanged
+conditional result has `notModified: true` and no content; a changed result has
+`notModified: false` and content. `knownRevision: null` requests content.
+See [file revisions](FILE_REVISIONS.md) for shapes, fallback and lifecycle rules.

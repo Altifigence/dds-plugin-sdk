@@ -37,4 +37,6 @@ jobs:
       - name: Verify SDK and packed consumers
         run: npm run check
       - name: Synthetic benchmark
-        run: npm run benchmark
+        run: |
+          npm run benchmark
+          npm run benchmark:files

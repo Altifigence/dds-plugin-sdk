@@ -1,9 +1,9 @@
 # Observe workspace files and command jobs
 
-SDK 0.5.0 adds `project.watchFiles()`, `client.watchJob()` and
-`client.waitForJob()`. These helpers use existing `fs.read`, `jobs.events` and
-`jobs.get` requests. They add no protocol method, permission or automatic
-connection. Use a connected `createWorkspaceClient()` from this SDK, after the
+SDK 0.5.0 introduced `project.watchFiles()`, `client.watchJob()` and
+`client.waitForJob()`. SDK 0.6.0 uses optional revision-only requests for file
+observation, with existing `fs.read` fallback on older hosts. Job observers keep
+using `jobs.events` and `jobs.get`. They add no permission or automatic connection. Use a connected `createWorkspaceClient()` from this SDK, after the
 host has reviewed the workspace and obtained the user's authorization.
 
 ## Explicit file paths
@@ -51,9 +51,9 @@ observation with their `WorkspaceError` code.
 
 Supply 1–16 unique relative file paths. Paths are copied and validated before
 HTTP work. The observer reads one file at a time in the supplied order, waiting
-`intervalMs` between full passes. It uses the existing bounded UTF-8 file read;
-the response's content is discarded after comparing its revision, and events
-carry no content. This is sampled observation, not an OS filesystem watcher:
+`intervalMs` between full passes. [File capability discovery](FILE_REVISIONS.md)
+selects revision-only responses on supporting hosts and bounded full reads on
+older hosts. The server still reads and hashes each file; events carry no content. This is sampled observation, not an OS filesystem watcher:
 intermediate changes may coalesce and a create/delete between samples can be
 missed. It does not discover directories or follow a renamed path. The server's
 protected-file policy and file-size limit still apply. Read-only servers work.

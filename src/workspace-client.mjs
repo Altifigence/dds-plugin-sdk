@@ -1,4 +1,4 @@
-import {WORKSPACE_PATH, WORKSPACE_LIMITS, WorkspaceError, workspaceFailure, requireToken, parseWorkspaceRequest, parseWorkspaceReply, parseWorkspaceHello, parseWorkspaceMethodResult} from './workspace-protocol.mjs';
+import {WORKSPACE_PATH, WORKSPACE_LIMITS, WorkspaceError, workspaceFailure, requireToken, requireWorkspacePath, requireSha256, parseWorkspaceRequest, parseWorkspaceReply, parseWorkspaceHello, parseWorkspaceMethodResult} from './workspace-protocol.mjs';
 import {parseJobOptions} from './jobs.mjs';
 import {registerObservationClient, watchWorkspaceJob, waitForWorkspaceJob} from './workspace-observation.mjs';
 export {createWorkspaceProject, applyTextEdits} from './workspace-project.mjs';
@@ -49,7 +49,7 @@ export function createWorkspaceClient({url, token, fetch: transport = globalThis
   const endpoint = normalizeWorkspaceUrl(url);
   token = requireToken(token);
   if (typeof transport !== 'function') throw workspaceFailure('invalid_request', 'A fetch transport is required');
-  let binding, closed = false, sequence = 0, bindingSequence = 0;
+  let binding, fileCapabilities, closed = false, sequence = 0, bindingSequence = 0;
   let connectionController = new AbortController();
   const pending = new Set();
   const instance = globalThis.crypto.randomUUID();
@@ -59,7 +59,7 @@ export function createWorkspaceClient({url, token, fetch: transport = globalThis
   };
   budget(timeoutMs);
   const revoke = (reason = workspaceFailure('disposed', 'Workspace connection changed')) => {
-    binding = undefined; bindingSequence++;
+    binding = undefined; fileCapabilities = undefined; bindingSequence++;
     connectionController.abort(reason);
     connectionController = new AbortController();
     for (const controller of pending) controller.abort(workspaceFailure('disposed', 'Workspace connection changed'));
@@ -111,6 +111,7 @@ export function createWorkspaceClient({url, token, fetch: transport = globalThis
       if (controller.signal.aborted) throw controller.signal.reason;
       if (closed || revision !== bindingSequence) throw workspaceFailure('disposed', 'Workspace connection changed');
       if (method.startsWith('fs.') && result.path !== undefined && result.path !== params.path) throw workspaceFailure('invalid_request', 'Workspace reply path mismatch');
+      if (method === 'fs.readIfChanged' && result.notModified !== (params.knownRevision !== null && result.revision === params.knownRevision)) throw workspaceFailure('invalid_request', 'Conditional file revision mismatch');
       if (method === 'fs.rename' && result.newPath !== params.newPath) throw workspaceFailure('invalid_request', 'Workspace reply path mismatch');
       if (method === 'fs.list' && result.entries.some(entry => entry.path.slice(0, entry.path.lastIndexOf('/') + 1) !== (params.path ? `${params.path}/` : ''))) throw workspaceFailure('invalid_request', 'Workspace listing scope mismatch');
       if (method === 'plugins.list' && JSON.stringify(result.plugins) !== JSON.stringify(captured.plugins)) {
@@ -141,6 +142,44 @@ export function createWorkspaceClient({url, token, fetch: transport = globalThis
       clearTimeout(timer); signal?.removeEventListener('abort', onAbort); controller.signal.removeEventListener('abort', rejectAbort); pending.delete(controller);
     }
   }
+  function checkFileConnection(captured, {signal, timeoutMs: requestTimeout = timeoutMs} = {}) {
+    if (closed || captured !== binding) throw workspaceFailure('disposed', 'Workspace connection changed');
+    if (!captured) throw workspaceFailure('unavailable', 'Connect to a workspace first');
+    if (signal !== undefined && !(signal instanceof AbortSignal)) throw workspaceFailure('invalid_request', 'Expected AbortSignal');
+    if (signal?.aborted) throw workspaceFailure('cancelled', 'Workspace request cancelled');
+    budget(requestTimeout);
+  }
+  async function getFileCapabilities(options) {
+    const captured = binding; checkFileConnection(captured, options);
+    if (fileCapabilities) return fileCapabilities;
+    const legacy = Object.freeze({protocolVersion: 1, revision: false, conditionalRead: false});
+    // Released pre-0.6 SDK hosts reject unknown methods before retaining their
+    // request ID. Recognize those versions without weakening reply validation.
+    if (captured.hostId === 'workspace-host' && /^0\.[0-5]\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(captured.hostVersion)) return fileCapabilities = legacy;
+    let capabilities;
+    try {capabilities = await request('fs.capabilities', {}, options);}
+    catch (error) {
+      if (!(error instanceof WorkspaceError) || error.code !== 'unsupported') throw error;
+      capabilities = legacy;
+    }
+    checkFileConnection(captured, options);
+    return fileCapabilities = capabilities;
+  }
+  async function getFileRevision(path, options) {
+    requireWorkspacePath(path);
+    const captured = binding, capabilities = await getFileCapabilities(options);
+    checkFileConnection(captured, options);
+    const file = await request(capabilities.revision ? 'fs.revision' : 'fs.read', {path}, options);
+    return Object.freeze({path: file.path, revision: file.revision});
+  }
+  async function readFileIfChanged(path, knownRevision, options) {
+    requireWorkspacePath(path); if (knownRevision !== null) requireSha256(knownRevision);
+    const captured = binding, capabilities = await getFileCapabilities(options);
+    checkFileConnection(captured, options);
+    if (capabilities.conditionalRead) return request('fs.readIfChanged', {path, knownRevision}, options);
+    const file = await request('fs.read', {path}, options);
+    return Object.freeze(file.revision === knownRevision ? {path: file.path, revision: file.revision, notModified: true} : {...file, notModified: false});
+  }
   const client = Object.freeze({
     async connect(options) {
       revoke();
@@ -158,6 +197,9 @@ export function createWorkspaceClient({url, token, fetch: transport = globalThis
     request,
     listFiles: (path = '', options) => request('fs.list', {path}, options),
     readFile: (path, options) => request('fs.read', {path}, options),
+    getFileCapabilities,
+    getFileRevision,
+    readFileIfChanged,
     writeFile: (path, content, expectedRevision, options) => request('fs.write', {path, content, expectedRevision}, options),
     mkdir: (path, options) => request('fs.mkdir', {path}, options),
     rename: (path, newPath, expectedRevision, options) => request('fs.rename', {path, newPath, ...(expectedRevision === undefined ? {} : {expectedRevision})}, options),

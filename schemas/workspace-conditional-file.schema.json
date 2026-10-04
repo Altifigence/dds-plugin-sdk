@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.6.0/schemas/workspace-conditional-file.schema.json",
+  "title": "workspace-conditional-file",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024,
+          "$comment": "Runtime enforces the protected relative workspace path policy."
+        },
+        "revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "notModified": {
+          "const": true
+        }
+      },
+      "required": [
+        "path",
+        "revision",
+        "notModified"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024,
+          "$comment": "Runtime enforces the protected relative workspace path policy."
+        },
+        "revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "notModified": {
+          "const": false
+        },
+        "content": {
+          "type": "string",
+          "maxLength": 262144,
+          "x-maxUtf8Bytes": 262144
+        }
+      },
+      "required": [
+        "path",
+        "revision",
+        "notModified",
+        "content"
+      ],
+      "additionalProperties": false
+    }
+  ],
+  "$comment": "Runtime additionally correlates notModified and revision with the request knownRevision."
+}

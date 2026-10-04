@@ -116,7 +116,7 @@ export function watchWorkspaceFiles(client, paths, value = {}, parentSignal) {
       if (completedPass) {await context.pause(); completedPass = false;}
       context.check();
       const path = paths[index]; let revision;
-      try {revision = (await client.readFile(path, context.requestOptions)).revision;}
+      try {revision = (await client.getFileRevision(path, context.requestOptions)).revision;}
       catch (error) {if (!(error instanceof WorkspaceError) || error.code !== 'not_found') throw error; revision = null;}
       context.check();
       const initial = !revisions.has(path), previousRevision = revisions.get(path) ?? null;

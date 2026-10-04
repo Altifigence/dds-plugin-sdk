@@ -24,10 +24,15 @@ try {
   client = createWorkspaceClient({url:server.url,token}); await client.connect();
   project = createWorkspaceProject(client);
   const edit = await project.openFile('design.sv'), original = edit.snapshot;
+  assert.equal((await client.getFileCapabilities()).revision,true);
+  assert.deepEqual(await client.getFileRevision('design.sv'),{path:'design.sv',revision:original.revision});
+  assert.deepEqual(await client.readFileIfChanged('design.sv',original.revision),{path:'design.sv',revision:original.revision,notModified:true});
   files = project.watchFiles(['design.sv'],{intervalMs:250});
   assert.equal((await files.next()).value.kind,'initial');
   await writeFile(path.join(root,'design.sv'),'module external; endmodule\n');
   assert.equal((await files.next()).value.kind,'changed');
+  const changed=await client.readFileIfChanged('design.sv',original.revision);
+  assert.equal(changed.notModified,false);assert.equal(changed.content,'module external; endmodule\n');
   assert.equal(edit.snapshot,original);
   await assert.rejects(edit.save('my unsaved draft'),{code:'conflict'});
   await files.return();
