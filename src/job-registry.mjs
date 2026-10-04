@@ -59,9 +59,21 @@ export function createJobRegistry({scope, enabled = false, binaryArtifacts = fal
     storageCapabilities() {if (closed) throw failure(ErrorCode.DISPOSED); return storage.capabilities();},
     flushStorage() {return storage.flush();},
     recover(pluginId, jobId, grants) {assertOpen(); return storage.recover(pluginId, jobId, grants, records.has(jobId));},
-    start({pluginId, commandId, input, options, grants = [], signal, assertActive, assertRead, execute, readFile, captureBinaryFile, readBinaryChunk, invokeBackend, registerController}) {
+    history(pluginId, query, grants, commands) {assertOpen(); return storage.history(pluginId, query, grants, commands);},
+    async retryResult(pluginId, commandId, attemptOf, input, options, grants) {
+      assertOpen(); parseJobId(attemptOf); options = parseJobOptions(options);
+      if (attemptOf === options.jobId) throw failure(ErrorCode.CONFLICT);
+      if (!storage.has(options.jobId)) return null;
+      const signature = canonical({pluginId,commandId,input,timeoutMs:options.timeoutMs,attemptOf});
+      const requestSha256 = await hash(signature);
+      assertOpen(); const result = storage.recover(pluginId, options.jobId, grants, records.has(options.jobId));
+      if (!result.record || result.record.requestSha256 !== requestSha256 || result.record.attemptOf !== attemptOf || result.record.snapshot.commandId !== commandId) throw failure(ErrorCode.CONFLICT);
+      return result;
+    },
+    start({pluginId, commandId, input, options, attemptOf, grants = [], signal, assertActive, assertRead, execute, readFile, captureBinaryFile, readBinaryChunk, invokeBackend, registerController}) {
       assertOpen(); assertActive(); options = parseJobOptions(options); input = parseJsonValue(input); collect();
-      const signature = canonical({pluginId, commandId, input, timeoutMs: options.timeoutMs});
+      if (attemptOf !== undefined) {parseJobId(attemptOf); if (!storage.enabled || attemptOf === options.jobId) throw failure(ErrorCode.CONFLICT);}
+      const signature = canonical({pluginId, commandId, input, timeoutMs: options.timeoutMs, ...(attemptOf === undefined ? {} : {attemptOf})});
       const old = records.get(options.jobId);
       if (old) {if (old.signature !== signature) throw failure(ErrorCode.CONFLICT); old.assertActive(); return snapshot(old);}
       // A prior generation's ID is history, never an instruction to re-execute.
@@ -69,7 +81,7 @@ export function createJobRegistry({scope, enabled = false, binaryArtifacts = fal
       if (active >= JOB_LIMITS.concurrent || records.size >= JOB_LIMITS.retained) throw failure(ErrorCode.BUDGET_EXCEEDED);
       if (signal.aborted) throw failure(ErrorCode.DISPOSED);
       const now = Date.now(), controller = new AbortController();
-      const r = {...options, pluginId, commandId, signature, assertActive, assertRead, readFile, readBinaryChunk, controller, state: 'running', startedAt: now, updatedAt: now, progress: null, artifacts: new Map(), binaryArtifacts: new Map(), pendingArtifacts: new Set(), operations: new Set(), events: [], eventBytes: 0, sequence: 0, settled: false};
+      const r = {...options, attemptOf, pluginId, commandId, signature, assertActive, assertRead, readFile, readBinaryChunk, controller, state: 'running', startedAt: now, updatedAt: now, progress: null, artifacts: new Map(), binaryArtifacts: new Map(), pendingArtifacts: new Set(), operations: new Set(), events: [], eventBytes: 0, sequence: 0, settled: false};
       storage.register(r, grants);
       records.set(r.jobId, r); active++; emit(r, 'state', {state: 'running'});
       const onOwnerAbort = () => controller.abort(failure(ErrorCode.DISPOSED));

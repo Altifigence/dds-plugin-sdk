@@ -2,6 +2,7 @@ import { LIMITS, ErrorCode } from './limits.mjs';
 import {JOB_LIMITS, JOB_STATES} from './jobs.mjs';
 import {BINARY_ARTIFACT_LIMITS} from './artifacts.mjs';
 import {JOB_STORE_LIMITS} from './job-storage.mjs';
+import {JOB_HISTORY_LIMITS} from './job-history.mjs';
 import { SEMVER_PATTERN } from './patterns.mjs';
 import { THEME_SCHEMA } from './themes.mjs';
 import {WORKSPACE_LIMITS} from './workspace-protocol.mjs';
@@ -84,7 +85,12 @@ const storageSha = {...text(64), pattern: '^[a-f0-9]{64}$'};
 const storeIdentity = {schemaVersion: {const: 1}, storeId: jobId, workspaceId: text(128), workspaceIdentity: storageSha};
 const storeLimits = object(Object.fromEntries(Object.entries(JOB_STORE_LIMITS).map(([key, maximum]) => [key, ['recordBytes', 'pendingWrites'].includes(key) ? {const: maximum} : integer(maximum, 1)])));
 const storedJob = {...object({...storeIdentity, pluginArtifactSha256: storageSha, requestSha256: storageSha, revision: integer(Number.MAX_SAFE_INTEGER, 1), savedAt: integer(Number.MAX_SAFE_INTEGER), expiresAt: integer(Number.MAX_SAFE_INTEGER, 1), settled: {type: 'boolean'}, contentPolicy: {enum: ['metadata-only', 'host-redacted']}, grants: manifestV2.properties.permissions, snapshot: {$ref: base + 'job-snapshot.schema.json'}, events: list(jobEvent, JOB_LIMITS.events, 1), binaryArtifacts: list(binaryArtifact, JOB_LIMITS.artifacts), attemptOf: jobId}, [...Object.keys(storeIdentity), 'pluginArtifactSha256', 'requestSha256', 'revision', 'savedAt', 'expiresAt', 'settled', 'contentPolicy', 'grants', 'snapshot', 'events', 'binaryArtifacts']), 'x-maxUtf8Bytes': JOB_STORE_LIMITS.recordBytes, $comment: 'Runtime additionally enforces scope and identity, chronological contiguous events, shared artifact IDs, retention bounds, immutable metadata-only redaction and matching terminal state.'};
+const historyDisposition = {enum:['live','completed','interrupted','expired']};
+const historyCursor = {...text(40),pattern:'^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}:(?:0|[1-9][0-9]{0,2})$'};
+const historyItem = object({jobId,commandId:text(128),state:{enum:JOB_STATES},disposition:historyDisposition,startedAt:integer(Number.MAX_SAFE_INTEGER),updatedAt:integer(Number.MAX_SAFE_INTEGER),expiresAt:integer(Number.MAX_SAFE_INTEGER,1),revision:integer(Number.MAX_SAFE_INTEGER,1),attemptOf:{oneOf:[jobId,{type:'null'}]},contentPolicy:{enum:['metadata-only','host-redacted']},artifactCount:integer(JOB_LIMITS.artifacts),resultAvailability:{enum:['none','source-references','expired']}});
 export const SCHEMAS = Object.freeze({
+  'job-history-query': define('job-history-query', {...object({limit:integer(JOB_HISTORY_LIMITS.pageSize,1),state:{enum:JOB_STATES},disposition:historyDisposition,commandId:text(128),from:integer(Number.MAX_SAFE_INTEGER),to:integer(Number.MAX_SAFE_INTEGER),attemptOf:jobId,cursor:historyCursor},[]),$comment:'Default limit 16. Runtime checks cursor offset and inclusive time ordering. Cursor binds the normalized filters and current host generation.'}),
+  'job-history-page': define('job-history-page', {...object({protocolVersion:{const:1},scope,storeId:jobId,pluginId:text(128),pluginArtifactSha256:storageSha,asOf:integer(Number.MAX_SAFE_INTEGER),expiresAt:integer(Number.MAX_SAFE_INTEGER,1),items:list(historyItem,JOB_HISTORY_LIMITS.pageSize),nextCursor:{oneOf:[historyCursor,{type:'null'}]}}),$comment:'Runtime additionally checks chronological bounds, descending startedAt and ascending jobId, unique IDs, retention states and a 60-second cursor lease.'}),
   'job-store-identity': define('job-store-identity', object(storeIdentity)),
   'stored-job': define('stored-job', storedJob),
   'job-storage-capabilities': define('job-storage-capabilities', {oneOf: [true, false].map(enabled => object({protocolVersion: {const: 1}, enabled: {const: enabled}, identity: enabled ? object(storeIdentity) : {type: 'null'}, limits: storeLimits}))}),

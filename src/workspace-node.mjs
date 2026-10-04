@@ -7,6 +7,9 @@ import {spawn} from 'node:child_process';
 import {createPluginHost} from './index.mjs';
 import {JOB_LIMITS} from './jobs.mjs';
 import {BINARY_ARTIFACT_LIMITS, parseBinaryArtifactRange} from './artifacts.mjs';
+import {JOB_STORE_LIMITS} from './job-storage.mjs';
+import {storageObject} from './job-storage-validation.mjs';
+import {nodeWorkspaceIdentity} from './workspace-identity-node.mjs';
 export {downloadJobBinaryArtifact} from './artifact-download-node.mjs';
 import {WORKSPACE_PATH, WORKSPACE_LIMITS, WORKSPACE_ERROR_CODES, WorkspaceError, workspaceFailure, requireText, requireUuid, requireSha256, requireToken, requireWorkspacePath, requireFileContent, copyWorkspaceJson, parseWorkspaceRequest, parseWorkspaceHello, parseWorkspaceMethodResult} from './workspace-protocol.mjs';
 
@@ -278,20 +281,31 @@ function safeOperationFailure(failure) {
 }
 
 /** HTTP server for explicitly configured trusted plugins in the user environment. */
-export async function createWorkspaceServer({workspace,root,workspaceId,name='User workspace',token,plugins=[],pluginHost,grants=[],backends={},jobs=false,binaryArtifacts=false,notice,host='127.0.0.1',port=0,writable=true,manage=writable,allowedOrigins=[],timeoutMs=WORKSPACE_LIMITS.defaultTimeoutMs}={}) {
+export async function createWorkspaceServer({workspace,root,workspaceId,name='User workspace',token,plugins=[],pluginHost,grants=[],backends={},jobs=false,binaryArtifacts=false,jobStorage,notice,host='127.0.0.1',port=0,writable=true,manage=writable,allowedOrigins=[],timeoutMs=WORKSPACE_LIMITS.defaultTimeoutMs}={}) {
   requireUuid(workspaceId);requireText(name,128);requireText(host,253);token=requireToken(token);
   if(typeof jobs!=='boolean'||typeof binaryArtifacts!=='boolean')throw workspaceFailure('invalid_request','Invalid job capability');
   const ownsPluginHost=pluginHost===undefined;
+  if(!Array.isArray(plugins)||plugins.length>WORKSPACE_LIMITS.plugins)throw workspaceFailure('invalid_request','Invalid configured plugins');
+  let storageOptions;
+  if (jobStorage !== undefined) {
+    if (!ownsPluginHost || workspace !== undefined || !jobs || typeof root !== 'string' || !path.isAbsolute(root)) throw workspaceFailure('invalid_request','Storage requires a server-owned Node workspace and job host');
+    storageObject(jobStorage,['store'],['redact']);
+    const stat = await fs.lstat(root,{bigint:true});
+    if (!stat.isDirectory() || stat.isSymbolicLink()) throw workspaceFailure('unsafe_path','Storage workspace must be a real directory');
+    const canonical = await fs.realpath(root), current = await fs.lstat(canonical,{bigint:true});
+    if (!sameIdentity(stat,current)) throw workspaceFailure('conflict','Workspace identity changed');
+    storageOptions={...jobStorage,workspaceIdentity:nodeWorkspaceIdentity(canonical,current),pluginArtifacts:Object.fromEntries(plugins.map(item=>[item.plugin?.manifest?.id,item.artifactSha256]))};
+  }
   if(!Number.isInteger(port)||port<0||port>65535||!Number.isInteger(timeoutMs)||timeoutMs<1||timeoutMs>WORKSPACE_LIMITS.maxTimeoutMs)throw workspaceFailure('invalid_request','Invalid workspace server configuration');
   if(!Array.isArray(allowedOrigins)||allowedOrigins.length>16)throw workspaceFailure('invalid_request','Invalid allowed origins');
   const origins=new Set(allowedOrigins.map(origin=>{let url;try{url=new URL(origin);}catch{throw workspaceFailure('invalid_request','Invalid allowed origin');}if(url.origin!==origin||!['https:','http:'].includes(url.protocol)||url.username||url.password)throw workspaceFailure('invalid_request','Invalid allowed origin');return origin;}));
-  if(!Array.isArray(plugins)||plugins.length>WORKSPACE_LIMITS.plugins)throw workspaceFailure('invalid_request','Invalid configured plugins');
   if(!notice||typeof notice.text!=='string'||!notice.text||Buffer.byteLength(notice.text)>65536)throw workspaceFailure('invalid_request','An operator notice is required');
   const noticePayload=Object.freeze({id:requireText(notice.id),version:requireText(notice.version,64),sha256:sha256(Buffer.from(notice.text)),text:notice.text});
   if(notice.sha256!==undefined&&notice.sha256!==noticePayload.sha256)throw workspaceFailure('invalid_request','Operator notice digest mismatch');
   workspace??=await createNodeWorkspace({root,writable,manage,binaryArtifacts});
   const generation=randomUUID(),scope=Object.freeze({projectId:workspaceId,sessionId:generation});
-  pluginHost??=createPluginHost({hostId:'workspace-host',scope,grants,workspace,backends,jobs,binaryArtifacts});
+  try{pluginHost??=createPluginHost({hostId:'workspace-host',scope,grants,workspace,backends,jobs,binaryArtifacts,jobStorage:storageOptions});}
+  catch(failure){workspace.dispose?.();throw safeOperationFailure(failure);}
   const pins=new Map();
   try{
     for(const item of plugins){const hash=requireSha256(item.artifactSha256);if(!item.plugin?.manifest?.id||pins.has(item.plugin.manifest.id))throw workspaceFailure('invalid_request','Duplicate or invalid configured plugin');if(item.licenseText!==undefined&&(typeof item.licenseText!=='string'||Buffer.byteLength(item.licenseText)>65536))throw workspaceFailure('invalid_request','Invalid plugin license text');await pluginHost.activate(item.plugin);pins.set(item.plugin.manifest.id,{artifactSha256:hash,...(item.licenseText===undefined?{}:{licenseText:item.licenseText})});}
@@ -300,7 +314,7 @@ export async function createWorkspaceServer({workspace,root,workspaceId,name='Us
     const commands=pluginHost.listCommands();
     return pluginHost.listPlugins().map(manifest=>({manifest,...pins.get(manifest.id),commands:commands.filter(command=>command.pluginId===manifest.id)}));
   };
-  const description=()=>parseWorkspaceHello({hostId:'workspace-host',hostVersion:'0.7.0',protocolVersion:1,workspace:{id:workspaceId,name,generation},capabilities:{read:true,write:workspace.capabilities?.write===true,manage:workspace.capabilities?.manage===true,commands:pins.size>0},plugins:metadata(),notice:noticePayload});
+  const description=()=>parseWorkspaceHello({hostId:'workspace-host',hostVersion:'0.8.0-dev',protocolVersion:1,workspace:{id:workspaceId,name,generation},capabilities:{read:true,write:workspace.capabilities?.write===true,manage:workspace.capabilities?.manage===true,commands:pins.size>0},plugins:metadata(),notice:noticePayload});
   let originalDescription;
   try{originalDescription=description();}catch(failure){pluginHost.dispose();workspace.dispose?.();throw safeOperationFailure(failure);}
   const originalMetadata=JSON.stringify({plugins:originalDescription.plugins,capabilities:originalDescription.capabilities});
@@ -317,6 +331,7 @@ export async function createWorkspaceServer({workspace,root,workspaceId,name='Us
   async function dispatch(request,signal) {
     const p=request.params;
     if(request.method.startsWith('jobs.')&&request.method!=='jobs.capabilities'&&(!jobs||!ownsPluginHost))throw workspaceFailure('unsupported','Enable jobs on the server-owned plugin host');
+    if(request.method.startsWith('history.')&&request.method!=='history.capabilities'&&(!jobs||!ownsPluginHost||!storageOptions))throw workspaceFailure('unsupported','Enable storage on the server-owned job host');
     if(request.method.startsWith('artifacts.')&&request.method!=='artifacts.capabilities'&&(!jobs||!binaryArtifacts||!ownsPluginHost))throw workspaceFailure('unsupported','Enable binary artifacts on the server-owned job host');
     switch(request.method){
       case 'hello':return checkedDescription();
@@ -337,6 +352,13 @@ export async function createWorkspaceServer({workspace,root,workspaceId,name='Us
       case 'plugins.list':return{plugins:checkedDescription().plugins};
       case 'commands.run':checkedDescription();if(pins.get(p.pluginId)?.artifactSha256!==p.artifactSha256)throw workspaceFailure('plugin_mismatch','Plugin artifact identity changed');return pluginHost.executeCommand(p.pluginId,p.commandId,p.input,{signal,timeoutMs});
       case 'jobs.capabilities':checkedDescription();return ownsPluginHost?pluginHost.jobCapabilities():{protocolVersion:1,enabled:false,limits:JOB_LIMITS};
+      case 'history.capabilities':checkedDescription();return ownsPluginHost?pluginHost.jobStorageCapabilities():{protocolVersion:1,enabled:false,identity:null,limits:JOB_STORE_LIMITS};
+      case 'history.list':case 'history.recover':case 'history.retry':{
+        checkedDescription();if(pins.get(p.pluginId)?.artifactSha256!==p.artifactSha256)throw workspaceFailure('plugin_mismatch','Plugin artifact identity changed');
+        if(request.method==='history.list')return pluginHost.listJobHistory(p.pluginId,p.query);
+        if(request.method==='history.recover')return pluginHost.recoverJob(p.pluginId,p.jobId);
+        return pluginHost.retryCommandJob(p.pluginId,p.previousJobId,p.input,{jobId:p.jobId,...(p.timeoutMs===undefined?{}:{timeoutMs:p.timeoutMs})});
+      }
       case 'jobs.start':checkedDescription();if(pins.get(p.pluginId)?.artifactSha256!==p.artifactSha256)throw workspaceFailure('plugin_mismatch','Plugin artifact identity changed');if(!pluginHost.startCommandJob)throw workspaceFailure('unsupported','Jobs are unavailable');return pluginHost.startCommandJob(p.pluginId,p.commandId,p.input,{jobId:p.jobId,...(p.timeoutMs===undefined?{}:{timeoutMs:p.timeoutMs})});
       case 'jobs.get':checkedDescription();if(!pluginHost.getJob)throw workspaceFailure('unsupported','Jobs are unavailable');return pluginHost.getJob(p.jobId);
       case 'jobs.events':checkedDescription();if(!pluginHost.getJobEvents)throw workspaceFailure('unsupported','Jobs are unavailable');return pluginHost.getJobEvents(p.jobId,p.after);
@@ -395,6 +417,6 @@ export async function createWorkspaceServer({workspace,root,workspaceId,name='Us
   try{await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,host,()=>{server.off('error',reject);resolve();});});}catch(failure){pluginHost.dispose();workspace.dispose?.();throw safeOperationFailure(failure);}
   const address=server.address();
   return Object.freeze({url:`http://${host.includes(':')?`[${host}]`:host}:${address.port}${WORKSPACE_PATH}`,workspaceId,generation,hello:checkedDescription,
-    async close(){if(closed)return;closed=true;for(const controller of pending.values())controller.abort(workspaceFailure('disposed','Workspace server is disposed'));pluginHost.dispose();workspace.dispose?.();await new Promise(resolve=>{server.close(()=>resolve());server.closeAllConnections();});},
+    async close(){if(closed)return;closed=true;for(const controller of pending.values())controller.abort(workspaceFailure('disposed','Workspace server is disposed'));pluginHost.dispose();workspace.dispose?.();await new Promise(resolve=>{server.close(()=>resolve());server.closeAllConnections();});if(storageOptions)await pluginHost.flushJobStore();},
   });
 }

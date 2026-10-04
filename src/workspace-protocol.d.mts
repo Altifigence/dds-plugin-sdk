@@ -1,7 +1,7 @@
 export const WORKSPACE_PROTOCOL_VERSION: 1;
 export const WORKSPACE_PATH: '/dds/workspace/v1';
 export const WORKSPACE_LIMITS: Readonly<{wireBytes:number;fileBytes:number;jsonBytes:number;depth:number;nodes:number;entries:number;plugins:number;pending:number;receiving:number;connections:number;defaultTimeoutMs:number;maxTimeoutMs:number}>;
-export type WorkspaceMethod = 'hello'|'fs.list'|'fs.read'|'fs.capabilities'|'fs.revision'|'fs.readIfChanged'|'fs.write'|'fs.mkdir'|'fs.rename'|'fs.remove'|'plugins.list'|'commands.run'|'request.cancel'|'jobs.capabilities'|'jobs.start'|'jobs.get'|'jobs.events'|'jobs.cancel'|'jobs.artifact'|'artifacts.capabilities'|'artifacts.list'|'artifacts.read';
+export type WorkspaceMethod = 'hello'|'fs.list'|'fs.read'|'fs.capabilities'|'fs.revision'|'fs.readIfChanged'|'fs.write'|'fs.mkdir'|'fs.rename'|'fs.remove'|'plugins.list'|'commands.run'|'request.cancel'|'jobs.capabilities'|'jobs.start'|'jobs.get'|'jobs.events'|'jobs.cancel'|'jobs.artifact'|'artifacts.capabilities'|'artifacts.list'|'artifacts.read'|'history.capabilities'|'history.list'|'history.recover'|'history.retry';
 export const WORKSPACE_METHODS: readonly WorkspaceMethod[];
 export type WorkspaceErrorCode = 'invalid_request'|'authentication_required'|'permission_denied'|'workspace_mismatch'|'generation_mismatch'|'not_found'|'conflict'|'unsafe_path'|'budget_exceeded'|'cancelled'|'disposed'|'plugin_mismatch'|'provider_failed'|'unsupported'|'unavailable'|'transport_failed';
 export const WORKSPACE_ERROR_CODES: readonly WorkspaceErrorCode[];

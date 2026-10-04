@@ -3,6 +3,7 @@ import {parseJobId, parseJobEvent, parseJobSnapshot} from './jobs.mjs';
 import {ErrorCode, PluginSdkError} from './limits.mjs';
 import {JOB_STORE_LIMITS, parseJobStoreIdentity, parseJobStoreLimits, parseStoredJob, parseJobRecovery, parseJobStorageCapabilities} from './job-storage.mjs';
 import {storageObject, storageSha} from './job-storage-validation.mjs';
+import {createJobHistoryIndex} from './job-history-index.mjs';
 
 const failure = code => new PluginSdkError(code, 'Job persistence operation failed');
 const hash = async text => [...new Uint8Array(await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)))].map(value => value.toString(16).padStart(2, '0')).join('');
@@ -15,6 +16,7 @@ export function createJobStorageSession(scope, options, snapshot) {
     enabled: false, capabilities: () => parseJobStorageCapabilities({protocolVersion: 1, enabled: false, identity: null, limits: JOB_STORE_LIMITS}),
     has: () => false, register() {}, mark() {}, settle() {}, forget() {}, beforeExecute: async () => {}, flush: async () => {},
     recover() {throw failure(ErrorCode.CAPABILITY_UNAVAILABLE);},
+    history() {throw failure(ErrorCode.CAPABILITY_UNAVAILABLE);},
   });
   storageObject(options, ['store', 'workspaceIdentity', 'pluginArtifacts'], ['redact']);
   const {store, redact} = options;
@@ -27,6 +29,13 @@ export function createJobStorageSession(scope, options, snapshot) {
   if (!artifacts || typeof artifacts !== 'object' || Array.isArray(artifacts)) throw failure(ErrorCode.INVALID_CONTRACT);
   for (const value of Object.values(artifacts)) storageSha(value);
   const entries = new Map(), dirty = new Map(); let processing = false, waiters = 0;
+  function authorizedRecords(pluginId, grants, commands) {
+    const artifactSha256 = artifacts[pluginId]; storageSha(artifactSha256); grants = parseGrants(grants);
+    const records = store.entries();
+    if (!Array.isArray(records) || records.length > limits.records) throw failure(ErrorCode.BUDGET_EXCEEDED);
+    return records.map(parseStoredJob).filter(record => record.storeId === identity.storeId && record.workspaceId === scope.projectId && record.workspaceIdentity === identity.workspaceIdentity && record.snapshot.pluginId === pluginId && record.pluginArtifactSha256 === artifactSha256 && record.grants.every(grant => grants.includes(grant)) && commands.has(record.snapshot.commandId));
+  }
+  const history = createJobHistoryIndex(scope, identity, pluginId => artifacts[pluginId], authorizedRecords, jobId => entries.has(jobId) && !entries.get(jobId).forgotten);
 
   function redactValue(entry, kind, value) {
     if (!redact) return null;
@@ -55,7 +64,7 @@ export function createJobStorageSession(scope, options, snapshot) {
     const signature = entry.r.signature;
     const requestSha256 = entry.requestSha256 ?? await hash(signature);
     entry.requestSha256 = requestSha256;
-    return parseStoredJob({...identity, pluginArtifactSha256: entry.artifactSha256, requestSha256, revision: entry.revision + 1, savedAt, expiresAt: savedAt + limits.retentionMs, settled, contentPolicy: redact ? 'host-redacted' : 'metadata-only', grants: entry.grants, snapshot: safeSnapshot, events, binaryArtifacts});
+    return parseStoredJob({...identity, pluginArtifactSha256: entry.artifactSha256, requestSha256, revision: entry.revision + 1, savedAt, expiresAt: savedAt + limits.retentionMs, settled, contentPolicy: redact ? 'host-redacted' : 'metadata-only', grants: entry.grants, snapshot: safeSnapshot, events, binaryArtifacts, ...(entry.r.attemptOf === undefined ? {} : {attemptOf: entry.r.attemptOf})});
   }
   function completeWaiters(entry) {
     if (entry.r.settled && (entry.failed || entry.committedVersion >= entry.version)) entry.release();
@@ -97,6 +106,7 @@ export function createJobStorageSession(scope, options, snapshot) {
   return Object.freeze({
     enabled: true,
     capabilities: () => parseJobStorageCapabilities({protocolVersion: 1, enabled: true, identity, limits}),
+    history,
     has(jobId) {return store.has(parseJobId(jobId));},
     register(r, grants) {
       const artifactSha256 = artifacts[r.pluginId]; storageSha(artifactSha256);

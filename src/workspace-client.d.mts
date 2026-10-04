@@ -2,6 +2,8 @@ import type {Json,WorkspaceMethod,WorkspaceHello,WorkspaceEntry,WorkspacePlugin,
 export type {WorkspaceFileCapabilities,WorkspaceFileRevision,WorkspaceConditionalFile} from './workspace-protocol.mjs';
 import type {JobOptions,JobSnapshot,JobEvents,JobArtifactContent,JobCapabilities} from './jobs.mjs';
 import type {BinaryArtifactCapabilities,BinaryArtifactReference,BinaryArtifactList,BinaryArtifactChunk} from './artifacts.mjs';
+import type {JobStorageCapabilities,JobRecovery} from './job-storage.mjs';
+import type {JobHistoryQuery,JobHistoryPage} from './job-history.mjs';
 import type {WorkspaceJobWatchOptions,WorkspaceObserver,WorkspaceJobUpdate} from './workspace-observation.mjs';
 export {createWorkspaceProject, applyTextEdits} from './workspace-project.mjs';
 export {WORKSPACE_OBSERVATION_LIMITS} from './workspace-observation.mjs';
@@ -24,6 +26,10 @@ export interface WorkspaceClient {
   listPlugins(options?:WorkspaceRequestOptions):Promise<{plugins:readonly WorkspacePlugin[]}>;
   runCommand(pluginId:string,commandId:string,input:Json,artifactSha256:string,options?:WorkspaceRequestOptions):Promise<Json>;
   getJobCapabilities(options?:WorkspaceRequestOptions):Promise<JobCapabilities>;
+  getJobStorageCapabilities(options?:WorkspaceRequestOptions):Promise<JobStorageCapabilities>;
+  listJobHistory(pluginId:string,artifactSha256:string,query?:JobHistoryQuery,options?:WorkspaceRequestOptions):Promise<JobHistoryPage>;
+  recoverJob(pluginId:string,jobId:string,artifactSha256:string,options?:WorkspaceRequestOptions):Promise<JobRecovery>;
+  retryCommandJob(pluginId:string,previousJobId:string,input:Json,artifactSha256:string,job:JobOptions,options?:WorkspaceRequestOptions):Promise<JobRecovery>;
   startCommandJob(pluginId:string,commandId:string,input:Json,artifactSha256:string,job:JobOptions,options?:WorkspaceRequestOptions):Promise<JobSnapshot>;
   getJob(jobId:string,options?:WorkspaceRequestOptions):Promise<JobSnapshot>;
   getJobEvents(jobId:string,after?:number,options?:WorkspaceRequestOptions):Promise<JobEvents>;

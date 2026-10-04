@@ -55,7 +55,17 @@ if (process.argv[2] === '--worker') {
     assert.equal(success.disposition,'completed');assert.equal(success.unrecordedTail,'none');
     assert.equal(stopped.disposition,'interrupted');assert.equal(stopped.unrecordedTail,'unknown');assert.equal(stopped.record.snapshot.state,'running');
     assert.throws(()=>host.startCommandJob(plugin.manifest.id,'work',{wait:true},{jobId:interrupted}),{code:'conflict'});
+    const history=host.listJobHistory(plugin.manifest.id,{disposition:'interrupted'});
+    assert.equal(history.items.length,1);assert.equal(history.items[0].jobId,interrupted);
+    const retryId=randomUUID();
+    await host.retryCommandJob(plugin.manifest.id,interrupted,{wait:false},{jobId:retryId});
+    for(let end=Date.now()+5000;;){await host.flushJobStore();if(host.recoverJob(plugin.manifest.id,retryId).record?.settled)break;if(Date.now()>end)throw Error('Retry checkpoint timeout');await delay(5);}
+    const retry=await host.retryCommandJob(plugin.manifest.id,interrupted,{wait:false},{jobId:retryId});
+    assert.equal(retry.disposition,'completed');assert.equal(retry.record.attemptOf,interrupted);
+    assert.equal(host.recoverJob(plugin.manifest.id,interrupted).disposition,'interrupted');
+    assert.equal(host.listJobHistory(plugin.manifest.id,{attemptOf:interrupted}).items[0].jobId,retryId);
     console.log('Durable jobs: clean shutdown, killed child, current authorization and no automatic replay verified');
+    console.log('Job history: explicit reviewed retry and preserved parent verified');
   } finally {
     for(const child of children)if(child.exitCode===null&&child.signalCode===null){child.kill('SIGKILL');await new Promise(resolve=>child.once('exit',resolve));}
     host?.dispose();await host?.flushJobStore();await store?.close();

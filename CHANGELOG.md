@@ -2,6 +2,11 @@
 
 ## Unreleased — 0.8 development
 
+- Add bounded history queries with snapshot cursors, current-grant filtering and
+  explicit retry relationships. Repeated attempts are idempotent across restart.
+- Add storage discovery, recovery/history/retry HTTP methods and client helpers;
+  known older hosts retain their original behavior without unknown probes.
+
 - Add opt-in durable job storage, bounded coalesced checkpoints, current-authority
   recovery receipts and a single-writer Node filesystem implementation.
 - Preserve v1 responses and memory-only defaults. Recovery distinguishes settled,

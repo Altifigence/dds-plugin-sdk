@@ -7,13 +7,13 @@ import {parseJobId} from './jobs.mjs';
 import {ErrorCode, PluginSdkError} from './limits.mjs';
 import {DEFAULT_JOB_RETENTION_MS, JOB_STORE_LIMITS, parseJobStoreIdentity, parseJobStoreLimits, parseStoredJob} from './job-storage.mjs';
 import {storageInteger, storageObject} from './job-storage-validation.mjs';
+import {nodeWorkspaceIdentity} from './workspace-identity-node.mjs';
 
 const digest = value => createHash('sha256').update(value).digest('hex');
 const failure = code => new PluginSdkError(code, 'Job store operation failed');
 const same = (a, b) => a.dev === b.dev && a.ino === b.ino;
 const contained = (root, target) => {const relative = path.relative(root, target); return relative === '' || relative !== '..' && !relative.startsWith('..' + path.sep) && !path.isAbsolute(relative);};
 const recordName = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\.json$/;
-const nodeWorkspaceIdentity = (root, stat) => digest(JSON.stringify({root, dev: String(stat.dev), ino: String(stat.ino)}));
 function mapped(error) {
   if (error instanceof PluginSdkError) return error;
   if (['EEXIST', 'ENOTEMPTY'].includes(error?.code)) return failure(ErrorCode.CONFLICT);

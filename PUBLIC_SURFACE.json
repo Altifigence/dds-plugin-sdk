@@ -136,6 +136,13 @@
     "schemas/job-recovery.schema.json",
     "schemas/job-storage-capabilities.schema.json",
     "schemas/job-store-identity.schema.json",
-    "schemas/stored-job.schema.json"
+    "schemas/stored-job.schema.json",
+    "src/job-history.mjs",
+    "src/job-history.d.mts",
+    "src/job-history-index.mjs",
+    "src/workspace-identity-node.mjs",
+    "docs/JOB_HISTORY.md",
+    "schemas/job-history-query.schema.json",
+    "schemas/job-history-page.schema.json"
   ]
 }
