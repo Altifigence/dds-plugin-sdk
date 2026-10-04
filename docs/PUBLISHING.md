@@ -26,7 +26,7 @@ notes for the capabilities and hosts actually supported by that release.
    what data the plugin uses, which backend receives it, and how users can find
    updates and contact the publisher about security.
 4. List the plugin's distribution files explicitly in `dds-package.json`, then
-   validate and pack them with the SDK 0.5.0 CLI described below. Inspect the
+   validate and pack them with the SDK 0.6.0 CLI described below. Inspect the
    archive; do not list credentials, private project data or files that you do
    not intend to distribute.
 5. Publish the immutable versioned `.tgz`, its external `.release.json` and
@@ -44,10 +44,10 @@ file. Errors do not print the detected value. This is a conservative additional
 check, not a complete secret or malware scanner. Inspect your source and final
 archive; obfuscated credentials and confidential implementation may evade it.
 
-## Package format and SDK 0.5.0 CLI
+## Package format and SDK 0.6.0 CLI
 
 The CLI has been available since SDK 0.2.0; SDK 0.1.0 does not provide it.
-Use an installed 0.5.0 package containing the `dds-plugin` executable.
+Use an installed 0.6.0 package containing the `dds-plugin` executable.
 For a new project, start with [init and doctor](DEVTOOLS.md).
 
 Prepare this layout:
@@ -87,9 +87,9 @@ The manifest, disclosure, manifest entry and selected license file must all be
 listed. The packer automatically includes `dds-package.json` and generates
 `package.json`; do not list either file in `files`. The generated npm metadata
 uses `type: "module"`, the manifest entry and a peer dependency on this SDK:
-`>=0.5.0 <0.6.0`. The packer targets its current tested SDK line; it does not
+`>=0.6.0 <0.7.0`. The packer targets its current tested SDK line; it does not
 infer compatibility by inspecting imports. Older archives from the 0.2.x,
-0.3.x and 0.4.x CLIs exclude SDK 0.5.0 in their peer ranges. Validate against 0.5.0 and
+0.3.x, 0.4.x and 0.5.x CLIs exclude SDK 0.6.0 in their peer ranges. Validate against 0.6.0 and
 publish a new plugin version with this packer when migrating those archives.
 List `NOTICE`, third-party notices, other runtime modules, assets and source material
 explicitly when they are applicable. The CLI does not determine which legal
@@ -153,7 +153,7 @@ separate from validating and packaging your own plugin.
 
 ## Select a distribution channel
 
-Before installing a downloaded plugin, use the SDK 0.5.0
+Before installing a downloaded plugin, use the SDK 0.6.0
 [`dds-plugin verify` command](VERIFYING.md) or `verifyPluginArchive()` API to
 check its archive and release metadata without running or extracting it.
 Supply an independently obtained expected SHA-256 when selecting exact release

@@ -1,4 +1,5 @@
-import type {Json,WorkspaceMethod,WorkspaceHello,WorkspaceEntry,WorkspacePlugin} from './workspace-protocol.mjs';
+import type {Json,WorkspaceMethod,WorkspaceHello,WorkspaceEntry,WorkspacePlugin,WorkspaceFileCapabilities,WorkspaceFileRevision,WorkspaceConditionalFile} from './workspace-protocol.mjs';
+export type {WorkspaceFileCapabilities,WorkspaceFileRevision,WorkspaceConditionalFile} from './workspace-protocol.mjs';
 import type {JobOptions,JobSnapshot,JobEvents,JobArtifactContent,JobCapabilities} from './jobs.mjs';
 import type {WorkspaceJobWatchOptions,WorkspaceObserver,WorkspaceJobUpdate} from './workspace-observation.mjs';
 export {createWorkspaceProject, applyTextEdits} from './workspace-project.mjs';
@@ -12,6 +13,9 @@ export interface WorkspaceClient {
   request(method:WorkspaceMethod,params:Readonly<Record<string,Json>>,options?:WorkspaceRequestOptions):Promise<Json>;
   listFiles(path?:string,options?:WorkspaceRequestOptions):Promise<{entries:readonly WorkspaceEntry[]}>;
   readFile(path:string,options?:WorkspaceRequestOptions):Promise<{path:string;content:string;revision:string}>;
+  getFileCapabilities(options?:WorkspaceRequestOptions):Promise<WorkspaceFileCapabilities>;
+  getFileRevision(path:string,options?:WorkspaceRequestOptions):Promise<WorkspaceFileRevision>;
+  readFileIfChanged(path:string,knownRevision:string|null,options?:WorkspaceRequestOptions):Promise<WorkspaceConditionalFile>;
   writeFile(path:string,content:string,expectedRevision:string|null,options?:WorkspaceRequestOptions):Promise<{path:string;revision:string}>;
   mkdir(path:string,options?:WorkspaceRequestOptions):Promise<{path:string}>;
   rename(path:string,newPath:string,expectedRevision?:string,options?:WorkspaceRequestOptions):Promise<{path:string;newPath:string}>;

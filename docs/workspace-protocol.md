@@ -69,6 +69,9 @@ cancel unread bodies after rejected status/headers or a deadline.
 | `hello` | `{}` | Description below |
 | `fs.list` | `{path: ''}` or a relative directory | `{entries: [{path,name,kind:'file'\|'directory',size?,revision?}]}` |
 | `fs.read` | `{path}` | `{path,content,revision}` |
+| `fs.capabilities` (0.6) | `{}` | `{protocolVersion:1,revision:boolean,conditionalRead:boolean}` |
+| `fs.revision` (0.6) | `{path}` | `{path,revision}` |
+| `fs.readIfChanged` (0.6) | `{path,knownRevision: SHA256 or null}` | `{path,revision,notModified:true}` or `{path,revision,notModified:false,content}` |
 | `fs.write` | `{path,content,expectedRevision}` | `{path,revision}` |
 | `fs.mkdir` | `{path}` | `{path}` |
 | `fs.rename` | `{path,newPath,expectedRevision?}` | `{path,newPath}` |
@@ -76,6 +79,10 @@ cancel unread bodies after rejected status/headers or a deadline.
 | `plugins.list` | `{}` | `{plugins: [...]}` |
 | `commands.run` | `{pluginId,commandId,input,artifactSha256}` | Bounded JSON command result |
 | `request.cancel` | `{requestId: 'target-request'}` | `{cancelled: boolean}` |
+
+The optional 0.6 methods retain the v1 hello shape and existing methods.
+See [file revisions](FILE_REVISIONS.md) for capability discovery, exact conditional
+reply correlation and old-server fallback. An unchanged reply cannot include content.
 
 Paths are relative POSIX paths. Absolute paths, backslashes, traversal, symlinks,
 multiply linked files, protected components, Windows device names and

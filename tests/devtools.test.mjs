@@ -24,7 +24,7 @@ test('init creates a valid standalone scaffold and never replaces existing conte
   const {directory}=await fixture(t,{installed:false});const before=await fs.readFile(path.join(directory,'plugin.mjs'),'utf8');
   assert.equal((await validatePluginPackage(directory)).pluginId,'sample-plugin');
   await assert.rejects(initPlugin(directory),/already exists/);assert.equal(await fs.readFile(path.join(directory,'plugin.mjs'),'utf8'),before);
-  const metadata=JSON.parse(await fs.readFile(path.join(directory,'package.json'),'utf8'));assert.equal(metadata.private,true);assert.match(metadata.dependencies['@altifigence/dds-plugin-sdk'],/\/v0\.5\.0\//);
+  const metadata=JSON.parse(await fs.readFile(path.join(directory,'package.json'),'utf8'));assert.equal(metadata.private,true);assert.match(metadata.dependencies['@altifigence/dds-plugin-sdk'],/\/v0\.6\.0\//);
   const report=await doctorPlugin(directory);assert.equal(report.ok,false);assert.equal(report.checks.find(c=>c.id==='sdk').status,'error');
 });
 test('doctor never imports plugin code and returns actionable human and JSON diagnostics',async t=>{

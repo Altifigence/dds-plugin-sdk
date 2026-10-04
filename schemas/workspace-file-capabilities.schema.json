@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.6.0/schemas/workspace-file-capabilities.schema.json",
+  "title": "workspace-file-capabilities",
+  "type": "object",
+  "properties": {
+    "protocolVersion": {
+      "const": 1
+    },
+    "revision": {
+      "type": "boolean"
+    },
+    "conditionalRead": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "protocolVersion",
+    "revision",
+    "conditionalRead"
+  ],
+  "additionalProperties": false
+}

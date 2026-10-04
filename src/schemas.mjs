@@ -2,10 +2,11 @@ import { LIMITS, ErrorCode } from './limits.mjs';
 import {JOB_LIMITS, JOB_STATES} from './jobs.mjs';
 import { SEMVER_PATTERN } from './patterns.mjs';
 import { THEME_SCHEMA } from './themes.mjs';
+import {WORKSPACE_LIMITS} from './workspace-protocol.mjs';
 import { LANGUAGE_FEATURES } from './contracts.mjs';
 
 const schema = 'https://json-schema.org/draft/2020-12/schema';
-const base = 'https://github.com/Altifigence/dds-plugin-sdk/blob/v0.5.0/schemas/';
+const base = 'https://github.com/Altifigence/dds-plugin-sdk/blob/v0.6.0/schemas/';
 const text = maxLength => ({type: 'string', minLength: 1, maxLength});
 const integer = (maximum, minimum = 0) => ({type: 'integer', minimum, maximum});
 const object = (properties, required = Object.keys(properties)) => ({type: 'object', properties, required, additionalProperties: false});
@@ -73,7 +74,11 @@ const jobProgress = object({completed: integer(Number.MAX_SAFE_INTEGER), total: 
 const jobArtifact = object({id: text(128), path: {...text(1024), $comment: 'Runtime enforces the protected workspace file policy.'}, revision: {...text(64), pattern: '^[a-f0-9]{64}$'}, byteLength: integer(LIMITS.documentBytes), label: text(256)}, ['id', 'path', 'revision', 'byteLength']);
 const jobBase = {protocolVersion: {const: 1}, jobId, scope, pluginId: text(128), commandId: text(128), startedAt: integer(Number.MAX_SAFE_INTEGER), updatedAt: integer(Number.MAX_SAFE_INTEGER), timeoutMs: integer(JOB_LIMITS.maxTimeoutMs, 1), progress: {oneOf: [{type: 'null'}, jobProgress]}, artifacts: list(jobArtifact, JOB_LIMITS.artifacts), lastSequence: integer(Number.MAX_SAFE_INTEGER, 1)};
 const jobEvent = {oneOf: Object.entries({progress: jobProgress, artifact: jobArtifact, state: object({state: {enum: JOB_STATES}}), log: object({level: {enum: ['debug', 'info', 'warning', 'error']}, message: {...text(JOB_LIMITS.messageBytes), 'x-maxUtf8Bytes': JOB_LIMITS.messageBytes}})}).map(([kind, data]) => object({sequence: integer(Number.MAX_SAFE_INTEGER, 1), at: integer(Number.MAX_SAFE_INTEGER), kind: {const: kind}, data}))};
+const fileRevision = {path: {...text(1024), $comment: 'Runtime enforces the protected relative workspace path policy.'}, revision: {...text(64), pattern: '^[a-f0-9]{64}$'}};
 export const SCHEMAS = Object.freeze({
+  'workspace-file-capabilities': define('workspace-file-capabilities', object({protocolVersion: {const: 1}, revision: {type: 'boolean'}, conditionalRead: {type: 'boolean'}})),
+  'workspace-file-revision': define('workspace-file-revision', object(fileRevision)),
+  'workspace-conditional-file': define('workspace-conditional-file', {oneOf: [object({...fileRevision, notModified: {const: true}}), object({...fileRevision, notModified: {const: false}, content: {type: 'string', maxLength: WORKSPACE_LIMITS.fileBytes, 'x-maxUtf8Bytes': WORKSPACE_LIMITS.fileBytes}})], $comment: 'Runtime additionally correlates notModified and revision with the request knownRevision.'}),
   'job-options': define('job-options', object({jobId, timeoutMs: integer(JOB_LIMITS.maxTimeoutMs, 1)}, ['jobId'])),
   'job-snapshot': define('job-snapshot', {oneOf: [object({...jobBase, state: {const: 'running'}}), object({...jobBase, state: {const: 'succeeded'}, result: {$ref: `${base}json-value.schema.json`}}), object({...jobBase, state: {enum: ['failed', 'cancelled', 'timed_out']}, error: object({code: {enum: Object.values(ErrorCode)}})})], 'x-maxUtf8Bytes': LIMITS.jsonBytes, $comment: 'Runtime checks unique artifact IDs and cross-field time/progress ordering.'}),
   'job-events': define('job-events', object({jobId, scope, after: integer(Number.MAX_SAFE_INTEGER), nextCursor: integer(Number.MAX_SAFE_INTEGER), dropped: integer(Number.MAX_SAFE_INTEGER), hasMore: {type: 'boolean'}, events: list(jobEvent, JOB_LIMITS.pageSize)})),

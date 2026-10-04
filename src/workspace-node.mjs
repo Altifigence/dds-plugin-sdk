@@ -235,7 +235,7 @@ export async function createWorkspaceServer({workspace,root,workspaceId,name='Us
     const commands=pluginHost.listCommands();
     return pluginHost.listPlugins().map(manifest=>({manifest,...pins.get(manifest.id),commands:commands.filter(command=>command.pluginId===manifest.id)}));
   };
-  const description=()=>parseWorkspaceHello({hostId:'workspace-host',hostVersion:'0.5.0',protocolVersion:1,workspace:{id:workspaceId,name,generation},capabilities:{read:true,write:workspace.capabilities?.write===true,manage:workspace.capabilities?.manage===true,commands:pins.size>0},plugins:metadata(),notice:noticePayload});
+  const description=()=>parseWorkspaceHello({hostId:'workspace-host',hostVersion:'0.6.0',protocolVersion:1,workspace:{id:workspaceId,name,generation},capabilities:{read:true,write:workspace.capabilities?.write===true,manage:workspace.capabilities?.manage===true,commands:pins.size>0},plugins:metadata(),notice:noticePayload});
   let originalDescription;
   try{originalDescription=description();}catch(failure){pluginHost.dispose();workspace.dispose?.();throw safeOperationFailure(failure);}
   const originalMetadata=JSON.stringify({plugins:originalDescription.plugins,capabilities:originalDescription.capabilities});
@@ -256,6 +256,14 @@ export async function createWorkspaceServer({workspace,root,workspaceId,name='Us
       case 'hello':return checkedDescription();
       case 'fs.list':return{entries:await workspace.listFiles(p.path,{signal})};
       case 'fs.read':return workspace.readFile(p.path,{signal});
+      case 'fs.capabilities':checkedDescription();return{protocolVersion:1,revision:true,conditionalRead:true};
+      case 'fs.revision':case 'fs.readIfChanged':{
+        // One guarded read supplies both the digest and any returned content.
+        const file=parseWorkspaceMethodResult('fs.read',await workspace.readFile(p.path,{signal}));
+        const metadata={path:file.path,revision:file.revision};
+        if(request.method==='fs.revision')return metadata;
+        return file.revision===p.knownRevision?{...metadata,notModified:true}:{...file,notModified:false};
+      }
       case 'fs.write':if(workspace.capabilities?.write!==true)throw workspaceFailure('permission_denied','Workspace is read-only');return workspace.writeFile(p.path,p.content,{expectedRevision:p.expectedRevision,signal});
       case 'fs.mkdir':if(!workspace.capabilities?.manage||!workspace.mkdir)throw workspaceFailure('permission_denied','Workspace management is disabled');return workspace.mkdir(p.path,{signal});
       case 'fs.rename':if(!workspace.capabilities?.manage||!workspace.rename)throw workspaceFailure('permission_denied','Workspace management is disabled');return workspace.rename(p.path,p.newPath,{expectedRevision:p.expectedRevision,signal});

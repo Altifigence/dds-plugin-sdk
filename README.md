@@ -15,7 +15,7 @@ application, private engines/services and production signing systems are outside
 this repository. Read the [public scope](docs/PUBLIC_SCOPE.md) and
 [compatibility table](docs/COMPATIBILITY.md) for exact boundaries.
 
-Version **0.5.0** supports Node 22 and 24. Manifest v1 diagnostic plugins remain
+Version **0.6.0** supports Node 22 and 24. Manifest v1 diagnostic plugins remain
 compatible. Manifest v2 adds commands, permission-scoped workspace and backend
 APIs, and open-source or proprietary distribution metadata. Themes export to
 the XML format already supported by DDS. The workspace host runs trusted plugins
@@ -27,6 +27,8 @@ without executing code with `doctor`, and run trusted code with `dev --watch`.
 files to explicitly enabled hosts while keeping existing API contracts.
 [Workspace observation](docs/OBSERVATION.md) follows explicit file revisions and
 job progress with cancellable async iterators, preserving edit drafts and job IDs.
+[File revisions and conditional reads](docs/FILE_REVISIONS.md) reduce response
+traffic on new hosts, with bounded full-read fallback on older hosts.
 
 ## Run your first plugin
 
@@ -59,7 +61,7 @@ mkdir my-dds-plugin
 cd my-dds-plugin
 npm init -y
 npm pkg set type=module
-npm install --ignore-scripts --save-exact https://github.com/Altifigence/dds-plugin-sdk/releases/download/v0.5.0/altifigence-dds-plugin-sdk-0.5.0.tgz
+npm install --ignore-scripts --save-exact https://github.com/Altifigence/dds-plugin-sdk/releases/download/v0.6.0/altifigence-dds-plugin-sdk-0.6.0.tgz
 ```
 
 Copy the example's `plugin.mjs` and `run.mjs` into this directory, then run:

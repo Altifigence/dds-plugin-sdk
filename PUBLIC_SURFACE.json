@@ -109,6 +109,10 @@
     "docs/OBSERVATION.md",
     "examples/workspace-observation/run.mjs",
     "src/workspace-observation.mjs",
-    "src/workspace-observation.d.mts"
+    "src/workspace-observation.d.mts",
+    "docs/FILE_REVISIONS.md",
+    "schemas/workspace-file-capabilities.schema.json",
+    "schemas/workspace-file-revision.schema.json",
+    "schemas/workspace-conditional-file.schema.json"
   ]
 }

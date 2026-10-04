@@ -105,7 +105,7 @@ test('verifies open and proprietary releases without importing code, extracting 
   }
 });
 
-for (const range of ['>=0.3.0 <0.4.0', '>=0.4.0 <0.5.0']) test(`previous ${range} metadata is verified without broadening its declared peer range`, async t => {
+for (const range of ['>=0.3.0 <0.4.0', '>=0.4.0 <0.5.0', '>=0.5.0 <0.6.0']) test(`previous ${range} metadata is verified without broadening its declared peer range`, async t => {
   const f = await fixture(t);
   const list = entries(f.archive), item = list.find(entry => name(entry) === 'package.json');
   const metadata = JSON.parse(item.bytes); metadata.peerDependencies['@altifigence/dds-plugin-sdk'] = range;
