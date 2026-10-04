@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.10.0/schemas/upload-capabilities.schema.json",
+  "title": "upload-capabilities",
+  "type": "object",
+  "properties": {
+    "protocolVersion": {
+      "const": 1
+    },
+    "enabled": {
+      "type": "boolean"
+    },
+    "scope": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+        },
+        "sessionId": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+        }
+      },
+      "required": [
+        "projectId",
+        "sessionId"
+      ],
+      "additionalProperties": false
+    },
+    "identity": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "protocolVersion": {
+              "const": 1
+            },
+            "storeId": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+            },
+            "workspaceId": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+            },
+            "workspaceIdentity": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "principalId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "protocolVersion",
+            "storeId",
+            "workspaceId",
+            "workspaceIdentity",
+            "principalId"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "roots": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 1024
+      },
+      "maxItems": 16,
+      "uniqueItems": true
+    },
+    "limits": {
+      "type": "object",
+      "properties": {
+        "fileBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1073741824
+        },
+        "chunkBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65536
+        },
+        "storeBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4294967296
+        },
+        "records": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64
+        },
+        "active": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4
+        },
+        "pending": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16
+        },
+        "retentionMs": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 86400000
+        },
+        "recordBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16384
+        },
+        "roots": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16
+        },
+        "timeoutMs": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 30000
+        }
+      },
+      "required": [
+        "fileBytes",
+        "chunkBytes",
+        "storeBytes",
+        "records",
+        "active",
+        "pending",
+        "retentionMs",
+        "recordBytes",
+        "roots",
+        "timeoutMs"
+      ],
+      "additionalProperties": false
+    },
+    "profile": {
+      "const": "local-node-v1"
+    }
+  },
+  "required": [
+    "protocolVersion",
+    "enabled",
+    "scope",
+    "identity",
+    "roots",
+    "limits",
+    "profile"
+  ],
+  "additionalProperties": false,
+  "$comment": "Runtime validates canonical paths, scope identity, host budget relationships and disabled fields."
+}

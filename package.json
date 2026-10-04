@@ -1,6 +1,6 @@
 {
   "name": "@altifigence/dds-plugin-sdk",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "Plugin, theme and user-owned workspace tools for Digital Design Studio",
   "type": "module",
   "license": "Apache-2.0",
@@ -104,6 +104,18 @@
     "./artifact-transfer-browser": {
       "types": "./src/artifact-transfer-browser.d.mts",
       "import": "./src/artifact-transfer-browser.mjs"
+    },
+    "./uploads": {
+      "types": "./src/uploads.d.mts",
+      "import": "./src/uploads.mjs"
+    },
+    "./uploads-node": {
+      "types": "./src/uploads-node.d.mts",
+      "import": "./src/uploads-node.mjs"
+    },
+    "./uploads-browser": {
+      "types": "./src/uploads-browser.d.mts",
+      "import": "./src/uploads-browser.mjs"
     }
   },
   "bin": {
@@ -153,7 +165,10 @@
     "example:project-browser": "node examples/project-tools/serve.mjs",
     "example:stream-artifacts": "node examples/browser-artifacts/run.mjs",
     "example:browser-artifacts": "node examples/browser-artifacts/serve.mjs",
-    "benchmark:browser-artifacts": "node scripts/benchmark-browser-artifacts.mjs"
+    "benchmark:browser-artifacts": "node scripts/benchmark-browser-artifacts.mjs",
+    "example:uploads": "node examples/uploads/run.mjs",
+    "benchmark:uploads": "node scripts/benchmark-uploads.mjs",
+    "example:uploads-browser": "node examples/uploads/serve.mjs"
   },
   "devDependencies": {
     "typescript": "5.9.3"

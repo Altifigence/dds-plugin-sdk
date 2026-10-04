@@ -12,7 +12,10 @@ your own workspace and tools with the Node.js host and HTTP client. The SDK has
 
 The next 0.10 line is in development: [browser artifact streaming](docs/BROWSER_ARTIFACTS.md)
 adds bounded sinks, incremental whole-file hashes, explicit storage readback and
-main-thread/Worker examples. These additions are not in the published 0.9 archive.
+main-thread/Worker examples and [selected-file uploads](docs/UPLOADS.md) with private
+staging, explicit restart recovery and verified conditional commit. The checkout
+uses 0.10.0 for protocol development; these additions are not in the published
+0.9 archive.
 
 This is the intentionally public SDK for external plugin developers. The DDS
 application, private engines/services and production signing systems are outside

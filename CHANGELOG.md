@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.10.0 — in development (not yet released)
+
+- Browser artifact streaming with caller-owned file/OPFS sinks and distinct
+  received versus stored verification.
+- Opt-in selected-file uploads with bounded private staging, current plugin/write
+  authority, chunk/full hashes, explicit restart recovery and conditional commit.
+- Keep project, text-file, job and artifact v1 contracts and released 0.3–0.9
+  plugin package metadata verification. See [uploads](docs/UPLOADS.md).
+
 ## 0.9.0 — 2026-10-04
 
 - Add operator-scoped Node project observation with bounded native hints, content

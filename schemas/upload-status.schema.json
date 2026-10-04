@@ -1,0 +1,231 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.10.0/schemas/upload-status.schema.json",
+  "title": "upload-status",
+  "type": "object",
+  "properties": {
+    "reference": {
+      "type": "object",
+      "properties": {
+        "protocolVersion": {
+          "const": 1
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+            },
+            "sessionId": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+            }
+          },
+          "required": [
+            "projectId",
+            "sessionId"
+          ],
+          "additionalProperties": false
+        },
+        "identity": {
+          "type": "object",
+          "properties": {
+            "protocolVersion": {
+              "const": 1
+            },
+            "storeId": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+            },
+            "workspaceId": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+            },
+            "workspaceIdentity": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "principalId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "protocolVersion",
+            "storeId",
+            "workspaceId",
+            "workspaceIdentity",
+            "principalId"
+          ],
+          "additionalProperties": false
+        },
+        "uploadGeneration": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+        },
+        "spec": {
+          "type": "object",
+          "properties": {
+            "uploadId": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+            },
+            "pluginId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "artifactSha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "path": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            },
+            "byteLength": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1073741824
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "expectedRevision": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "uploadId",
+            "pluginId",
+            "artifactSha256",
+            "path",
+            "byteLength",
+            "sha256",
+            "expectedRevision"
+          ],
+          "additionalProperties": false
+        },
+        "createdAt": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "expiresAt": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "protocolVersion",
+        "scope",
+        "identity",
+        "uploadGeneration",
+        "spec",
+        "createdAt",
+        "expiresAt"
+      ],
+      "additionalProperties": false
+    },
+    "state": {
+      "enum": [
+        "receiving",
+        "committing",
+        "committed",
+        "aborted",
+        "expired",
+        "corrupt",
+        "uncertain"
+      ]
+    },
+    "offset": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1073741824
+    },
+    "prefixSha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "updatedAt": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "commitReceipt": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "uploadId": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+            },
+            "uploadGeneration": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+            },
+            "path": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            },
+            "revision": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "byteLength": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1073741824
+            },
+            "committedAt": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "verified": {
+              "const": true
+            }
+          },
+          "required": [
+            "uploadId",
+            "uploadGeneration",
+            "path",
+            "revision",
+            "byteLength",
+            "committedAt",
+            "verified"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "reference",
+    "state",
+    "offset",
+    "prefixSha256",
+    "updatedAt",
+    "commitReceipt"
+  ],
+  "additionalProperties": false,
+  "$comment": "Runtime verifies scope/store/workspace equality, lifetime <=24h, offset <=length, empty/full prefix digests, exact receipt identity and state agreement."
+}
