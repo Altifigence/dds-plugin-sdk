@@ -5,14 +5,15 @@ import {textIndex, languageText, languageCall} from './language-values.mjs';
 import {parseWorkspaceEdit} from './workspace-edit-contracts.mjs';
 import {parseFormattingOptions, parseCodeActionContext, parseCodeActions, validateFormattingEdit, validateCodeActions} from './language-editing.mjs';
 import {parseSemanticTokens, parseFoldingRanges, parseInlayHints, parseDocumentSymbolTree, validateLanguageDisplay} from './language-display.mjs';
+import {parseDataSchema, validateDataValue, parseDisplayMetadata, DataValidationError} from './data-schema.mjs';
 
 const encoder = new TextEncoder();
 const identifierPattern = /^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$/;
 const semverPattern = new RegExp(SEMVER_PATTERN);
 const uriPattern = /^[A-Za-z][A-Za-z0-9+.-]*:[^\s\u0000-\u001f\u007f]+$/;
 const permissions = ['document.read', 'diagnostics.publish'];
-const workspacePermissions = ['workspace.read', 'workspace.write', 'backend.invoke'];
-const allPermissions = [...permissions, ...workspacePermissions, 'language.provide'];
+const workspacePermissions = ['workspace.read', 'workspace.write', 'backend.invoke', 'secrets.resolve'];
+const allPermissions = [...permissions, ...workspacePermissions, 'language.provide', 'settings.read'];
 export const LANGUAGE_FEATURES = Object.freeze(['completion', 'hover', 'definition', 'references', 'document-symbols', 'signature-help', 'prepare-rename', 'rename', 'format-document', 'format-range', 'code-actions', 'semantic-tokens', 'folding-ranges', 'inlay-hints', 'document-symbol-tree']);
 export const LANGUAGE_CAPABILITIES = Object.freeze([...LANGUAGE_FEATURES, 'completion-resolve', 'completion-snippets', 'code-action-resolve', 'semantic-tokens-delta']);
 
@@ -157,7 +158,7 @@ export function parseManifest(value) {
   const descriptor = Object.getOwnPropertyDescriptor(value, 'manifestVersion');
   const manifestVersion = descriptor && 'value' in descriptor ? descriptor.value : undefined;
   if (![1, 2].includes(manifestVersion)) fail('manifest.manifestVersion', 'expected 1 or 2');
-  record(value, ['manifestVersion', 'id', 'name', 'publisher', 'version', 'protocolVersion', 'entry', 'capabilities', 'permissions', 'supportedHosts', 'license', ...(manifestVersion === 2 ? ['runtime', 'source'] : [])], [], 'manifest');
+  record(value, ['manifestVersion', 'id', 'name', 'publisher', 'version', 'protocolVersion', 'entry', 'capabilities', 'permissions', 'supportedHosts', 'license', ...(manifestVersion === 2 ? ['runtime', 'source'] : [])], manifestVersion === 2 ? ['display'] : [], 'manifest');
   const entry = string(value.entry, 256, 'manifest.entry');
   if (!/^\.\/(?:[A-Za-z0-9_-]+\/)*[A-Za-z0-9_.-]+\.mjs$/.test(entry)) fail('manifest.entry', 'expected a relative .mjs module path');
   const output = {
@@ -168,12 +169,13 @@ export function parseManifest(value) {
     version: string(value.version, 64, 'manifest.version', semverPattern),
     protocolVersion: version(value.protocolVersion, 'manifest.protocolVersion'),
     entry,
-    capabilities: Object.freeze(unique(array(value.capabilities, manifestVersion === 1 ? 1 : LANGUAGE_CAPABILITIES.length + 2, 'manifest.capabilities', (v, p) => enumeration(v, manifestVersion === 1 ? ['diagnostics'] : ['diagnostics', 'commands', ...LANGUAGE_CAPABILITIES], p), 1), 'manifest.capabilities')),
-    permissions: Object.freeze(unique(array(value.permissions, manifestVersion === 1 ? 2 : 6, 'manifest.permissions', (v, p) => enumeration(v, manifestVersion === 1 ? permissions : allPermissions, p)), 'manifest.permissions')),
+    capabilities: Object.freeze(unique(array(value.capabilities, manifestVersion === 1 ? 1 : LANGUAGE_CAPABILITIES.length + 3, 'manifest.capabilities', (v, p) => enumeration(v, manifestVersion === 1 ? ['diagnostics'] : ['diagnostics', 'commands', 'settings', ...LANGUAGE_CAPABILITIES], p), 1), 'manifest.capabilities')),
+    permissions: Object.freeze(unique(array(value.permissions, manifestVersion === 1 ? 2 : allPermissions.length, 'manifest.permissions', (v, p) => enumeration(v, manifestVersion === 1 ? permissions : allPermissions, p)), 'manifest.permissions')),
     supportedHosts: Object.freeze(unique(array(value.supportedHosts, manifestVersion === 1 ? 1 : 2, 'manifest.supportedHosts', (v, p) => enumeration(v, manifestVersion === 1 ? ['test-host'] : ['test-host', 'workspace-host'], p), 1), 'manifest.supportedHosts')),
     license: manifestVersion === 1 ? string(value.license, 128, 'manifest.license', /^[A-Za-z0-9.+-]+$/) : parseLicenseExpression(value.license),
   };
   if (manifestVersion === 2) {
+    if (Object.hasOwn(value, 'display')) output.display = parseDisplayMetadata(value.display);
     if (output.capabilities.some(capability => ['completion-resolve', 'completion-snippets'].includes(capability)) && !output.capabilities.includes('completion')) fail('manifest.capabilities', 'completion extension requires completion');
     if (output.capabilities.includes('code-action-resolve') && !output.capabilities.includes('code-actions')) fail('manifest.capabilities', 'code action resolve requires code-actions');
     if (output.capabilities.includes('semantic-tokens-delta') && !output.capabilities.includes('semantic-tokens')) fail('manifest.capabilities', 'semantic delta requires semantic-tokens');
@@ -242,7 +244,7 @@ export function parseProviderSelector(value) {
 }
 
 export function parseGrants(value) {
-  return Object.freeze(unique(array(value, 6, 'grants', (v, p) => enumeration(v, allPermissions, p)), 'grants'));
+  return Object.freeze(unique(array(value, allPermissions.length, 'grants', (v, p) => enumeration(v, allPermissions, p)), 'grants'));
 }
 
 export function parseScope(value) { return scope(value, 'scope'); }
@@ -325,9 +327,12 @@ export function parseJsonValue(value) {
 }
 
 export function parseCommandDefinition(value) {
-  record(value, ['id', 'title'], ['description', 'parameters'], 'command');
+  record(value, ['id', 'title'], ['description', 'parameters', 'inputSchema', 'outputSchema', 'display'], 'command');
   const output = {id: string(value.id, 128, 'command.id', identifierPattern), title: string(value.title, 128, 'command.title')};
   if (Object.hasOwn(value, 'description')) output.description = string(value.description, 2048, 'command.description');
+  if (Object.hasOwn(value, 'parameters') && Object.hasOwn(value, 'inputSchema')) fail('command', 'parameters and inputSchema are mutually exclusive');
+  for (const field of ['inputSchema', 'outputSchema']) if (Object.hasOwn(value, field)) output[field] = parseDataSchema(value[field]);
+  if (Object.hasOwn(value, 'display')) output.display = parseDisplayMetadata(value.display);
   if (Object.hasOwn(value, 'parameters')) output.parameters = Object.freeze(array(value.parameters, 32, 'command.parameters', (parameter, path) => {
     record(parameter, ['name', 'label', 'type', 'required'], ['choices'], path);
     if (typeof parameter.required !== 'boolean') fail(`${path}.required`, 'expected boolean');
@@ -346,6 +351,8 @@ export function parseCommandDefinition(value) {
 }
 
 export function parseCommandInput(value, command) {
+  command = parseCommandDefinition(command);
+  if (command.inputSchema) return commandData(command.inputSchema, value, 'input', true);
   const input = parseJsonValue(value);
   if (!command.parameters) return input;
   if (!input || typeof input !== 'object' || Array.isArray(input)) fail('command.input', 'expected parameter object');
@@ -357,6 +364,20 @@ export function parseCommandInput(value, command) {
     if (typeof value !== parameter.type || parameter.choices && !parameter.choices.includes(value)) fail('command.input', 'invalid parameter value');
   }
   return input;
+}
+
+function commandData(schema, value, phase, applyDefaults) {
+  try {return parseJsonValue(validateDataValue(schema, value, {applyDefaults}));}
+  catch (failure) {
+    if (failure instanceof DataValidationError) throw new DataValidationError(failure.reason, `/${phase}${failure.path}`, failure.code === ErrorCode.BUDGET_EXCEEDED);
+    if (failure instanceof PluginSdkError) throw new DataValidationError('json_budget', `/${phase}`, failure.code === ErrorCode.BUDGET_EXCEEDED);
+    throw failure;
+  }
+}
+/** Outputs never receive schema defaults. */
+export function parseCommandOutput(value, command) {
+  command = parseCommandDefinition(command);
+  return command.outputSchema ? commandData(command.outputSchema, value, 'output', false) : parseJsonValue(value);
 }
 
 // Internal port validators shared with the portable host.

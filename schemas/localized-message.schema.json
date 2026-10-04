@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.12.0/schemas/localized-message.schema.json",
+  "title": "localized-message",
+  "type": "object",
+  "properties": {
+    "key": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^(?!constructor$|prototype$|__proto__$)[A-Za-z][A-Za-z0-9_.-]{0,127}$"
+    },
+    "text": {
+      "type": "string",
+      "maxLength": 16384
+    },
+    "locale": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 64,
+      "$comment": "Runtime requires a canonical BCP 47 base tag supported by Intl.getCanonicalLocales; extensions/private-use are rejected."
+    },
+    "requestedLocale": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 64,
+      "$comment": "Runtime requires a canonical BCP 47 base tag supported by Intl.getCanonicalLocales; extensions/private-use are rejected."
+    },
+    "fallback": {
+      "type": "boolean"
+    },
+    "direction": {
+      "enum": [
+        "ltr",
+        "rtl"
+      ]
+    }
+  },
+  "required": [
+    "key",
+    "text",
+    "locale",
+    "requestedLocale",
+    "fallback",
+    "direction"
+  ],
+  "additionalProperties": false
+}

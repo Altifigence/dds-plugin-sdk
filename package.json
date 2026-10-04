@@ -1,6 +1,6 @@
 {
   "name": "@altifigence/dds-plugin-sdk",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "description": "Plugin, theme and user-owned workspace tools for Digital Design Studio",
   "type": "module",
   "license": "Apache-2.0",
@@ -16,6 +16,26 @@
     "url": "https://github.com/Altifigence/dds-plugin-sdk/issues"
   },
   "exports": {
+    "./localization": {
+      "types": "./src/localization.d.mts",
+      "import": "./src/localization.mjs"
+    },
+    "./accessibility": {
+      "types": "./src/accessibility.d.mts",
+      "import": "./src/accessibility.mjs"
+    },
+    "./data-schema": {
+      "types": "./src/data-schema.d.mts",
+      "import": "./src/data-schema.mjs"
+    },
+    "./settings": {
+      "types": "./src/settings.d.mts",
+      "import": "./src/settings.mjs"
+    },
+    "./secrets": {
+      "types": "./src/secrets.d.mts",
+      "import": "./src/secrets.mjs"
+    },
     ".": {
       "types": "./src/index.d.mts",
       "import": "./src/index.mjs"
@@ -153,6 +173,8 @@
     "PUBLIC_SURFACE.json"
   ],
   "scripts": {
+    "example:configuration": "node examples/configuration/run.mjs",
+    "example:configuration-browser": "node examples/configuration/serve.mjs",
     "test": "node --test tests/*.test.mjs",
     "test:types": "tsc --noEmit -p tests/types/tsconfig.json",
     "schemas:write": "node scripts/schemas.mjs --write",

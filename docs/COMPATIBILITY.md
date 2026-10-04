@@ -1,5 +1,21 @@
 # Compatibility and availability
 
+## 0.12 configuration and display
+
+[Settings](SETTINGS.md) and [secret references](SECRETS.md) are operator-owned
+optional ports. New `settings` capability, `settings.read`/`secrets.resolve`
+permissions, manifest display and [command schema metadata](DATA_SCHEMAS.md)
+require a 0.12-aware peer. Existing diagnostics, language features, commands and
+workspace protocol v1 continue to work. Older clients reject unknown metadata;
+an unchanged protocol version does not make new fields readable by an old peer.
+Keep legacy definitions when using old clients. Cancellation now retains normal
+command/port slots until actual provider settlement, as jobs already did.
+
+[Locale catalogs and accessibility helpers](LOCALIZATION.md) return display data
+and bounded inspection hints. They do not change DDS product UI or theme XML.
+New plugin archives use `>=0.12.0 <0.13.0`; verification preserves exact released
+0.3.x through 0.11.x peer metadata. An old archive's peer range is not widened.
+
 ## 0.11 language assistance and editing
 
 Optional `signature-help`, `completion-resolve` and `completion-snippets` extend the
@@ -29,7 +45,7 @@ is unchanged. These features do not establish a DDS product editor integration.
 | Browser-only DDS host | Native workspace transport is unavailable |
 | Language providers | Diagnostics plus completion, hover, definition, references and document symbols in SDK hosts since 0.3.0; no released DDS editor bridge is implied |
 | Project edit sessions | Client helpers in 0.3.0 over unchanged workspace protocol v1, including 0.2.x servers |
-| Download verification | Node API/CLI since 0.3.1; 0.11.0 accepts exact 0.3.x–0.11.x package metadata; no extraction, code execution or publisher authentication |
+| Download verification | Node API/CLI since 0.3.1; 0.12.0 accepts exact 0.3.x–0.12.x package metadata; no extraction, code execution or publisher authentication |
 | Development tools | `init`, `doctor`, `dev` since 0.4.0; local Node tools, explicit trusted-code execution |
 | Command jobs | Opt-in SDK host/client extension since 0.4.0; progress/logs/UTF-8 artifacts; v1 hello unchanged |
 | File and job observation | Client helpers since 0.5.0; 0.6 uses revision reads when supported; job reads need enabled 0.4+ hosts |

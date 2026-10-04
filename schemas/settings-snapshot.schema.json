@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.12.0/schemas/settings-snapshot.schema.json",
+  "title": "settings-snapshot",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "pluginId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
+    },
+    "workspaceId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^(?!__proto__$|prototype$|constructor$)[^\\u0000-\\u001f\\u007f]+$"
+    },
+    "definitionVersion": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "values": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128,
+        "pattern": "^(?!constructor$|prototype$|__proto__$)[A-Za-z][A-Za-z0-9_.-]{0,127}$"
+      },
+      "maxProperties": 64
+    },
+    "sources": {
+      "type": "object",
+      "maxProperties": 64,
+      "propertyNames": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128,
+        "pattern": "^(?!constructor$|prototype$|__proto__$)[A-Za-z][A-Za-z0-9_.-]{0,127}$"
+      },
+      "additionalProperties": {
+        "enum": [
+          "default",
+          "user",
+          "workspace"
+        ]
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "pluginId",
+    "workspaceId",
+    "definitionVersion",
+    "revision",
+    "values",
+    "sources"
+  ],
+  "additionalProperties": false,
+  "x-maxUtf8Bytes": 262144,
+  "$comment": "Runtime requires the same keys in values and sources. Host reads and notifications must match the active plugin and workspace. Default < user < workspace replaces an entire setting value. References are opaque identifiers, not secret values."
+}

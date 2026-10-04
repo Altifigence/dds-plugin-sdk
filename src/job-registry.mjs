@@ -83,7 +83,7 @@ export function createJobRegistry({scope, enabled = false, binaryArtifacts = fal
       if (!result.record || result.record.requestSha256 !== requestSha256 || result.record.attemptOf !== attemptOf || result.record.snapshot.commandId !== commandId) throw failure(ErrorCode.CONFLICT);
       return result;
     },
-    start({pluginId, commandId, input, options, attemptOf, grants = [], signal, assertActive, assertRead, execute, readFile, captureBinaryFile, readBinaryChunk, invokeBackend, registerController}) {
+    start({pluginId, commandId, input, options, attemptOf, grants = [], signal, assertActive, assertRead, execute, validateOutput = parseJsonValue, readFile, captureBinaryFile, readBinaryChunk, invokeBackend, registerController}) {
       assertOpen(); assertActive(); options = parseJobOptions(options); input = parseJsonValue(input); collect();
       if (attemptOf !== undefined) {parseJobId(attemptOf); if (!storage.enabled || attemptOf === options.jobId) throw failure(ErrorCode.CONFLICT);}
       const signature = canonical({pluginId, commandId, input, timeoutMs: options.timeoutMs, ...(attemptOf === undefined ? {} : {attemptOf})});
@@ -138,7 +138,7 @@ export function createJobRegistry({scope, enabled = false, binaryArtifacts = fal
       });
       // Keep this slot until the actual provider settles, even after cancellation.
       Promise.resolve().then(async () => {if (storage.enabled) await storage.beforeExecute(r); live(r); return execute(input, {signal: controller.signal, job});}).then(async result => {
-        await drain(r); live(r); const parsed = parseJsonValue(result);
+        await drain(r); live(r); const parsed = validateOutput(result);
         // Include metadata overhead in the snapshot budget before committing success.
         const candidate = {...r, state: 'succeeded', result: parsed}; snapshot(candidate);
         r.result = parsed; terminal(r, 'succeeded');

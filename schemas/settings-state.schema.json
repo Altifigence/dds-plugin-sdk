@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.12.0/schemas/settings-state.schema.json",
+  "title": "settings-state",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "pluginId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
+    },
+    "definitionVersion": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "user": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128,
+        "pattern": "^(?!constructor$|prototype$|__proto__$)[A-Za-z][A-Za-z0-9_.-]{0,127}$"
+      },
+      "maxProperties": 64
+    },
+    "workspaces": {
+      "type": "object",
+      "maxProperties": 32,
+      "propertyNames": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128,
+        "pattern": "^(?!__proto__$|prototype$|constructor$)[^\\u0000-\\u001f\\u007f]+$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^(?!constructor$|prototype$|__proto__$)[A-Za-z][A-Za-z0-9_.-]{0,127}$"
+        },
+        "maxProperties": 64
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "pluginId",
+    "definitionVersion",
+    "revision",
+    "user",
+    "workspaces"
+  ],
+  "additionalProperties": false,
+  "x-maxUtf8Bytes": 1048576,
+  "$comment": "An operator-owned memory store export. Import must match the selected plugin and definition version, validate each layer against the definition, reject read-only/scope overrides and bound each layer to 64 KiB. No secret resolver values are included."
+}

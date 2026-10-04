@@ -4,6 +4,8 @@ import type {BinaryArtifactSource} from './artifacts.mjs';
 import type {JobStore,JobStorageOptions} from './job-storage.mjs';
 import type {ArtifactStore} from './artifact-storage.mjs';
 import type {NodeUploadConfiguration} from './uploads-node.mjs';
+import type {SettingsReadPort} from './settings.mjs';
+import type {SecretResolverPort} from './secrets.mjs';
 export {downloadJobBinaryArtifact} from './artifact-download-node.mjs';
 export {downloadStoredJobArtifact} from './stored-artifact-download-node.mjs';
 export type {StoredArtifactDownloadReceipt} from './stored-artifact-download-node.mjs';
@@ -26,6 +28,8 @@ export type ProcessBackend=(input:JsonValue,options?:{readonly signal?:AbortSign
 export function createProcessBackend(options:{readonly executable:string;readonly args?:readonly string[];readonly cwd:string;readonly env?:Readonly<Record<string,string>>;readonly timeoutMs?:number;readonly maxOutputBytes?:number}):ProcessBackend;
 export interface ConfiguredWorkspacePlugin {readonly plugin:Plugin;readonly artifactSha256:string;readonly licenseText?:string;}
 export interface WorkspaceServerOptions {
+  readonly settings?: Readonly<Record<string, SettingsReadPort>>;
+  readonly secrets?: SecretResolverPort;
   /** Optional durable upload store; the server owns and closes this store. */
   readonly uploads?:NodeUploadConfiguration;
   /** Optional operator-scoped project tools on a server-owned Node workspace. */
