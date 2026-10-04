@@ -1,7 +1,7 @@
 # Selected-file uploads
 
-The 0.10 development line adds opt-in uploads to a server-owned Node workspace.
-The public 0.9 archive does not contain these APIs. Use a local Windows/Linux
+The 0.10 line adds opt-in uploads to a server-owned Node workspace.
+Use a local Windows/Linux
 filesystem with Node 22 or 24. The operator selects both the workspace and a
 separate private staging directory; a client cannot choose a host absolute path.
 This is an SDK host contract, not evidence of a DDS or Cloud product rollout.
@@ -155,7 +155,7 @@ native pickers, Firefox and Safari were not qualified by this run.
 
 ## 한국어 요약
 
-0.10 개발 API는 운영자가 선택한 workspace·별도 staging·root·principal을
+0.10 API는 운영자가 선택한 workspace·별도 staging·root·principal을
 사용합니다. 현재 플러그인 패키지 해시와 선언/승인된 workspace.write를 매번
 확인하고, 부분 파일은 작업 파일로 노출하지 않습니다. Node에서 선택한 파일
 또는 브라우저 File을 전체 사전 해시한 뒤 최대 64 KiB씩 전송합니다.

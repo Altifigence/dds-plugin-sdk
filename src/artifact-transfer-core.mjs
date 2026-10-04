@@ -2,7 +2,7 @@ import {BINARY_ARTIFACT_LIMITS,parseBinaryArtifact,parseBinaryArtifactReference,
 import {parseStoredArtifactReference,parseStoredArtifactChunk,parseArtifactStorageCapabilities} from './artifact-storage.mjs';
 import {storageEqual} from './job-storage-validation.mjs';
 import {WORKSPACE_LIMITS,WorkspaceError,workspaceFailure,exactObject,copyWorkspaceJson,requireSha256} from './workspace-values.mjs';
-import {createIncrementalSha256} from './sha256-stream.mjs';
+import {createIncrementalSha256,snapshotSha256} from './sha256-stream.mjs';
 import {PluginSdkError} from './limits.mjs';
 export {createIncrementalSha256} from './sha256-stream.mjs';
 
@@ -42,13 +42,14 @@ const yieldTask=()=>new Promise(resolve=>setTimeout(resolve,0));
 
 /** Browser-safe, bounded sequential download. Sink ports are trusted caller implementations. */
 export function streamJobBinaryArtifact(client,value,options){return runJobBinaryArtifact(client,value,options);}
-export async function runJobBinaryArtifact(client,value,options,control){
+export async function runJobBinaryArtifact(client,value,options,control,storedReference){
   const reference=parseBinaryArtifactReference(value);
-  exactObject(options,['sink'],['signal','timeoutMs','requestTimeoutMs','onProgress']);
-  const {sink,signal,timeoutMs=ARTIFACT_TRANSFER_LIMITS.timeoutMs,requestTimeoutMs=WORKSPACE_LIMITS.defaultTimeoutMs,onProgress}=options;
+  exactObject(options,['sink'],['resume','signal','timeoutMs','requestTimeoutMs','onProgress']);
+  const {sink,resume=false,signal,timeoutMs=ARTIFACT_TRANSFER_LIMITS.timeoutMs,requestTimeoutMs=WORKSPACE_LIMITS.defaultTimeoutMs,onProgress}=options;
   integer(timeoutMs,ARTIFACT_TRANSFER_LIMITS.timeoutMs,1);integer(requestTimeoutMs,WORKSPACE_LIMITS.maxTimeoutMs,1);
-  if(signal!==undefined&&!(signal instanceof AbortSignal)||onProgress!==undefined&&typeof onProgress!=='function'||!sink||typeof sink.open!=='function'||!client||['getBinaryArtifactCapabilities','getJobBinaryArtifact','readJobBinaryArtifactChunk'].some(key=>typeof client[key]!=='function'))throw workspaceFailure('invalid_request','Invalid stream download options');
+  if(typeof resume!=='boolean'||signal!==undefined&&!(signal instanceof AbortSignal)||onProgress!==undefined&&typeof onProgress!=='function'||!sink||typeof sink.open!=='function'||!client||['getBinaryArtifactCapabilities','getJobBinaryArtifact','readJobBinaryArtifactChunk'].some(key=>typeof client[key]!=='function'))throw workspaceFailure('invalid_request','Invalid stream download options');
   const capabilities=parseArtifactSinkCapabilities(sink.capabilities),binding=client.binding,controller=new AbortController();
+  if(resume&&(!capabilities.seek||!capabilities.readback||capabilities.persistence!=='per-checkpoint'))throw workspaceFailure('unsupported','This sink does not support verified checkpoint recovery');
   const abort=()=>controller.abort(workspaceFailure('cancelled','Artifact transfer cancelled'));
   if(signal?.aborted)abort();else signal?.addEventListener('abort',abort,{once:true});
   const expiresAt=Date.now()+timeoutMs;
@@ -61,7 +62,7 @@ export async function runJobBinaryArtifact(client,value,options,control){
   };
   const requestOptions={signal:controller.signal,timeoutMs:requestTimeoutMs},started=performance.now();
   const step=(run,metadata={})=>control?control.step(async()=>{current();return run();},metadata,controller.signal):run();
-  const partial={receivedBytes:0,writtenBytes:0,receivedVerified:false,storedVerified:false,commit:'not-committed',disposition:'unknown'};
+  const partial={receivedBytes:0,resumedBytes:0,writtenBytes:0,receivedVerified:false,storedVerified:false,commit:'not-committed',disposition:'unknown'};
   const metrics={chunks:0,peakQueuedChunks:0,peakDecodedBytes:0,maxChunkWorkMs:0,elapsedMs:0};
   let session,registered=false;
   try{
@@ -74,9 +75,27 @@ export async function runJobBinaryArtifact(client,value,options,control){
     if(reference.artifact.byteLength>caps.limits.fileBytes)throw workspaceFailure('budget_exceeded','Artifact exceeds the host file budget');
     const fresh=parseBinaryArtifactReference(await step(()=>client.getJobBinaryArtifact(reference.jobId,reference.artifact.id,requestOptions),{phase:'preparing'}));current();
     if(!storageEqual(fresh,reference))throw workspaceFailure('conflict','Artifact reference changed');
-    session=await step(()=>sink.open({artifact:reference.artifact,signal:controller.signal}),{phase:'preparing'});current();
+    session=await step(()=>sink.open({artifact:reference.artifact,signal:controller.signal,...(resume?{resume:true}:{}),...(storedReference&&capabilities.persistence==='per-checkpoint'?{storedReference}:{})}),{phase:'preparing'});current();
     if(!session||['write','commit','abort'].some(key=>typeof session[key]!=='function')||capabilities.readback&&typeof session.readback!=='function')throw workspaceFailure('invalid_request','Invalid artifact sink session');
     const hash=createIncrementalSha256();let offset=0;
+    if(resume){
+      const recovery=session.recovery;
+      if(!recovery||typeof recovery.read!=='function')throw workspaceFailure('unsupported','The sink did not provide checkpoint recovery');
+      integer(recovery.offset,reference.artifact.byteLength);requireSha256(recovery.sha256);
+      const checkpoint={offset:recovery.offset,sha256:recovery.sha256};
+      progress(onProgress,{phase:'verifying-prefix',receivedBytes:0,writtenBytes:0,totalBytes:reference.artifact.byteLength,resumedBytes:0,verified:false});current();
+      while(offset<checkpoint.offset){
+        await step(async()=>{
+          const length=Math.min(ARTIFACT_TRANSFER_LIMITS.chunkBytes,checkpoint.offset-offset),bytes=await recovery.read(offset,length,{signal:controller.signal});current();
+          if(!(bytes instanceof Uint8Array)||bytes.length!==length)throw workspaceFailure('conflict','Recovered artifact prefix size changed');
+          const workStarted=performance.now();hash.update(bytes);metrics.maxChunkWorkMs=Math.max(metrics.maxChunkWorkMs,performance.now()-workStarted);offset+=bytes.length;
+        },{phase:'verifying-prefix'});await yieldTask();current();
+      }
+      // Independently validate the saved bytes without trusting the sink's offset/hash assertion.
+      if(snapshotSha256(hash)!==checkpoint.sha256)throw workspaceFailure('conflict','Recovered artifact prefix SHA-256 mismatch');
+      partial.resumedBytes=offset;partial.writtenBytes=offset;
+      progress(onProgress,{phase:'verifying-prefix',receivedBytes:0,writtenBytes:offset,totalBytes:reference.artifact.byteLength,resumedBytes:offset,verified:false});current();
+    }
     for(;;){
       let eof,retryError;
       await step(async()=>{
@@ -89,18 +108,18 @@ export async function runJobBinaryArtifact(client,value,options,control){
       hash.update(bytes);partial.receivedBytes+=bytes.length;metrics.chunks++;metrics.peakQueuedChunks=1;metrics.peakDecodedBytes=Math.max(metrics.peakDecodedBytes,bytes.length);metrics.maxChunkWorkMs=Math.max(metrics.maxChunkWorkMs,performance.now()-workStarted);
       // Do not request the next chunk until the sink has accepted this one.
       await session.write({offset,bytes,signal:controller.signal});partial.writtenBytes+=bytes.length;current();offset=chunk.nextOffset;
-      progress(onProgress,{phase:'receiving',receivedBytes:partial.receivedBytes,writtenBytes:partial.writtenBytes,totalBytes:artifact.byteLength,resumedBytes:0,verified:false});current();
+      progress(onProgress,{phase:'receiving',receivedBytes:partial.receivedBytes,writtenBytes:partial.writtenBytes,totalBytes:artifact.byteLength,resumedBytes:partial.resumedBytes,verified:false});current();
       eof=chunk.eof;
       },{phase:'receiving',bytes:Math.min(caps.limits.chunkBytes,reference.artifact.byteLength-offset),canRetry:error=>error===retryError});
       await yieldTask();current();if(eof)break;
     }
     const receivedSha256=hash.digest();
     if(receivedSha256!==reference.artifact.revision)throw workspaceFailure('conflict','Whole artifact SHA-256 mismatch');
-    partial.receivedVerified=true;progress(onProgress,{phase:'committing',receivedBytes:partial.receivedBytes,writtenBytes:partial.writtenBytes,totalBytes:reference.artifact.byteLength,resumedBytes:0,verified:false});current();
+    partial.receivedVerified=true;progress(onProgress,{phase:'committing',receivedBytes:partial.receivedBytes,writtenBytes:partial.writtenBytes,totalBytes:reference.artifact.byteLength,resumedBytes:partial.resumedBytes,verified:false});current();
     await step(async()=>{partial.commit='unknown';await session.commit({signal:controller.signal});partial.commit='committed';current();},{phase:'committing'});
     let storedSha256=null;
     if(capabilities.readback){
-      progress(onProgress,{phase:'verifying-storage',receivedBytes:partial.receivedBytes,writtenBytes:partial.writtenBytes,totalBytes:reference.artifact.byteLength,resumedBytes:0,verified:false});current();
+      progress(onProgress,{phase:'verifying-storage',receivedBytes:partial.receivedBytes,writtenBytes:partial.writtenBytes,totalBytes:reference.artifact.byteLength,resumedBytes:partial.resumedBytes,verified:false});current();
       const reader=await step(()=>session.readback({signal:controller.signal}),{phase:'verifying-storage'});current();
       if(!reader||reader.byteLength!==reference.artifact.byteLength||typeof reader.read!=='function')throw workspaceFailure('conflict','Stored artifact size changed');
       const storedHash=createIncrementalSha256();let offset=0;
@@ -115,8 +134,8 @@ export async function runJobBinaryArtifact(client,value,options,control){
     }
     if(typeof session.close==='function'){await step(()=>session.close(),{phase:'verifying-storage'});current();}
     metrics.elapsedMs=performance.now()-started;
-    const receipt=parseArtifactTransferReceipt({protocolVersion:1,artifact:reference.artifact,receivedBytes:partial.receivedBytes,resumedBytes:0,receivedSha256,storedSha256,verification:storedSha256===null?'received':'stored',committed:true,sink:capabilities,metrics});
-    progress(onProgress,{phase:'completed',receivedBytes:partial.receivedBytes,writtenBytes:partial.writtenBytes,totalBytes:reference.artifact.byteLength,resumedBytes:0,verified:true});current();return receipt;
+    const receipt=parseArtifactTransferReceipt({protocolVersion:1,artifact:reference.artifact,receivedBytes:partial.receivedBytes,resumedBytes:partial.resumedBytes,receivedSha256,storedSha256,verification:storedSha256===null?'received':'stored',committed:true,sink:capabilities,metrics});
+    progress(onProgress,{phase:'completed',receivedBytes:partial.receivedBytes,writtenBytes:partial.writtenBytes,totalBytes:reference.artifact.byteLength,resumedBytes:partial.resumedBytes,verified:true});current();return receipt;
   }catch(error){
     if(session&&typeof session.abort==='function'){
       try{await session.abort({reason:controller.signal.aborted?controller.signal.reason:error});partial.disposition=partial.commit==='not-committed'?({discard:'discarded',retain:'retained',unknown:'unknown'}[capabilities.abort]):'retained';}catch{partial.disposition='unknown';}
@@ -137,5 +156,5 @@ export async function runStoredJobArtifact(client,value,options,control){
     async getJobBinaryArtifact(_jobId,_artifactId,requestOptions){const current=parseStoredArtifactReference(await client.getStoredJobArtifact(s.pluginId,s.jobId,s.artifact.id,s.pluginArtifactSha256,requestOptions));if(!storageEqual(current,reference))throw workspaceFailure('conflict','Stored artifact identity changed');return legacy;},
     async readJobBinaryArtifactChunk(_reference,offset,requestOptions){const result=parseStoredArtifactChunk(await client.readStoredJobArtifactChunk(reference,offset,requestOptions));if(!storageEqual(result.reference,reference))throw workspaceFailure('conflict','Stored artifact identity changed');const {reference:_,...chunk}=result;return{...legacy,...chunk};},
   };
-  return runJobBinaryArtifact(bridge,legacy,options,control);
+  return runJobBinaryArtifact(bridge,legacy,options,control,reference);
 }

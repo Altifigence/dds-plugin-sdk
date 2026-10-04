@@ -1,7 +1,7 @@
 # Caller-owned transfer queue
 
-The 0.10 development checkout adds `/transfer-queue` for uploads, live binary job
-downloads and stored artifact downloads. The published 0.9 archive does not include
+The 0.10 line adds `/transfer-queue` for uploads, live binary job
+downloads and stored artifact downloads. Earlier archives do not include
 it. Node and browsers share the queue and the same chunk/whole-file verifiers used
 by `uploadFile`, `streamJobBinaryArtifact` and `streamStoredJobArtifact`.
 
@@ -98,8 +98,9 @@ Queue pause/resume is scoped to this live JavaScript instance. After cancellatio
 host restart or page reload, create a new approved client and a new transfer. For
 uploads, explicitly choose `recover: true` with the same selection. The helper
 queries current authority and rehashes the source's saved prefix before sending
-new bytes. Persistent browser download recovery is a separate 0.10 integration
-feature; this queue alone does not persist sink handles or checkpoint metadata.
+new bytes. Persistent browser recovery uses the [Worker checkpoint sink](BROWSER_RESUME.md)
+and explicit `resume: true` on a newly enqueued stored download. This queue alone
+does not persist sink handles or checkpoint metadata.
 
 The optional per-transfer `timeoutMs` is at most 30 minutes and includes queue
 wait, retry backoff and pause. Request timeouts are at most 30 seconds. Callers
@@ -122,7 +123,7 @@ recovery proves the durable result. Retrying the whole transfer is not implicit.
 | Field | Meaning |
 | --- | --- |
 | `acknowledgedBytes` | Upload bytes saved by the host, or download bytes accepted by the sink |
-| `resumedBytes` | Saved upload prefix found at explicit recovery |
+| `resumedBytes` | Verified upload or download prefix found at explicit recovery |
 | `transferredBytes` | Newly acknowledged bytes, excluding that prefix |
 | `attemptedBytes` | Raw payload bytes admitted for network attempts, including failed attempts |
 | `retriedBytes` | Portion admitted after a chunk's first attempt |
@@ -170,4 +171,5 @@ not a DDS/Cloud product deployment or a performance guarantee.
 429/503·네트워크 오류·요청 timeout으로 실패한 동일 청크만 제한적으로 재시도합니다.
 인증·권한·해시·범위·충돌 오류와 begin/commit은 자동 반복하지 않습니다. 진행률
 100%와 `verified: true`를 구분하고 전송 시도·새 저장 바이트·재시도·기존 prefix를
-별도로 표시합니다. 이 문서는 0.10 개발분이며 공개 0.9 archive에는 포함되지 않습니다.
+별도로 표시합니다. 이 기능은 0.10 archive에 포함되며 새로고침 후 다운로드
+복구에는 Worker checkpoint sink와 명시적 resume 옵션을 함께 사용합니다.
