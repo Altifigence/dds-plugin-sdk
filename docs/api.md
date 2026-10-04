@@ -1,4 +1,4 @@
-# API reference — 0.6.0
+# API reference — 0.7.0
 
 Workspace client helpers include connection-bound project edit sessions,
 `project.watchFiles(paths, options)`, `client.watchJob(jobId, options)` and
@@ -77,7 +77,7 @@ license eligibility or agreement acceptance. See [LICENSING](LICENSING.md).
 
 | Activation context member | Behavior |
 | --- | --- |
-| `host` | `{id: 'test-host' \| 'workspace-host', version: '0.6.0', protocolVersion: 1}` |
+| `host` | `{id: 'test-host' \| 'workspace-host', version: '0.7.0', protocolVersion: 1}` |
 | `pluginId`, `scope` | Manifest ID and opaque host `{projectId, sessionId}` |
 | `grants` | Frozen intersection of host grants and manifest permissions |
 | `signal` | Aborted on deactivation, host disposal or activation timeout |
@@ -257,3 +257,12 @@ and `readFileIfChanged(path, knownRevision, options?)` in 0.6.0. An unchanged
 conditional result has `notModified: true` and no content; a changed result has
 `notModified: false` and content. `knownRevision: null` requests content.
 See [file revisions](FILE_REVISIONS.md) for shapes, fallback and lifecycle rules.
+
+## Binary job results
+
+SDK 0.7.0 adds `job.addBinaryArtifact()`, `client.getBinaryArtifactCapabilities()`,
+`listJobBinaryArtifacts()`, `getJobBinaryArtifact()` and `readJobBinaryArtifactChunk()`.
+The Node `downloadJobBinaryArtifact()` helper verifies and publishes a complete
+file, with explicit resumption of a partial download. Contracts and decoders are
+exported through `/artifacts`. See [binary artifacts](BINARY_ARTIFACTS.md) for
+operator opt-in, identity, limits, filesystem behavior and browser responsibilities.

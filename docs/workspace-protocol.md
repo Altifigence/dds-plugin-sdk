@@ -156,3 +156,16 @@ Stable codes include `invalid_request`, `authentication_required`,
 `conflict`, `unsafe_path`, `budget_exceeded`, `cancelled`, `disposed`,
 `plugin_mismatch`, `provider_failed`, `unsupported`, `unavailable` and
 `transport_failed`. Client request/reply identity mismatches fail closed.
+
+## Optional binary result extension (SDK 0.7.0)
+
+`artifacts.capabilities` takes `{}` and returns `{protocolVersion:1,enabled,limits}`.
+`artifacts.list` takes `{jobId}` and returns `{jobId,scope,artifacts}`.
+`artifacts.read` takes `{jobId,artifactId,revision,offset,length}` and returns
+`{jobId,scope,artifact,offset,nextOffset,eof,data,sha256}`. Data is canonical
+base64 for at most 64 KiB; the hash covers decoded chunk bytes. The artifact
+contains `{id,path,revision,byteLength,label?}` and pins the full-file SHA-256.
+Registered files are at most 1 GiB and require explicit server opt-in and
+the plugin's existing read grant. Older v1 text/job shapes are unchanged.
+See [binary results](BINARY_ARTIFACTS.md) for discovery, source mutation checks,
+resumption, full-file verification and the unchanged job-retention boundary.

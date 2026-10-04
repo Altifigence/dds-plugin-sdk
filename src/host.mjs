@@ -4,6 +4,7 @@ import { createLanguageRegistry } from './lifecycle.mjs';
 import { LANGUAGE_FEATURES, parseLanguageRequest } from './contracts.mjs';
 import { ErrorCode, LIMITS, PluginSdkError } from './limits.mjs';
 import {createJobRegistry} from './job-registry.mjs';
+import {parseBinaryArtifactSource, parseBinaryChunk} from './artifacts.mjs';
 
 const hostFailures = new WeakSet();
 const error = (code, message) => {
@@ -13,7 +14,7 @@ const error = (code, message) => {
 };
 
 /** Executes trusted local plugins in this process. This developer host is not a sandbox. */
-export function createPluginHost({hostId = 'test-host', scope = {projectId: 'example-project', sessionId: 'example-session'}, grants = [], workspace, backends = {}, jobs = false} = {}) {
+export function createPluginHost({hostId = 'test-host', scope = {projectId: 'example-project', sessionId: 'example-session'}, grants = [], workspace, backends = {}, jobs = false, binaryArtifacts = false} = {}) {
   if (!['test-host', 'workspace-host'].includes(hostId)) throw error(ErrorCode.UNSUPPORTED_HOST, 'Unknown plugin host');
   scope = parseScope(scope);
   grants = parseGrants(grants);
@@ -33,7 +34,8 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
   let commandCount = 0;
   const plugins = new Map();
   const pending = new Set();
-  const jobRegistry = createJobRegistry({scope, enabled: jobs});
+  if (typeof binaryArtifacts !== 'boolean') throw error(ErrorCode.INVALID_CONTRACT, 'Invalid binary artifact capability');
+  const jobRegistry = createJobRegistry({scope, enabled: jobs, binaryArtifacts: binaryArtifacts && typeof workspace?.captureBinaryFile === 'function'});
   function isCurrent(request) {
     return !!document && request.scope.projectId === scope.projectId && request.scope.sessionId === scope.sessionId &&
       ['uri', 'languageId', 'modelVersion', 'workspaceRevision', 'text'].every(key => request.snapshot[key] === document[key]);
@@ -127,7 +129,7 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
     const state = {active: true, ready: false, manifest, grants: effectiveGrants, commands: new Map(), registrations: new Set(), controller: new AbortController(), disposable: undefined};
     plugins.set(manifest.id, state);
     const context = Object.freeze({
-      host: Object.freeze({id: hostId, version: '0.6.0', protocolVersion: 1}),
+      host: Object.freeze({id: hostId, version: '0.7.0', protocolVersion: 1}),
       pluginId: manifest.id,
       scope,
       grants: effectiveGrants,
@@ -301,6 +303,7 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
       return run(state, signal => entry.handler(value, Object.freeze({signal})), options, {entry});
     },
     jobCapabilities() {assertOpen(); return jobRegistry.capabilities();},
+    binaryArtifactCapabilities() {assertOpen(); return jobRegistry.binaryCapabilities();},
     startCommandJob(pluginId, commandId, input, options) {
       assertOpen();
       const state = plugins.get(pluginId);
@@ -310,12 +313,22 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
       const value = parseCommandInput(input, entry.command);
       return jobRegistry.start({pluginId, commandId, input: value, options, signal: state.controller.signal,
         assertActive: () => {assertActive(state); if (state.commands.get(commandId) !== entry) throw error(ErrorCode.DISPOSED, 'Command is disposed');},
+        assertRead: () => permit(state, 'workspace.read'),
         execute: (input, options) => entry.handler(input, Object.freeze(options)),
         registerController: controller => {entry.pending.add(controller); return () => entry.pending.delete(controller);},
         readFile: (path, signal, timeoutMs = LIMITS.defaultTimeoutMs) => {
           permit(state, 'workspace.read');
           if (!workspace || typeof workspace.readFile !== 'function') throw error(ErrorCode.CAPABILITY_UNAVAILABLE, 'Workspace read port is unavailable');
           return run(state, signal => workspace.readFile(path, Object.freeze({signal})), {signal, timeoutMs}, {validate: value => parseWorkspaceRead(value, path), trusted: true});
+        },
+        captureBinaryFile: (path, signal) => {
+          permit(state, 'workspace.read');
+          if (!binaryArtifacts || typeof workspace?.captureBinaryFile !== 'function') throw error(ErrorCode.CAPABILITY_UNAVAILABLE, 'Binary artifact port is unavailable');
+          return run(state, signal => workspace.captureBinaryFile(path, Object.freeze({signal})), {signal, timeoutMs: LIMITS.maxTimeoutMs}, {validate: value => parseBinaryArtifactSource(value, path), trusted: true});
+        },
+        readBinaryChunk: (source, offset, length, signal, timeoutMs = LIMITS.defaultTimeoutMs) => {
+          permit(state, 'workspace.read');
+          return run(state, signal => source.readChunk(offset, length, Object.freeze({signal})), {signal, timeoutMs}, {validate: value => parseBinaryChunk(value, source.byteLength), trusted: true});
         },
         invokeBackend: async (id, input, options) => {
           permit(state, 'backend.invoke');
@@ -330,6 +343,11 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
     cancelJob(jobId) {assertOpen(); return jobRegistry.cancel(jobId);},
     readJobArtifact(jobId, artifactId, options = {}) {
       assertOpen(); const {signal, timeoutMs} = checkedOptions(options); return jobRegistry.readArtifact(jobId, artifactId, signal, timeoutMs);
+    },
+    listJobBinaryArtifacts(jobId) {assertOpen(); return jobRegistry.listBinaryArtifacts(jobId);},
+    readJobBinaryArtifactChunk(jobId, artifactId, revision, offset, length, options = {}) {
+      assertOpen(); const {signal, timeoutMs} = checkedOptions(options);
+      return jobRegistry.readBinaryArtifact(jobId, artifactId, revision, offset, length, signal, timeoutMs);
     },
     deactivate(pluginId) {
       assertOpen();

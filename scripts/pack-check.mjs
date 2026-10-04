@@ -177,6 +177,8 @@ try {
   await cp(join(root, 'tests', 'types', 'workspace-project.mts'), join(consumer, 'workspace-project.mts'));
   await cp(join(root, 'tests', 'types', 'jobs-devtools.mts'), join(consumer, 'jobs-devtools.mts'));
   await cp(join(root, 'tests', 'types', 'workspace-observation.mts'), join(consumer, 'workspace-observation.mts'));
+  await cp(join(root, 'tests', 'types', 'artifacts.mts'), join(consumer, 'artifacts.mts'));
+  run(process.execPath, [join(installed, 'examples', 'binary-artifacts', 'run.mjs')], consumer);
   await cp(join(root, 'tests', 'types', 'tsconfig.json'), join(consumer, 'tsconfig.json'));
   const typescript = join(root, 'node_modules', 'typescript', 'bin', 'tsc');
   run(process.execPath, [typescript, '--noEmit', '-p', 'tsconfig.json'], consumer);

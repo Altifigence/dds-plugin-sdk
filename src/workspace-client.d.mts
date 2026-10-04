@@ -1,6 +1,7 @@
 import type {Json,WorkspaceMethod,WorkspaceHello,WorkspaceEntry,WorkspacePlugin,WorkspaceFileCapabilities,WorkspaceFileRevision,WorkspaceConditionalFile} from './workspace-protocol.mjs';
 export type {WorkspaceFileCapabilities,WorkspaceFileRevision,WorkspaceConditionalFile} from './workspace-protocol.mjs';
 import type {JobOptions,JobSnapshot,JobEvents,JobArtifactContent,JobCapabilities} from './jobs.mjs';
+import type {BinaryArtifactCapabilities,BinaryArtifactReference,BinaryArtifactList,BinaryArtifactChunk} from './artifacts.mjs';
 import type {WorkspaceJobWatchOptions,WorkspaceObserver,WorkspaceJobUpdate} from './workspace-observation.mjs';
 export {createWorkspaceProject, applyTextEdits} from './workspace-project.mjs';
 export {WORKSPACE_OBSERVATION_LIMITS} from './workspace-observation.mjs';
@@ -28,6 +29,10 @@ export interface WorkspaceClient {
   getJobEvents(jobId:string,after?:number,options?:WorkspaceRequestOptions):Promise<JobEvents>;
   cancelJob(jobId:string,options?:WorkspaceRequestOptions):Promise<JobSnapshot>;
   readJobArtifact(jobId:string,artifactId:string,options?:WorkspaceRequestOptions):Promise<JobArtifactContent>;
+  getBinaryArtifactCapabilities(options?:WorkspaceRequestOptions):Promise<BinaryArtifactCapabilities>;
+  listJobBinaryArtifacts(jobId:string,options?:WorkspaceRequestOptions):Promise<BinaryArtifactList>;
+  getJobBinaryArtifact(jobId:string,artifactId:string,options?:WorkspaceRequestOptions):Promise<BinaryArtifactReference>;
+  readJobBinaryArtifactChunk(reference:BinaryArtifactReference,offset:number,options?:WorkspaceRequestOptions & {readonly length?:number}):Promise<BinaryArtifactChunk>;
   watchJob(jobId:string,options?:WorkspaceJobWatchOptions):WorkspaceObserver<WorkspaceJobUpdate>;
   waitForJob(jobId:string,options?:WorkspaceJobWatchOptions):Promise<JobSnapshot>;
   disconnect():void;dispose():void;

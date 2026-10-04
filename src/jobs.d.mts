@@ -1,4 +1,5 @@
 import type {JsonValue, Scope, PluginErrorCode} from './index.mjs';
+import type {BinaryArtifact} from './artifacts.mjs';
 export const JOB_PROTOCOL_VERSION: 1;
 export const JOB_LIMITS: Readonly<{concurrent:number;retained:number;operations:number;events:number;eventBytes:number;messageBytes:number;artifacts:number;defaultTimeoutMs:number;maxTimeoutMs:number;retentionMs:number;pageSize:number}>;
 export type JobState = 'running' | 'succeeded' | 'failed' | 'cancelled' | 'timed_out';
@@ -10,6 +11,7 @@ export interface JobReporter {
   reportProgress(progress: JobProgress): void;
   log(level: 'debug'|'info'|'warning'|'error', message: string): void;
   addArtifact(artifact: {readonly id:string;readonly path:string;readonly label?:string}): Promise<JobArtifact>;
+  addBinaryArtifact(artifact: {readonly id:string;readonly path:string;readonly label?:string}): Promise<BinaryArtifact>;
   invokeBackend(id: string, input: JsonValue): Promise<JsonValue>;
 }
 export type JobEvent = {readonly sequence:number;readonly at:number} & (

@@ -1,6 +1,6 @@
 # Security
 
-The current development line is **0.5.x**. It retains the security fixes from
+The current development line is **0.7.x**. It retains the security fixes from
 0.3.2. Update workspace servers and clients together, using a current patched
 Node 22 or 24; do not use a pre-0.3.2 workspace host.
 Report an SDK
@@ -55,7 +55,7 @@ protect storage, verify the current identity and implement revocation themselves
 
 ## 한국어
 
-보안 수정은 최신 0.3.x에 제공합니다. workspace **서버와 클라이언트를 모두
+현재 개발 버전은 **0.7.x**이며 0.3.2의 보안 수정을 유지합니다. workspace **서버와 클라이언트를 모두
 0.3.2 이상**으로 갱신하고 Node 22/24의 최신 보안 패치를 사용하세요. 클라이언트만
 갱신하면 오래된 서버의 파일 검사와 요청 수신 제한은 바뀌지 않습니다.
 
@@ -65,3 +65,12 @@ protect storage, verify the current identity and implement revocation themselves
 해당 파일을 제거한 새 버전으로 패키징하세요. 보호 목록에 없는 모든 비밀정보를
 탐지한다는 의미는 아닙니다. 플러그인은 여전히 호스트 프로세스 권한으로 실행되므로
 신뢰할 수 있는 코드만 구성하고 실제 실행 격리는 운영자가 제공해야 합니다.
+
+## Binary result boundary
+
+Binary results are opt-in and retain the protected-path and link policy. Registered
+files are pinned by SHA-256 and size, with metadata rechecked around chunk reads.
+The Node downloader hashes the entire stream and the actual staging file before
+exclusive publication. Partial files are not verified results. This is not a lock
+against hostile processes with write access to the workspace or download directory.
+Custom ports must enforce equivalent isolation and coherent-source checks.

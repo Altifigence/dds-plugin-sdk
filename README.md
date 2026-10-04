@@ -15,7 +15,7 @@ application, private engines/services and production signing systems are outside
 this repository. Read the [public scope](docs/PUBLIC_SCOPE.md) and
 [compatibility table](docs/COMPATIBILITY.md) for exact boundaries.
 
-Version **0.6.0** supports Node 22 and 24. Manifest v1 diagnostic plugins remain
+Version **0.7.0** supports Node 22 and 24. Manifest v1 diagnostic plugins remain
 compatible. Manifest v2 adds commands, permission-scoped workspace and backend
 APIs, and open-source or proprietary distribution metadata. Themes export to
 the XML format already supported by DDS. The workspace host runs trusted plugins
@@ -29,6 +29,8 @@ files to explicitly enabled hosts while keeping existing API contracts.
 job progress with cancellable async iterators, preserving edit drafts and job IDs.
 [File revisions and conditional reads](docs/FILE_REVISIONS.md) reduce response
 traffic on new hosts, with bounded full-read fallback on older hosts.
+[Binary job results](docs/BINARY_ARTIFACTS.md) add optional 64 KiB chunk reads and
+a Node downloader with interruption, resumption and whole-file SHA-256 verification.
 
 ## Run your first plugin
 
@@ -61,7 +63,7 @@ mkdir my-dds-plugin
 cd my-dds-plugin
 npm init -y
 npm pkg set type=module
-npm install --ignore-scripts --save-exact https://github.com/Altifigence/dds-plugin-sdk/releases/download/v0.6.0/altifigence-dds-plugin-sdk-0.6.0.tgz
+npm install --ignore-scripts --save-exact https://github.com/Altifigence/dds-plugin-sdk/releases/download/v0.7.0/altifigence-dds-plugin-sdk-0.7.0.tgz
 ```
 
 Copy the example's `plugin.mjs` and `run.mjs` into this directory, then run:
@@ -88,6 +90,7 @@ and the install command includes the release URL rather than an npm registry loo
 | `@altifigence/dds-plugin-sdk/publishing` | Node.js allowlist validation, deterministic packaging and downloaded archive verification |
 | `@altifigence/dds-plugin-sdk/consent` | Versioned notices, explicit local receipts and permission identity checks |
 | `@altifigence/dds-plugin-sdk/devtools` | Create projects, diagnose metadata and run/watch trusted local plugin code |
+| `@altifigence/dds-plugin-sdk/artifacts` | Binary result metadata, ranges, base64 decoding and transfer contracts |
 | `@altifigence/dds-plugin-sdk/jobs` | Job contracts, lifecycle states, bounded event pages and file references |
 
 [API reference](docs/api.md) explains the manifest, permissions, requests,

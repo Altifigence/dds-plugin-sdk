@@ -1,15 +1,16 @@
 import {parseJsonValue, parseScope, parseWorkspacePath, parseWorkspaceRead} from './contracts.mjs';
 import {ErrorCode, PluginSdkError} from './limits.mjs';
 import {JOB_LIMITS, parseJobId, parseJobOptions, parseJobProgress, parseJobArtifact, parseJobEvent, parseJobSnapshot, parseJobEvents} from './jobs.mjs';
+import {BINARY_ARTIFACT_LIMITS, parseBinaryArtifact, parseBinaryArtifactSource, parseBinaryArtifactList, parseBinaryArtifactRange, parseBinaryArtifactChunk, decodeBinaryArtifactData} from './artifacts.mjs';
 
 const failure = code => new PluginSdkError(code, 'Job operation failed');
 const canonical = value => JSON.stringify(value, function (_key, v) {return v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.keys(v).sort().map(key => [key, v[key]])) : v;});
 const hash = async text => [...new Uint8Array(await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)))].map(v => v.toString(16).padStart(2, '0')).join('');
 
 /** Host-owned bounded jobs. Cancellation is cooperative; unsettled work keeps its slot. */
-export function createJobRegistry({scope, enabled = false}) {
-  scope = parseScope(scope); if (typeof enabled !== 'boolean') throw failure(ErrorCode.INVALID_CONTRACT);
-  const records = new Map(); let closed = false, active = 0;
+export function createJobRegistry({scope, enabled = false, binaryArtifacts = false}) {
+  scope = parseScope(scope); if (typeof enabled !== 'boolean' || typeof binaryArtifacts !== 'boolean') throw failure(ErrorCode.INVALID_CONTRACT);
+  const records = new Map(); let closed = false, active = 0, binaryOperations = 0;
   const assertOpen = () => {if (closed) throw failure(ErrorCode.DISPOSED); if (!enabled) throw failure(ErrorCode.CAPABILITY_UNAVAILABLE);};
   const collect = () => {const cutoff = Date.now() - JOB_LIMITS.retentionMs; for (const [id, record] of records) if (record.settled && record.state !== 'running' && record.updatedAt <= cutoff) records.delete(id);};
   const find = id => {assertOpen(); parseJobId(id); collect(); const record = records.get(id); if (!record) throw failure(ErrorCode.CAPABILITY_UNAVAILABLE); record.assertActive(); return record;};
@@ -38,9 +39,20 @@ export function createJobRegistry({scope, enabled = false}) {
     return promise;
   }
   async function drain(r) {while (r.operations.size) await Promise.allSettled([...r.operations]);}
+  async function binaryOperation(operation) {
+    assertOpen(); if (!binaryArtifacts) throw failure(ErrorCode.CAPABILITY_UNAVAILABLE);
+    if (binaryOperations >= BINARY_ARTIFACT_LIMITS.concurrent) throw failure(ErrorCode.BUDGET_EXCEEDED);
+    binaryOperations++; try {return await operation();} finally {binaryOperations--;}
+  }
+  function reserveArtifact(r, id) {
+    if (r.artifacts.has(id) || r.binaryArtifacts.has(id) || r.pendingArtifacts.has(id)) throw failure(ErrorCode.CONFLICT);
+    if (r.artifacts.size + r.binaryArtifacts.size + r.pendingArtifacts.size >= JOB_LIMITS.artifacts) throw failure(ErrorCode.BUDGET_EXCEEDED);
+    r.pendingArtifacts.add(id);
+  }
   return Object.freeze({
     capabilities() {if (closed) throw failure(ErrorCode.DISPOSED); return Object.freeze({protocolVersion: 1, enabled, limits: JOB_LIMITS});},
-    start({pluginId, commandId, input, options, signal, assertActive, execute, readFile, invokeBackend, registerController}) {
+    binaryCapabilities() {if (closed) throw failure(ErrorCode.DISPOSED); return Object.freeze({protocolVersion: 1, enabled: enabled && binaryArtifacts, limits: BINARY_ARTIFACT_LIMITS});},
+    start({pluginId, commandId, input, options, signal, assertActive, assertRead, execute, readFile, captureBinaryFile, readBinaryChunk, invokeBackend, registerController}) {
       assertOpen(); assertActive(); options = parseJobOptions(options); input = parseJsonValue(input); collect();
       const signature = canonical({pluginId, commandId, input, timeoutMs: options.timeoutMs});
       const old = records.get(options.jobId);
@@ -48,7 +60,7 @@ export function createJobRegistry({scope, enabled = false}) {
       if (active >= JOB_LIMITS.concurrent || records.size >= JOB_LIMITS.retained) throw failure(ErrorCode.BUDGET_EXCEEDED);
       if (signal.aborted) throw failure(ErrorCode.DISPOSED);
       const now = Date.now(), controller = new AbortController();
-      const r = {...options, pluginId, commandId, signature, assertActive, readFile, controller, state: 'running', startedAt: now, updatedAt: now, progress: null, artifacts: new Map(), pendingArtifacts: new Set(), operations: new Set(), events: [], eventBytes: 0, sequence: 0, settled: false};
+      const r = {...options, pluginId, commandId, signature, assertActive, assertRead, readFile, readBinaryChunk, controller, state: 'running', startedAt: now, updatedAt: now, progress: null, artifacts: new Map(), binaryArtifacts: new Map(), pendingArtifacts: new Set(), operations: new Set(), events: [], eventBytes: 0, sequence: 0, settled: false};
       records.set(r.jobId, r); active++; emit(r, 'state', {state: 'running'});
       const onOwnerAbort = () => controller.abort(failure(ErrorCode.DISPOSED));
       const onAbort = () => {const code = controller.signal.reason instanceof PluginSdkError ? controller.signal.reason.code : ErrorCode.CANCELLED; terminal(r, code === ErrorCode.BUDGET_EXCEEDED ? 'timed_out' : 'cancelled', code);};
@@ -63,9 +75,7 @@ export function createJobRegistry({scope, enabled = false}) {
           if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).some(k => !['id', 'path', 'label'].includes(k))) throw failure(ErrorCode.INVALID_CONTRACT);
           // Validate all metadata before reading, then reserve a slot across the await.
           const draft = parseJobArtifact({...value, revision: '0'.repeat(64), byteLength: 0});
-          if (r.artifacts.has(draft.id) || r.pendingArtifacts.has(draft.id)) throw failure(ErrorCode.CONFLICT);
-          if (r.artifacts.size + r.pendingArtifacts.size >= JOB_LIMITS.artifacts) throw failure(ErrorCode.BUDGET_EXCEEDED);
-          r.pendingArtifacts.add(draft.id);
+          reserveArtifact(r, draft.id);
           try {
             const file = parseWorkspaceRead(await readFile(parseWorkspacePath(draft.path), controller.signal), draft.path); live(r);
             if (await hash(file.content) !== file.revision) throw failure(ErrorCode.CONFLICT); live(r);
@@ -73,6 +83,18 @@ export function createJobRegistry({scope, enabled = false}) {
             emit(r, 'artifact', artifact); r.artifacts.set(artifact.id, artifact); return artifact;
           } finally {r.pendingArtifacts.delete(draft.id);}
         });},
+        addBinaryArtifact(value) {return track(r, () => binaryOperation(async () => {
+          live(r); value = parseJsonValue(value);
+          if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).some(k => !['id', 'path', 'label'].includes(k))) throw failure(ErrorCode.INVALID_CONTRACT);
+          const draft = parseBinaryArtifact({...value, revision: '0'.repeat(64), byteLength: 0}); reserveArtifact(r, draft.id);
+          try {
+            const source = parseBinaryArtifactSource(await captureBinaryFile(draft.path, controller.signal), draft.path); live(r);
+            const artifact = parseBinaryArtifact({...draft, revision: source.revision, byteLength: source.byteLength});
+            // Existing readers understand this event and the unchanged v1 snapshot.
+            emit(r, 'log', {level: 'info', message: `Binary artifact registered: ${artifact.id}`});
+            r.binaryArtifacts.set(artifact.id, {artifact, source}); return artifact;
+          } finally {r.pendingArtifacts.delete(draft.id);}
+        }));},
         invokeBackend(id, value) {return track(r, async () => {live(r); const result = await invokeBackend(id, parseJsonValue(value), {signal: controller.signal, job}); live(r); return parseJsonValue(result);});},
       });
       // Keep this slot until the actual provider settles, even after cancellation.
@@ -107,6 +129,27 @@ export function createJobRegistry({scope, enabled = false}) {
       if (file.revision !== artifact.revision || await hash(file.content) !== artifact.revision) throw failure(ErrorCode.CONFLICT);
       find(id); if (signal?.aborted) throw failure(ErrorCode.CANCELLED);
       return Object.freeze({jobId: id, scope, artifact, content: file.content});
+    },
+    listBinaryArtifacts(id) {
+      if (!binaryArtifacts) throw failure(ErrorCode.CAPABILITY_UNAVAILABLE);
+      const r = find(id); r.assertRead();
+      return parseBinaryArtifactList({jobId: id, scope, artifacts: [...r.binaryArtifacts.values()].map(entry => entry.artifact)});
+    },
+    readBinaryArtifact(id, artifactId, revision, offset, length, signal, timeoutMs) {
+      return binaryOperation(async () => {
+        const r = find(id); r.assertRead(); const entry = r.binaryArtifacts.get(artifactId);
+        if (!entry) throw failure(ErrorCode.CAPABILITY_UNAVAILABLE);
+        if (entry.artifact.revision !== revision) throw failure(ErrorCode.CONFLICT);
+        parseBinaryArtifactRange(offset, length, entry.artifact.byteLength);
+        if (signal?.aborted) throw failure(ErrorCode.CANCELLED);
+        const chunk = await r.readBinaryChunk(entry.source, offset, length, signal, timeoutMs);
+        find(id); r.assertRead(); if (signal?.aborted) throw failure(ErrorCode.CANCELLED);
+        const result = parseBinaryArtifactChunk({jobId: id, scope, artifact: entry.artifact, ...chunk});
+        if (result.offset !== offset || result.nextOffset !== offset + Math.min(length, entry.artifact.byteLength - offset)) throw failure(ErrorCode.INVALID_CONTRACT);
+        const digest = [...new Uint8Array(await globalThis.crypto.subtle.digest('SHA-256', decodeBinaryArtifactData(result.data)))].map(v => v.toString(16).padStart(2, '0')).join('');
+        find(id); r.assertRead(); if (signal?.aborted) throw failure(ErrorCode.CANCELLED);
+        if (digest !== result.sha256) throw failure(ErrorCode.CONFLICT); return result;
+      });
     },
     dispose() {if (closed) return; closed = true; for (const r of records.values()) if (r.state === 'running') r.controller.abort(failure(ErrorCode.DISPOSED)); records.clear();},
   });
