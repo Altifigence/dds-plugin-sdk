@@ -36,6 +36,10 @@ traffic on new hosts, with bounded full-read fallback on older hosts.
 [Binary job results](docs/BINARY_ARTIFACTS.md) add optional 64 KiB chunk reads and
 a Node downloader with interruption, resumption and whole-file SHA-256 verification.
 
+Development on `main`: the next 0.9 release adds optional
+[project observation](docs/PROJECT_WATCH.md) with explicit roots, content-verified
+reconciliation and bounded resync events. Run its Node example from this checkout.
+
 ## Run your first plugin
 
 ```sh

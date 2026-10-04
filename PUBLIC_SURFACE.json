@@ -158,6 +158,20 @@
     "schemas/stored-artifact.schema.json",
     "schemas/stored-artifact-reference.schema.json",
     "schemas/stored-artifact-chunk.schema.json",
-    "schemas/stored-artifact-list.schema.json"
+    "schemas/stored-artifact-list.schema.json",
+    "docs/PROJECT_WATCH.md",
+    "examples/project-watch/run.mjs",
+    "src/node-workspace-context.mjs",
+    "src/project-patterns.mjs",
+    "src/project-scan-node.mjs",
+    "src/project-watch-node.d.mts",
+    "src/project-watch-node.mjs",
+    "src/project-watch-schemas.mjs",
+    "src/project-watch.d.mts",
+    "src/project-watch.mjs",
+    "schemas/project-entry.schema.json",
+    "schemas/project-snapshot.schema.json",
+    "schemas/project-watch-event.schema.json",
+    "schemas/project-watch-options.schema.json"
   ]
 }

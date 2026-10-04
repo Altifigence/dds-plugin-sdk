@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.8.0/schemas/project-entry.schema.json",
+  "title": "project-entry",
+  "type": "object",
+  "properties": {
+    "path": {
+      "type": "string",
+      "maxLength": 1024,
+      "minLength": 1,
+      "$comment": "Runtime applies workspace-relative protected-path and Windows-component rules."
+    },
+    "kind": {
+      "enum": [
+        "file",
+        "directory"
+      ]
+    },
+    "size": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "revision": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "fingerprint": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  },
+  "required": [
+    "path",
+    "kind",
+    "size",
+    "revision",
+    "fingerprint"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "directory"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "size": {
+            "const": 0
+          },
+          "revision": {
+            "type": "null"
+          }
+        }
+      }
+    }
+  ],
+  "$comment": "For hashed files fingerprint equals the content revision. Otherwise it is opaque metadata, not a content checksum."
+}
