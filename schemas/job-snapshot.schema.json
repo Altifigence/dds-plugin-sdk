@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.8.0/schemas/job-snapshot.schema.json",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.9.0/schemas/job-snapshot.schema.json",
   "title": "job-snapshot",
   "oneOf": [
     {
@@ -305,7 +305,7 @@
           "const": "succeeded"
         },
         "result": {
-          "$ref": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.8.0/schemas/json-value.schema.json"
+          "$ref": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.9.0/schemas/json-value.schema.json"
         }
       },
       "required": [

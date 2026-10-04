@@ -11,6 +11,7 @@ import {JOB_STORE_LIMITS} from './job-storage.mjs';
 import {storageObject} from './job-storage-validation.mjs';
 import {nodeWorkspaceIdentity} from './workspace-identity-node.mjs';
 import {registerNodeWorkspace} from './node-workspace-context.mjs';
+import {createWorkspaceProjectTransport} from './workspace-project-node.mjs';
 import {ARTIFACT_STORE_LIMITS} from './artifact-storage.mjs';
 export {downloadJobBinaryArtifact} from './artifact-download-node.mjs';
 export {downloadStoredJobArtifact} from './stored-artifact-download-node.mjs';
@@ -287,10 +288,11 @@ function safeOperationFailure(failure) {
 }
 
 /** HTTP server for explicitly configured trusted plugins in the user environment. */
-export async function createWorkspaceServer({workspace,root,workspaceId,name='User workspace',token,plugins=[],pluginHost,grants=[],backends={},jobs=false,binaryArtifacts=false,jobStorage,notice,host='127.0.0.1',port=0,writable=true,manage=writable,allowedOrigins=[],timeoutMs=WORKSPACE_LIMITS.defaultTimeoutMs}={}) {
+export async function createWorkspaceServer({workspace,root,workspaceId,name='User workspace',token,plugins=[],pluginHost,grants=[],backends={},jobs=false,binaryArtifacts=false,jobStorage,projects,notice,host='127.0.0.1',port=0,writable=true,manage=writable,allowedOrigins=[],timeoutMs=WORKSPACE_LIMITS.defaultTimeoutMs}={}) {
   requireUuid(workspaceId);requireText(name,128);requireText(host,253);token=requireToken(token);
   if(typeof jobs!=='boolean'||typeof binaryArtifacts!=='boolean')throw workspaceFailure('invalid_request','Invalid job capability');
   const ownsPluginHost=pluginHost===undefined;
+  if(projects!==undefined&&workspace!==undefined)throw workspaceFailure('invalid_request','Project tools require a server-owned Node workspace');
   if(!Array.isArray(plugins)||plugins.length>WORKSPACE_LIMITS.plugins)throw workspaceFailure('invalid_request','Invalid configured plugins');
   let storageOptions;
   if (jobStorage !== undefined) {
@@ -310,19 +312,20 @@ export async function createWorkspaceServer({workspace,root,workspaceId,name='Us
   if(notice.sha256!==undefined&&notice.sha256!==noticePayload.sha256)throw workspaceFailure('invalid_request','Operator notice digest mismatch');
   workspace??=await createNodeWorkspace({root,writable,manage,binaryArtifacts});
   const generation=randomUUID(),scope=Object.freeze({projectId:workspaceId,sessionId:generation});
-  try{pluginHost??=createPluginHost({hostId:'workspace-host',scope,grants,workspace,backends,jobs,binaryArtifacts,jobStorage:storageOptions});}
-  catch(failure){workspace.dispose?.();throw safeOperationFailure(failure);}
+  let projectTransport;
+  try{projectTransport=await createWorkspaceProjectTransport(workspace,projects,scope);pluginHost??=createPluginHost({hostId:'workspace-host',scope,grants,workspace,backends,jobs,binaryArtifacts,jobStorage:storageOptions});}
+  catch(failure){await projectTransport?.close();workspace.dispose?.();throw safeOperationFailure(failure);}
   const pins=new Map();
   try{
     for(const item of plugins){const hash=requireSha256(item.artifactSha256);if(!item.plugin?.manifest?.id||pins.has(item.plugin.manifest.id))throw workspaceFailure('invalid_request','Duplicate or invalid configured plugin');if(item.licenseText!==undefined&&(typeof item.licenseText!=='string'||Buffer.byteLength(item.licenseText)>65536))throw workspaceFailure('invalid_request','Invalid plugin license text');await pluginHost.activate(item.plugin);pins.set(item.plugin.manifest.id,{artifactSha256:hash,...(item.licenseText===undefined?{}:{licenseText:item.licenseText})});}
-  }catch(failure){pluginHost.dispose();workspace.dispose?.();throw safeOperationFailure(failure);}
+  }catch(failure){await projectTransport.close();pluginHost.dispose();workspace.dispose?.();throw safeOperationFailure(failure);}
   const metadata=()=>{
     const commands=pluginHost.listCommands();
     return pluginHost.listPlugins().map(manifest=>({manifest,...pins.get(manifest.id),commands:commands.filter(command=>command.pluginId===manifest.id)}));
   };
-  const description=()=>parseWorkspaceHello({hostId:'workspace-host',hostVersion:'0.8.0',protocolVersion:1,workspace:{id:workspaceId,name,generation},capabilities:{read:true,write:workspace.capabilities?.write===true,manage:workspace.capabilities?.manage===true,commands:pins.size>0},plugins:metadata(),notice:noticePayload});
+  const description=()=>parseWorkspaceHello({hostId:'workspace-host',hostVersion:'0.9.0',protocolVersion:1,workspace:{id:workspaceId,name,generation},capabilities:{read:true,write:workspace.capabilities?.write===true,manage:workspace.capabilities?.manage===true,commands:pins.size>0},plugins:metadata(),notice:noticePayload});
   let originalDescription;
-  try{originalDescription=description();}catch(failure){pluginHost.dispose();workspace.dispose?.();throw safeOperationFailure(failure);}
+  try{originalDescription=description();}catch(failure){await projectTransport.close();pluginHost.dispose();workspace.dispose?.();throw safeOperationFailure(failure);}
   const originalMetadata=JSON.stringify({plugins:originalDescription.plugins,capabilities:originalDescription.capabilities});
   const checkedDescription=()=>{const current=description();if(JSON.stringify({plugins:current.plugins,capabilities:current.capabilities})!==originalMetadata)throw workspaceFailure('generation_mismatch','Workspace configuration changed; restart the host');return current;};
   const pending=new Map();let closed=false,receiving=0;
@@ -336,6 +339,7 @@ export async function createWorkspaceServer({workspace,root,workspaceId,name='Us
   };
   async function dispatch(request,signal) {
     const p=request.params;
+    if(request.method.startsWith('projects.')){checkedDescription();return projectTransport.dispatch(request.method,p,signal);}
     if(request.method.startsWith('jobs.')&&request.method!=='jobs.capabilities'&&(!jobs||!ownsPluginHost))throw workspaceFailure('unsupported','Enable jobs on the server-owned plugin host');
     if(request.method.startsWith('history.')&&request.method!=='history.capabilities'&&(!jobs||!ownsPluginHost||!storageOptions))throw workspaceFailure('unsupported','Enable storage on the server-owned job host');
     if(request.method.startsWith('snapshots.')&&request.method!=='snapshots.capabilities'&&(!jobs||!ownsPluginHost||!storageOptions?.artifacts))throw workspaceFailure('unsupported','Enable artifact storage on the server-owned job host');
@@ -433,9 +437,10 @@ export async function createWorkspaceServer({workspace,root,workspaceId,name='Us
   });
   server.headersTimeout=10_000;server.requestTimeout=10_000;server.maxHeadersCount=32;
   server.maxConnections=WORKSPACE_LIMITS.connections;server.dropMaxConnection=true;server.maxRequestsPerSocket=128;
-  try{await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,host,()=>{server.off('error',reject);resolve();});});}catch(failure){pluginHost.dispose();workspace.dispose?.();throw safeOperationFailure(failure);}
+  try{await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,host,()=>{server.off('error',reject);resolve();});});}catch(failure){await projectTransport.close();pluginHost.dispose();workspace.dispose?.();throw safeOperationFailure(failure);}
   const address=server.address();
   return Object.freeze({url:`http://${host.includes(':')?`[${host}]`:host}:${address.port}${WORKSPACE_PATH}`,workspaceId,generation,hello:checkedDescription,
-    async close(){if(closed)return;closed=true;for(const controller of pending.values())controller.abort(workspaceFailure('disposed','Workspace server is disposed'));pluginHost.dispose();workspace.dispose?.();await new Promise(resolve=>{server.close(()=>resolve());server.closeAllConnections();});if(storageOptions)await pluginHost.flushJobStore();},
+    revokeProjects(){projectTransport.revoke();},
+    async close(){if(closed)return;closed=true;for(const controller of pending.values())controller.abort(workspaceFailure('disposed','Workspace server is disposed'));await projectTransport.close();pluginHost.dispose();workspace.dispose?.();await new Promise(resolve=>{server.close(()=>resolve());server.closeAllConnections();});if(storageOptions)await pluginHost.flushJobStore();},
   });
 }

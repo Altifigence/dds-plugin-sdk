@@ -11,6 +11,7 @@ import {validatePluginPackage} from '../src/publishing.mjs';
 import {deferred} from './fixtures.mjs';
 
 const sdkRoot=fileURLToPath(new URL('../',import.meta.url)),cli=fileURLToPath(new URL('../bin/dds-plugin.mjs',import.meta.url));
+const sdkVersion=JSON.parse(await fs.readFile(new URL('../package.json',import.meta.url),'utf8')).version;
 async function fixture(t,{installed=true}={}) {
   const root=await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(),'dds-devtools-'))),directory=path.join(root,'my-plugin');
   await initPlugin(directory,{publisher:'author',id:'sample-plugin'});
@@ -24,7 +25,7 @@ test('init creates a valid standalone scaffold and never replaces existing conte
   const {directory}=await fixture(t,{installed:false});const before=await fs.readFile(path.join(directory,'plugin.mjs'),'utf8');
   assert.equal((await validatePluginPackage(directory)).pluginId,'sample-plugin');
   await assert.rejects(initPlugin(directory),/already exists/);assert.equal(await fs.readFile(path.join(directory,'plugin.mjs'),'utf8'),before);
-  const metadata=JSON.parse(await fs.readFile(path.join(directory,'package.json'),'utf8'));assert.equal(metadata.private,true);assert.match(metadata.dependencies['@altifigence/dds-plugin-sdk'],/\/v0\.8\.0\//);
+  const metadata=JSON.parse(await fs.readFile(path.join(directory,'package.json'),'utf8'));assert.equal(metadata.private,true);assert.equal(metadata.dependencies['@altifigence/dds-plugin-sdk'],`https://github.com/Altifigence/dds-plugin-sdk/releases/download/v${sdkVersion}/altifigence-dds-plugin-sdk-${sdkVersion}.tgz`);
   const report=await doctorPlugin(directory);assert.equal(report.ok,false);assert.equal(report.checks.find(c=>c.id==='sdk').status,'error');
 });
 test('doctor never imports plugin code and returns actionable human and JSON diagnostics',async t=>{

@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.9.0/schemas/project-watch-capabilities.schema.json",
+  "title": "project-watch-capabilities",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "supported": {
+      "const": true
+    },
+    "platform": {
+      "enum": [
+        "win32",
+        "linux"
+      ]
+    },
+    "fileSystem": {
+      "const": "local"
+    },
+    "filesystemType": {
+      "type": "string",
+      "pattern": "^\\d{1,20}$"
+    },
+    "mode": {
+      "const": "native-hints-with-reconciliation"
+    },
+    "rename": {
+      "const": "delete-create"
+    },
+    "roots": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 1024,
+        "$comment": "Empty root requires explicit operator scope."
+      },
+      "maxItems": 16,
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "limits": {
+      "type": "object",
+      "properties": {
+        "observers": {
+          "const": 4
+        },
+        "nativeHandles": {
+          "const": 128
+        },
+        "entries": {
+          "const": 1000
+        },
+        "visited": {
+          "const": 10000
+        },
+        "depth": {
+          "const": 32
+        },
+        "patterns": {
+          "const": 16
+        },
+        "patternLength": {
+          "const": 256
+        },
+        "fileBytes": {
+          "const": 16777216
+        },
+        "scanBytes": {
+          "const": 67108864
+        },
+        "snapshotBytes": {
+          "const": 131072
+        },
+        "changes": {
+          "const": 256
+        },
+        "queue": {
+          "const": 4
+        },
+        "minIntervalMs": {
+          "const": 250
+        },
+        "maxIntervalMs": {
+          "const": 60000
+        },
+        "defaultIntervalMs": {
+          "const": 1000
+        },
+        "minDebounceMs": {
+          "const": 10
+        },
+        "maxDebounceMs": {
+          "const": 1000
+        },
+        "defaultDebounceMs": {
+          "const": 50
+        },
+        "maxScanMs": {
+          "const": 30000
+        }
+      },
+      "required": [
+        "observers",
+        "nativeHandles",
+        "entries",
+        "visited",
+        "depth",
+        "patterns",
+        "patternLength",
+        "fileBytes",
+        "scanBytes",
+        "snapshotBytes",
+        "changes",
+        "queue",
+        "minIntervalMs",
+        "maxIntervalMs",
+        "defaultIntervalMs",
+        "minDebounceMs",
+        "maxDebounceMs",
+        "defaultDebounceMs",
+        "maxScanMs"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "version",
+    "supported",
+    "platform",
+    "fileSystem",
+    "filesystemType",
+    "mode",
+    "rename",
+    "roots",
+    "limits"
+  ],
+  "additionalProperties": false
+}

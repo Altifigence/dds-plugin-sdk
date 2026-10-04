@@ -108,6 +108,13 @@ export function createWorkspaceProject(client) {
   }
   return Object.freeze({
     get workspace() { assertCurrent(); return binding.workspace; },
+    async getProjectCapabilities(value){const requestOptions=options(value),result=await client.getProjectCapabilities(requestOptions);checkReply(requestOptions);return result;},
+    async getProjectSnapshot(input,value){const requestOptions=options(value),result=await client.getProjectSnapshot(input,requestOptions);checkReply(requestOptions);return result;},
+    async listTree(input,value){const requestOptions=options(value),result=await client.listTree(input,requestOptions);checkReply(requestOptions);return result;},
+    async searchFiles(input,value){const requestOptions=options(value),result=await client.searchFiles(input,requestOptions);checkReply(requestOptions);return result;},
+    async searchText(input,value){const requestOptions=options(value),result=await client.searchText(input,requestOptions);checkReply(requestOptions);return result;},
+    async releaseProjectQuery(cursor,value){const requestOptions=options(value),result=await client.releaseProjectQuery(cursor,requestOptions);checkReply(requestOptions);return result;},
+    watchProject(input,value={}){assertCurrent();exactObject(value,[],['signal','requestTimeoutMs','timeoutMs']);if(value.signal!==undefined&&!(value.signal instanceof AbortSignal))throw workspaceFailure('invalid_request','Expected AbortSignal');return client.watchProject(input,{...value,signal:AbortSignal.any([controller.signal,...(value.signal?[value.signal]:[])])});},
     watchFiles(paths, value) {assertCurrent(); return watchWorkspaceFiles(client, paths, value, controller.signal);},
     async listFiles(path = '', value) {
       requireWorkspacePath(path, true);

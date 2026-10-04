@@ -1,9 +1,8 @@
 # Project tree and search
 
-Development for 0.9. This optional Node port reuses an operator-created
-[project watcher](PROJECT_WATCH.md). It does not expand the watcher's root scope.
-The released 0.8 archive does not include this port. HTTP/project-session
-integration and the public 0.9 release are the next integration step.
+Available in SDK 0.9.0. This optional Node port reuses an operator-created
+[project watcher](PROJECT_WATCH.md) and does not expand its root scope.
+The [HTTP/project client](PROJECT_TOOLS.md) offers the same scoped query methods.
 
 ```js
 import {createNodeProjectQueries} from '@altifigence/dds-plugin-sdk/project-query-node';
@@ -122,4 +121,4 @@ claim representative performance for every filesystem.
 상태를 별도로 표시합니다. 60초 안에 같은 옵션으로 이어 읽고, 사용하지 않는
 cursor는 해제합니다. 결과 범위는 과거 내용에 해당할 수 있으므로 편집 전에는
 재조회와 기존 리비전 비교 저장을 사용합니다. 검색/감시로 편집 초안을 덮어쓰지
-않습니다. 현재 main의 0.9 개발 기능이며 공개 0.8 패키지에는 포함되지 않습니다.
+않습니다. SDK 0.9.0에서 제공하며 HTTP/project client에서도 같은 범위를 유지합니다.

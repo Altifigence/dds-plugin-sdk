@@ -1,6 +1,6 @@
 import type {NodeWorkspace} from './workspace-node.mjs';
-import type {ProjectWatchOptions,ProjectSnapshot,ProjectWatchEvent,PROJECT_WATCH_LIMITS} from './project-watch.mjs';
-export interface NodeProjectWatchCapabilities {readonly version:1;readonly supported:true;readonly platform:'win32'|'linux';readonly fileSystem:'local';readonly filesystemType:string;readonly mode:'native-hints-with-reconciliation';readonly rename:'delete-create';readonly roots:readonly string[];readonly limits:typeof PROJECT_WATCH_LIMITS;}
+import type {ProjectWatchOptions,ProjectSnapshot,ProjectWatchEvent,ProjectWatchCapabilities} from './project-watch.mjs';
+export type NodeProjectWatchCapabilities=ProjectWatchCapabilities;
 export interface NodeProjectWatcher {
   readonly capabilities:NodeProjectWatchCapabilities;
   snapshot(options:ProjectWatchOptions,request?:{readonly signal?:AbortSignal}):Promise<ProjectSnapshot>;

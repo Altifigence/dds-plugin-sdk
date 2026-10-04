@@ -15,7 +15,7 @@ application, private engines/services and production signing systems are outside
 this repository. Read the [public scope](docs/PUBLIC_SCOPE.md) and
 [compatibility table](docs/COMPATIBILITY.md) for exact boundaries.
 
-Version **0.8.0** supports Node 22 and 24. Manifest v1 diagnostic plugins remain
+Version **0.9.0** supports Node 22 and 24. Manifest v1 diagnostic plugins remain
 compatible. Manifest v2 adds commands, permission-scoped workspace and backend
 APIs, and open-source or proprietary distribution metadata. Themes export to
 the XML format already supported by DDS. The workspace host runs trusted plugins
@@ -36,11 +36,13 @@ traffic on new hosts, with bounded full-read fallback on older hosts.
 [Binary job results](docs/BINARY_ARTIFACTS.md) add optional 64 KiB chunk reads and
 a Node downloader with interruption, resumption and whole-file SHA-256 verification.
 
-Development on `main`: the next 0.9 release adds optional
-[project observation](docs/PROJECT_WATCH.md) with explicit roots, content-verified
-reconciliation and bounded resync events, plus [project tree and search](docs/PROJECT_QUERIES.md)
-with scoped queries, content revisions and pages that identify external changes.
-Run the Node examples from this checkout.
+Optional [project observation](docs/PROJECT_WATCH.md) uses explicit roots,
+content-verified reconciliation and bounded resync events. [Project tree and
+search](docs/PROJECT_QUERIES.md) add scoped queries, content revisions and pages
+that identify external changes. The [HTTP/project client](docs/PROJECT_TOOLS.md)
+connects these tools while preserving edit drafts, with bounded subscription leases
+and explicit reconnect behavior. Run `npm run example:project-tools`, or
+`npm run example:project-browser` for the local browser scenario.
 
 ## Run your first plugin
 
@@ -73,7 +75,7 @@ mkdir my-dds-plugin
 cd my-dds-plugin
 npm init -y
 npm pkg set type=module
-npm install --ignore-scripts --save-exact https://github.com/Altifigence/dds-plugin-sdk/releases/download/v0.8.0/altifigence-dds-plugin-sdk-0.8.0.tgz
+npm install --ignore-scripts --save-exact https://github.com/Altifigence/dds-plugin-sdk/releases/download/v0.9.0/altifigence-dds-plugin-sdk-0.9.0.tgz
 ```
 
 Copy the example's `plugin.mjs` and `run.mjs` into this directory, then run:

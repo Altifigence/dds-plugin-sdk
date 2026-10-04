@@ -1,6 +1,6 @@
 {
   "name": "@altifigence/dds-plugin-sdk",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Plugin, theme and user-owned workspace tools for Digital Design Studio",
   "type": "module",
   "license": "Apache-2.0",
@@ -140,7 +140,9 @@
     "example:project-watch": "node examples/project-watch/run.mjs",
     "benchmark:project-watch": "node scripts/benchmark-project-watch.mjs",
     "example:project-query": "node examples/project-query/run.mjs",
-    "benchmark:project-query": "node scripts/benchmark-project-query.mjs"
+    "benchmark:project-query": "node scripts/benchmark-project-query.mjs",
+    "example:project-tools": "node examples/project-tools/run.mjs",
+    "example:project-browser": "node examples/project-tools/serve.mjs"
   },
   "devDependencies": {
     "typescript": "5.9.3"

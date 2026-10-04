@@ -179,3 +179,28 @@ retained bytes. All use the existing authenticated workspace/generation envelope
 New references recheck current authority; prior generations never authorize
 reads or automatic execution. See [history](JOB_HISTORY.md) and
 [stored results](ARTIFACT_STORAGE.md) for parameters, limits and migration.
+
+## Optional project tools (SDK 0.9.0)
+
+All methods retain the authenticated workspace/generation envelope. Each result
+contains `scope:{projectId,sessionId}` matching that envelope.
+
+| Method | Parameters | Other result fields |
+| --- | --- | --- |
+| `projects.capabilities` | `{}` | `protocolVersion:1,enabled,watch,query,limits` |
+| `projects.snapshot` | `{options:ProjectWatchOptions}` | `snapshot` |
+| `projects.query` | `{query:ProjectQueryOptions}` | `page` |
+| `projects.query.release` | `{cursor}` | `released` |
+| `projects.watch.start` | `{subscriptionId,options:ProjectWatchOptions}` | `subscriptionId,after:0,event,expiresAt` |
+| `projects.watch.next` | `{subscriptionId,after,waitMs}` | `subscriptionId,after,event,expiresAt` |
+| `projects.watch.stop` | `{subscriptionId}` | `stopped` |
+
+Query options include `kind:'tree'|'files'|'text'`; high-level client methods select
+it. Subscription IDs are caller-generated UUIDs, distinct from the native event's
+own stable subscription ID. `start` returns cursor 1. `next` requires a positive
+acknowledged cursor and `waitMs` from 1 to 1000; `event:null` means no change before
+the wait elapsed. `expiresAt` is the renewed idle lease deadline in Unix milliseconds.
+Repeated starts conflict; repeated stops return `stopped:false` once absent.
+Exact schemas, scope validation, lease and resync behavior are described in
+[project tools](PROJECT_TOOLS.md), [watch](PROJECT_WATCH.md) and
+[query](PROJECT_QUERIES.md). Known older SDK hosts are detected without probing.

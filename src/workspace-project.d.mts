@@ -14,6 +14,13 @@ export interface WorkspaceEditSession {
   dispose(): void;
 }
 export interface WorkspaceProject {
+  getProjectCapabilities:WorkspaceClient['getProjectCapabilities'];
+  getProjectSnapshot:WorkspaceClient['getProjectSnapshot'];
+  listTree:WorkspaceClient['listTree'];
+  searchFiles:WorkspaceClient['searchFiles'];
+  searchText:WorkspaceClient['searchText'];
+  releaseProjectQuery:WorkspaceClient['releaseProjectQuery'];
+  watchProject:WorkspaceClient['watchProject'];
   readonly workspace: WorkspaceHello['workspace'];
   /** Observe explicit file revisions without replacing edit-session snapshots. */
   watchFiles(paths: readonly string[], options?: WorkspaceFileWatchOptions): WorkspaceObserver<WorkspaceFileChange>;

@@ -1,0 +1,784 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.9.0/schemas/workspace-project-poll.schema.json",
+  "title": "workspace-project-poll",
+  "type": "object",
+  "properties": {
+    "scope": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+        },
+        "sessionId": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+        }
+      },
+      "required": [
+        "projectId",
+        "sessionId"
+      ],
+      "additionalProperties": false
+    },
+    "subscriptionId": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+    },
+    "after": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "event": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "version": {
+              "const": 1
+            },
+            "subscriptionId": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+            },
+            "cursor": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "kind": {
+              "enum": [
+                "snapshot",
+                "changes",
+                "resync"
+              ]
+            },
+            "previousRevision": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "snapshot": {
+              "type": "object",
+              "properties": {
+                "version": {
+                  "const": 1
+                },
+                "root": {
+                  "type": "string",
+                  "maxLength": 1024,
+                  "$comment": "Empty root requires explicit operator scope."
+                },
+                "revision": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                "entries": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "path": {
+                        "type": "string",
+                        "maxLength": 1024,
+                        "minLength": 1,
+                        "$comment": "Runtime applies workspace-relative protected-path and Windows-component rules."
+                      },
+                      "kind": {
+                        "enum": [
+                          "file",
+                          "directory"
+                        ]
+                      },
+                      "size": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "revision": {
+                        "oneOf": [
+                          {
+                            "type": "string",
+                            "pattern": "^[a-f0-9]{64}$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "fingerprint": {
+                        "type": "string",
+                        "pattern": "^[a-f0-9]{64}$"
+                      }
+                    },
+                    "required": [
+                      "path",
+                      "kind",
+                      "size",
+                      "revision",
+                      "fingerprint"
+                    ],
+                    "additionalProperties": false,
+                    "allOf": [
+                      {
+                        "if": {
+                          "properties": {
+                            "kind": {
+                              "const": "directory"
+                            }
+                          }
+                        },
+                        "then": {
+                          "properties": {
+                            "size": {
+                              "const": 0
+                            },
+                            "revision": {
+                              "type": "null"
+                            }
+                          }
+                        }
+                      }
+                    ],
+                    "$comment": "For hashed files fingerprint equals the content revision. Otherwise it is opaque metadata, not a content checksum."
+                  },
+                  "maxItems": 1000
+                },
+                "complete": {
+                  "type": "boolean"
+                },
+                "reasons": {
+                  "type": "array",
+                  "items": {
+                    "enum": [
+                      "entry_limit",
+                      "visit_limit",
+                      "depth_limit",
+                      "file_bytes",
+                      "scan_bytes",
+                      "snapshot_bytes",
+                      "scan_timeout",
+                      "unsafe_entries",
+                      "unstable"
+                    ]
+                  },
+                  "maxItems": 9,
+                  "uniqueItems": true
+                },
+                "observedAt": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "version",
+                "root",
+                "revision",
+                "entries",
+                "complete",
+                "reasons",
+                "observedAt"
+              ],
+              "additionalProperties": false,
+              "x-maxUtf8Bytes": 131072,
+              "$comment": "Runtime checks sorted unique scoped paths and complete iff reasons is empty. This is a bounded per-file validated view, not a filesystem transaction.",
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "complete": {
+                        "const": true
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "reasons": {
+                        "maxItems": 0
+                      },
+                      "entries": {
+                        "items": {
+                          "if": {
+                            "properties": {
+                              "kind": {
+                                "const": "file"
+                              }
+                            }
+                          },
+                          "then": {
+                            "properties": {
+                              "revision": {
+                                "type": "string",
+                                "pattern": "^[a-f0-9]{64}$"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "else": {
+                    "properties": {
+                      "reasons": {
+                        "minItems": 1
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            "changes": {
+              "type": "array",
+              "items": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "const": "created"
+                      },
+                      "path": {
+                        "type": "string",
+                        "maxLength": 1024,
+                        "minLength": 1,
+                        "$comment": "Runtime applies workspace-relative protected-path and Windows-component rules."
+                      },
+                      "previous": {
+                        "type": "null"
+                      },
+                      "current": {
+                        "type": "object",
+                        "properties": {
+                          "path": {
+                            "type": "string",
+                            "maxLength": 1024,
+                            "minLength": 1,
+                            "$comment": "Runtime applies workspace-relative protected-path and Windows-component rules."
+                          },
+                          "kind": {
+                            "enum": [
+                              "file",
+                              "directory"
+                            ]
+                          },
+                          "size": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "revision": {
+                            "oneOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^[a-f0-9]{64}$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "fingerprint": {
+                            "type": "string",
+                            "pattern": "^[a-f0-9]{64}$"
+                          }
+                        },
+                        "required": [
+                          "path",
+                          "kind",
+                          "size",
+                          "revision",
+                          "fingerprint"
+                        ],
+                        "additionalProperties": false,
+                        "allOf": [
+                          {
+                            "if": {
+                              "properties": {
+                                "kind": {
+                                  "const": "directory"
+                                }
+                              }
+                            },
+                            "then": {
+                              "properties": {
+                                "size": {
+                                  "const": 0
+                                },
+                                "revision": {
+                                  "type": "null"
+                                }
+                              }
+                            }
+                          }
+                        ],
+                        "$comment": "For hashed files fingerprint equals the content revision. Otherwise it is opaque metadata, not a content checksum."
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "path",
+                      "previous",
+                      "current"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "const": "changed"
+                      },
+                      "path": {
+                        "type": "string",
+                        "maxLength": 1024,
+                        "minLength": 1,
+                        "$comment": "Runtime applies workspace-relative protected-path and Windows-component rules."
+                      },
+                      "previous": {
+                        "type": "object",
+                        "properties": {
+                          "path": {
+                            "type": "string",
+                            "maxLength": 1024,
+                            "minLength": 1,
+                            "$comment": "Runtime applies workspace-relative protected-path and Windows-component rules."
+                          },
+                          "kind": {
+                            "enum": [
+                              "file",
+                              "directory"
+                            ]
+                          },
+                          "size": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "revision": {
+                            "oneOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^[a-f0-9]{64}$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "fingerprint": {
+                            "type": "string",
+                            "pattern": "^[a-f0-9]{64}$"
+                          }
+                        },
+                        "required": [
+                          "path",
+                          "kind",
+                          "size",
+                          "revision",
+                          "fingerprint"
+                        ],
+                        "additionalProperties": false,
+                        "allOf": [
+                          {
+                            "if": {
+                              "properties": {
+                                "kind": {
+                                  "const": "directory"
+                                }
+                              }
+                            },
+                            "then": {
+                              "properties": {
+                                "size": {
+                                  "const": 0
+                                },
+                                "revision": {
+                                  "type": "null"
+                                }
+                              }
+                            }
+                          }
+                        ],
+                        "$comment": "For hashed files fingerprint equals the content revision. Otherwise it is opaque metadata, not a content checksum."
+                      },
+                      "current": {
+                        "type": "object",
+                        "properties": {
+                          "path": {
+                            "type": "string",
+                            "maxLength": 1024,
+                            "minLength": 1,
+                            "$comment": "Runtime applies workspace-relative protected-path and Windows-component rules."
+                          },
+                          "kind": {
+                            "enum": [
+                              "file",
+                              "directory"
+                            ]
+                          },
+                          "size": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "revision": {
+                            "oneOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^[a-f0-9]{64}$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "fingerprint": {
+                            "type": "string",
+                            "pattern": "^[a-f0-9]{64}$"
+                          }
+                        },
+                        "required": [
+                          "path",
+                          "kind",
+                          "size",
+                          "revision",
+                          "fingerprint"
+                        ],
+                        "additionalProperties": false,
+                        "allOf": [
+                          {
+                            "if": {
+                              "properties": {
+                                "kind": {
+                                  "const": "directory"
+                                }
+                              }
+                            },
+                            "then": {
+                              "properties": {
+                                "size": {
+                                  "const": 0
+                                },
+                                "revision": {
+                                  "type": "null"
+                                }
+                              }
+                            }
+                          }
+                        ],
+                        "$comment": "For hashed files fingerprint equals the content revision. Otherwise it is opaque metadata, not a content checksum."
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "path",
+                      "previous",
+                      "current"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "const": "deleted"
+                      },
+                      "path": {
+                        "type": "string",
+                        "maxLength": 1024,
+                        "minLength": 1,
+                        "$comment": "Runtime applies workspace-relative protected-path and Windows-component rules."
+                      },
+                      "previous": {
+                        "type": "object",
+                        "properties": {
+                          "path": {
+                            "type": "string",
+                            "maxLength": 1024,
+                            "minLength": 1,
+                            "$comment": "Runtime applies workspace-relative protected-path and Windows-component rules."
+                          },
+                          "kind": {
+                            "enum": [
+                              "file",
+                              "directory"
+                            ]
+                          },
+                          "size": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "revision": {
+                            "oneOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^[a-f0-9]{64}$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "fingerprint": {
+                            "type": "string",
+                            "pattern": "^[a-f0-9]{64}$"
+                          }
+                        },
+                        "required": [
+                          "path",
+                          "kind",
+                          "size",
+                          "revision",
+                          "fingerprint"
+                        ],
+                        "additionalProperties": false,
+                        "allOf": [
+                          {
+                            "if": {
+                              "properties": {
+                                "kind": {
+                                  "const": "directory"
+                                }
+                              }
+                            },
+                            "then": {
+                              "properties": {
+                                "size": {
+                                  "const": 0
+                                },
+                                "revision": {
+                                  "type": "null"
+                                }
+                              }
+                            }
+                          }
+                        ],
+                        "$comment": "For hashed files fingerprint equals the content revision. Otherwise it is opaque metadata, not a content checksum."
+                      },
+                      "current": {
+                        "type": "null"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "path",
+                      "previous",
+                      "current"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "maxItems": 256
+            },
+            "reason": {
+              "oneOf": [
+                {
+                  "enum": [
+                    "initial_changed",
+                    "scan_changed",
+                    "scan_incomplete",
+                    "scan_recovered",
+                    "native_unavailable",
+                    "native_unknown",
+                    "native_overflow",
+                    "watcher_limit",
+                    "consumer_overflow",
+                    "change_limit",
+                    "cursor_gap",
+                    "revision_mismatch"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "version",
+            "subscriptionId",
+            "cursor",
+            "kind",
+            "previousRevision",
+            "snapshot",
+            "changes",
+            "reason"
+          ],
+          "additionalProperties": false,
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "kind": {
+                    "const": "snapshot"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "previousRevision": {
+                    "type": "null"
+                  },
+                  "changes": {
+                    "maxItems": 0
+                  },
+                  "reason": {
+                    "type": "null"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "kind": {
+                    "const": "changes"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "previousRevision": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "changes": {
+                    "minItems": 1
+                  },
+                  "reason": {
+                    "type": "null"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "kind": {
+                    "const": "resync"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "changes": {
+                    "maxItems": 0
+                  },
+                  "reason": {
+                    "enum": [
+                      "initial_changed",
+                      "scan_changed",
+                      "scan_incomplete",
+                      "scan_recovered",
+                      "native_unavailable",
+                      "native_unknown",
+                      "native_overflow",
+                      "watcher_limit",
+                      "consumer_overflow",
+                      "change_limit",
+                      "cursor_gap",
+                      "revision_mismatch"
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "cursor": {
+                    "const": 1
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "previousRevision": {
+                    "type": "null"
+                  }
+                }
+              },
+              "else": {
+                "properties": {
+                  "previousRevision": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "snapshot",
+                      "changes"
+                    ]
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "snapshot": {
+                    "properties": {
+                      "complete": {
+                        "const": true
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "kind": {
+                    "const": "snapshot"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "cursor": {
+                    "const": 1
+                  }
+                }
+              }
+            }
+          ],
+          "$comment": "Runtime checks unique change paths and matching before/after entries. Cursor is local to one subscription. Rename is represented as delete/create."
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "expiresAt": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    }
+  },
+  "required": [
+    "scope",
+    "subscriptionId",
+    "after",
+    "event",
+    "expiresAt"
+  ],
+  "additionalProperties": false,
+  "x-maxUtf8Bytes": 800000,
+  "$comment": "Runtime checks initial after=0 has event.cursor=1; subsequent non-null event cursors are greater than after. Clients check request subscription ID, generation, scope, snapshot digest and event continuity."
+}

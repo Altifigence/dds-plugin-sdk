@@ -12,6 +12,7 @@ const snapshot={...object({version:{const:1},root,revision:sha,entries:list(entr
 snapshot.allOf=[{if:{properties:{complete:{const:true}}},then:{properties:{reasons:{maxItems:0},entries:{items:{if:{properties:{kind:{const:'file'}}},then:{properties:{revision:sha}}}}}},else:{properties:{reasons:{minItems:1}}}}];
 const change={oneOf:['created','changed','deleted'].map(kind=>object({kind:{const:kind},path,previous:kind==='created'?{type:'null'}:entry,current:kind==='deleted'?{type:'null'}:entry}))};
 export const PROJECT_WATCH_SCHEMAS=Object.freeze({
+  'project-watch-capabilities':object({version:{const:1},supported:{const:true},platform:{enum:['win32','linux']},fileSystem:{const:'local'},filesystemType:{type:'string',pattern:'^\\d{1,20}$'},mode:{const:'native-hints-with-reconciliation'},rename:{const:'delete-create'},roots:{...list(root,16),minItems:1,uniqueItems:true},limits:object(Object.fromEntries(Object.entries(limits).map(([key,value])=>[key,{const:value}])))}),
   'project-watch-options':{...object({root,include:patterns,exclude:patterns,maxDepth:integer(limits.depth,1),maxEntries:integer(limits.entries,1),maxFileBytes:integer(limits.fileBytes,1),maxScanBytes:integer(limits.scanBytes,1),scanTimeoutMs:integer(limits.maxScanMs,1),intervalMs:integer(limits.maxIntervalMs,limits.minIntervalMs),debounceMs:integer(limits.maxDebounceMs,limits.minDebounceMs)},['root']),$comment:'Runtime applies defaults, rejects unknown fields, and intersects root with operator-configured roots.'},
   'project-entry':entry,
   'project-snapshot':snapshot,

@@ -1,4 +1,4 @@
-import {copyWorkspaceJson,exactObject,requireSha256,requireUuid,requireWorkspacePath,workspaceFailure} from './workspace-protocol.mjs';
+import {copyWorkspaceJson,exactObject,requireSha256,requireUuid,requireWorkspacePath,workspaceFailure} from './workspace-values.mjs';
 import {parseProjectWatchOptions,parseProjectPatterns,parseProjectEntry,PROJECT_SCAN_REASONS} from './project-watch.mjs';
 import {projectContains} from './project-patterns.mjs';
 
@@ -73,7 +73,7 @@ export function parseProjectQueryPage(input){
     if(item.state==='missing'&&item.currentRevision!==null||item.state==='unverified'&&item.currentRevision!==null||entry.kind==='directory'&&item.currentRevision!==null)invalid();
     return Object.freeze({entry,match,state:item.state,currentRevision:item.currentRevision});
   });
-  for(let i=1;i<items.length;i++){const a=items[i-1],b=items[i];if(a.entry.path>b.entry.path||a.entry.path===b.entry.path&&(value.kind!=='text'||a.match.range.start.line>b.match.range.start.line||a.match.range.start.line===b.match.range.start.line&&a.match.range.start.character>=b.match.range.start.character))invalid();}
+  for(let i=1;i<items.length;i++){const a=items[i-1],b=items[i];if(a.entry.path>b.entry.path||a.entry.path===b.entry.path&&(JSON.stringify(a.entry)!==JSON.stringify(b.entry)||value.kind!=='text'||a.match.range.start.line>b.match.range.start.line||a.match.range.start.line===b.match.range.start.line&&a.match.range.start.character>=b.match.range.start.character))invalid();}
   if(value.nextCursor!==null){parseProjectQueryCursor(value.nextCursor);if(value.nextCursor!==value.viewId+':'+(value.offset+items.length)||!items.length||value.offset+items.length>=value.total)invalid();}
   else if(value.offset+items.length!==value.total)invalid();
   if(!value.stale&&items.some(x=>['changed','missing'].includes(x.state)))invalid();
