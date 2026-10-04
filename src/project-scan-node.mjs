@@ -19,10 +19,10 @@ export function projectFileError(error){
 }
 
 /** Bounded snapshot shared by project observation and read-only queries. */
-export async function scanNodeProject(context,options,{signal,onDirectory,metrics}={}){
+export async function scanNodeProject(context,options,{signal,onDirectory,onFile,metrics,deadline}={}){
   const started=Date.now(),entries=[],reasons=new Set(),stop=Symbol('scan limit');
   let visited=0,bytesRead=0,filesHashed=0,serializedBytes=4_096;
-  const check=()=>{projectAbort(signal);if(Date.now()-started>=options.scanTimeoutMs){reasons.add('scan_timeout');throw stop;}};
+  const check=()=>{projectAbort(signal);if(Date.now()-started>=options.scanTimeoutMs||deadline!==undefined&&Date.now()>=deadline){reasons.add('scan_timeout');throw stop;}};
   const add=entry=>{
     if(entries.length>=options.maxEntries){reasons.add('entry_limit');throw stop;}
     serializedBytes+=Buffer.byteLength(JSON.stringify(entry))+1;
@@ -39,17 +39,18 @@ export async function scanNodeProject(context,options,{signal,onDirectory,metric
     try{
       const opened=await handle.stat({bigint:true});
       if(!opened.isFile()||opened.nlink!==1n||!sameState(opened,stat))throw workspaceFailure('unsafe_path','Project file identity changed');
-      const digest=createHash('sha256'),buffer=Buffer.alloc(65_536);let count=0;
+      const digest=createHash('sha256'),buffer=Buffer.alloc(65_536),chunks=onFile?[]:null;let count=0;
       while(count<Number(opened.size)){
         check();const available=Math.min(buffer.length,Number(opened.size)-count,options.maxFileBytes-count,options.maxScanBytes-bytesRead);
         const read=await handle.read(buffer,0,available,null);if(!read.bytesRead)break;
         count+=read.bytesRead;bytesRead+=read.bytesRead;
         digest.update(buffer.subarray(0,read.bytesRead));
+        chunks?.push(Buffer.from(buffer.subarray(0,read.bytesRead)));
       }
       const after=await handle.stat({bigint:true}),current=await context.resolve(relative);
       if(after.nlink!==1n||current.stat.nlink!==1n||!sameState(opened,after)||!sameState(opened,current.stat)||BigInt(count)!==opened.size)throw workspaceFailure('conflict','Project file changed while hashing');
       await context.checkRoot();check();filesHashed++;
-      const revision=digest.digest('hex');return{revision,fingerprint:revision};
+      const revision=digest.digest('hex');return{revision,fingerprint:revision,...(chunks?{bytes:Buffer.concat(chunks)}:{})};
     }finally{await handle.close();}
   }
   async function walk(relative,depth){
@@ -78,7 +79,11 @@ export async function scanNodeProject(context,options,{signal,onDirectory,metric
           if(stat.nlink!==1n){reasons.add('unsafe_entries');continue;}
           if(!projectMatches(options.include,local))continue;
           if(stat.size>BigInt(Number.MAX_SAFE_INTEGER)){reasons.add('file_bytes');continue;}
-          add({path:entryPath,kind:'file',size:Number(stat.size),...await fingerprint(entryPath,stat)});
+          const {bytes,...identity}=await fingerprint(entryPath,stat);
+          const entry={path:entryPath,kind:'file',size:Number(stat.size),...identity};
+          add(entry);
+          if(bytes)await onFile?.(entry,bytes);
+          check();
         }
       }catch(error){
         if(error===stop)throw error;

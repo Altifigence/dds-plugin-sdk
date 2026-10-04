@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.8.0/schemas/project-query-capabilities.schema.json",
+  "title": "project-query-capabilities",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "supported": {
+      "const": true
+    },
+    "kinds": {
+      "const": [
+        "tree",
+        "files",
+        "text"
+      ]
+    },
+    "caseFolding": {
+      "const": "ascii"
+    },
+    "ranges": {
+      "const": "utf16-zero-based"
+    },
+    "cursor": {
+      "const": "query-bound-frozen-membership"
+    },
+    "roots": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 1024,
+        "$comment": "Empty root requires explicit operator scope."
+      },
+      "maxItems": 16,
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "limits": {
+      "type": "object",
+      "properties": {
+        "concurrent": {
+          "const": 2
+        },
+        "views": {
+          "const": 8
+        },
+        "cursorTtlMs": {
+          "const": 60000
+        },
+        "pageSize": {
+          "const": 64
+        },
+        "results": {
+          "const": 512
+        },
+        "queryChars": {
+          "const": 256
+        },
+        "snippetChars": {
+          "const": 512
+        },
+        "textFileBytes": {
+          "const": 262144
+        },
+        "responseBytes": {
+          "const": 131072
+        },
+        "minResponseBytes": {
+          "const": 16384
+        },
+        "viewBytes": {
+          "const": 262144
+        }
+      },
+      "required": [
+        "concurrent",
+        "views",
+        "cursorTtlMs",
+        "pageSize",
+        "results",
+        "queryChars",
+        "snippetChars",
+        "textFileBytes",
+        "responseBytes",
+        "minResponseBytes",
+        "viewBytes"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "version",
+    "supported",
+    "kinds",
+    "caseFolding",
+    "ranges",
+    "cursor",
+    "roots",
+    "limits"
+  ],
+  "additionalProperties": false
+}

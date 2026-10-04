@@ -1,0 +1,16 @@
+import type {ProjectEntry,ProjectScanReason} from './project-watch.mjs';
+export const PROJECT_QUERY_LIMITS:Readonly<{concurrent:2;views:8;cursorTtlMs:60000;pageSize:64;results:512;queryChars:256;snippetChars:512;textFileBytes:262144;responseBytes:131072;minResponseBytes:16384;viewBytes:262144}>;
+export type ProjectQueryReason=ProjectScanReason|'result_limit'|'result_bytes'|'binary'|'invalid_utf8';
+export const PROJECT_QUERY_REASONS:readonly ProjectQueryReason[];
+export interface ProjectQueryCapabilities {readonly version:1;readonly supported:true;readonly kinds:readonly ['tree','files','text'];readonly caseFolding:'ascii';readonly ranges:'utf16-zero-based';readonly cursor:'query-bound-frozen-membership';readonly roots:readonly string[];readonly limits:typeof PROJECT_QUERY_LIMITS;}
+export interface ProjectTreeOptions {readonly root:string;readonly include?:readonly string[];readonly exclude?:readonly string[];readonly maxDepth?:number;readonly maxEntries?:number;readonly maxFileBytes?:number;readonly maxScanBytes?:number;readonly scanTimeoutMs?:number;readonly pageSize?:number;readonly maxResults?:number;readonly maxResponseBytes?:number;readonly cursor?:string;}
+export interface ProjectFileSearchOptions extends ProjectTreeOptions {readonly query:string;readonly mode?:'literal'|'glob';/** false folds ASCII A-Z only, preserving UTF-16 positions. */readonly caseSensitive?:boolean;}
+export interface ProjectTextSearchOptions extends ProjectTreeOptions {readonly query:string;readonly mode?:'literal';readonly caseSensitive?:boolean;}
+export type ProjectQueryOptions=({readonly kind:'tree'}&ProjectTreeOptions)|({readonly kind:'files'}&ProjectFileSearchOptions)|({readonly kind:'text'}&ProjectTextSearchOptions);
+export interface ProjectTextMatch {readonly range:{readonly start:{readonly line:number;readonly character:number};readonly end:{readonly line:number;readonly character:number}};readonly snippet:{readonly text:string;readonly startCharacter:number;readonly leading:boolean;readonly trailing:boolean};}
+export interface ProjectQueryItem {readonly entry:ProjectEntry;readonly match:ProjectTextMatch|null;readonly state:'current'|'changed'|'missing'|'unverified';readonly currentRevision:string|null;}
+export interface ProjectQueryPage {readonly version:1;readonly viewId:string;readonly kind:'tree'|'files'|'text';readonly root:string;readonly queryHash:string;readonly snapshotRevision:string;readonly observedAt:number;readonly checkedAt:number;readonly expiresAt:number;readonly offset:number;readonly total:number;readonly items:readonly ProjectQueryItem[];readonly nextCursor:string|null;/** Completeness of the initial captured query, not the current filesystem. */readonly complete:boolean;readonly truncated:boolean;readonly reasons:readonly ProjectQueryReason[];/** Current rescan differs or was unstable; a page is not a filesystem transaction. */readonly stale:boolean;}
+export function parseProjectQueryOptions(value:unknown):ProjectQueryOptions;
+export function parseProjectQueryCursor(value:unknown):string;
+export function parseProjectQueryPage(value:unknown):ProjectQueryPage;
+export function parseProjectQueryCapabilities(value:unknown):ProjectQueryCapabilities;

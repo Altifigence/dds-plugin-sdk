@@ -60,13 +60,16 @@ test('jobs are disabled by default and on a preconfigured host with another scop
   assert.equal((await second.client.getJobCapabilities()).enabled,false);await assert.rejects(start(second.client),{code:'unsupported'});
 });
 test('HTTP job cancellation terminates a real fixed process backend',async t=>{
-  let backend;
-  const {root,client}=await fixture(t,ctx=>ctx.registerCommand({id:'analyze',title:'Analyze'},async(_,{job})=>job.invokeBackend('wait',{})),{grants:['backend.invoke'],backends:{wait:(input,options)=>backend(input,options)}});
+  let backend;const backendFinished=deferred();
+  const {root,client}=await fixture(t,ctx=>ctx.registerCommand({id:'analyze',title:'Analyze'},async(_,{job})=>job.invokeBackend('wait',{})),{grants:['backend.invoke'],backends:{wait:async(input,options)=>{try{return await backend(input,options);}catch(error){backendFinished.resolve(error.code);throw error;}}}});
   const pidFile=path.join(root,'worker.pid');
   backend=createProcessBackend({executable:process.execPath,args:['-e',"require('node:fs').writeFileSync('worker.pid',String(process.pid));setInterval(()=>{},1000);"],cwd:root,env:{},timeoutMs:60_000});
   const started=await start(client);const pid=await waitFor(async()=>{try{return Number(await fs.readFile(pidFile,'utf8'));}catch{return null;}});
   assert.equal((await client.cancelJob(started.jobId)).state,'cancelled');
   await waitFor(()=>{try{process.kill(pid,0);return false;}catch(failure){if(failure.code==='ESRCH')return true;throw failure;}});
+  // A terminal job and missing PID can precede the backend's close/pipe cleanup.
+  // Await the backend's own cancellation before removing its Windows cwd.
+  assert.equal(await backendFinished.promise,'cancelled');
   assert.equal((await client.getJob(started.jobId)).result,undefined);
 });
 test('server shutdown aborts jobs; a new generation cannot retrieve an old job',async t=>{

@@ -2,6 +2,7 @@ import {watch as nativeWatch} from 'node:fs';
 import {statfs} from 'node:fs/promises';
 import {randomUUID} from 'node:crypto';
 import {nodeWorkspaceContext} from './node-workspace-context.mjs';
+import {registerNodeProject} from './node-project-context.mjs';
 import {workspaceFailure,requireWorkspacePath,exactObject} from './workspace-protocol.mjs';
 import {PROJECT_WATCH_LIMITS,parseProjectWatchOptions,parseProjectWatchEvent} from './project-watch.mjs';
 import {projectContains} from './project-patterns.mjs';
@@ -28,7 +29,7 @@ export async function createNodeProjectWatcher({workspace,roots,fileSystem}={}){
     check(value.signal);
     if(pendingScans>=8)throw workspaceFailure('budget_exceeded','Project scan queue is full');
     pendingScans++;const previous=scanTail;let release;scanTail=new Promise(resolve=>{release=resolve;});
-    try{await previous;check(value.signal);const snapshot=await scanNodeProject(context,parsed,{...value,metrics:metric=>{totals.scans++;totals.bytesRead+=metric.bytesRead;totals.filesHashed+=metric.filesHashed;totals.lastScanMs=metric.durationMs;totals.maxScanMs=Math.max(totals.maxScanMs,metric.durationMs);}});check(value.signal);return snapshot;}
+    try{await previous;check(value.signal);const snapshot=await scanNodeProject(context,parsed,{...value,metrics:metric=>{totals.scans++;totals.bytesRead+=metric.bytesRead;totals.filesHashed+=metric.filesHashed;totals.lastScanMs=metric.durationMs;totals.maxScanMs=Math.max(totals.maxScanMs,metric.durationMs);value.metrics?.(metric);}});check(value.signal);return snapshot;}
     finally{pendingScans--;release();}
   }
   function dispose(reason=workspaceFailure('disposed','Project observation port is disposed')){
@@ -147,5 +148,6 @@ export async function createNodeProjectWatcher({workspace,roots,fileSystem}={}){
     revoke(){dispose(workspaceFailure('permission_denied','Project observation permission was revoked'));},
     dispose(){dispose();},
   };
+  registerNodeProject(port,{check,options,scan,signal:lifetime.signal});
   return Object.freeze(port);
 }
