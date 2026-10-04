@@ -52,7 +52,12 @@ test('file revisions report initial/create/change/delete without replacing edit 
 });
 
 test('file observation is pull-driven, samples coalesced changes and skips equal revisions', {timeout:10000}, async t => {
-  const {root,project,requests} = await fixture(t,undefined,{writable:false});
+  let afterSample;
+  const {root,project,requests} = await fixture(t,undefined,{writable:false},async({request,send})=>{
+    const response=await send();
+    if(request.method==='fs.revision')await afterSample?.();
+    return response;
+  });
   const paths = ['design.sv'];
   const files = project.watchFiles(paths, observation);paths[0]='changed-by-caller.txt';
   const initial = (await files.next()).value;
@@ -63,10 +68,12 @@ test('file observation is pull-driven, samples coalesced changes and skips equal
   const changed = (await files.next()).value;
   assert.equal(changed.kind,'changed');assert.equal(changed.previousRevision,initial.revision);
   assert.equal(changed.revision,(await project.openFile('design.sv')).snapshot.revision);
-  const before = reads(), pending = files.next(); pending.catch(()=>{});
-  await until(()=>reads()>=before+2);
-  await fs.writeFile(path.join(root,'design.sv'),'final change');
+  const before = reads();let unchanged=0;
+  // Change after two completed samples, never during the server's guarded read.
+  afterSample=async()=>{if(++unchanged===2)await fs.writeFile(path.join(root,'design.sv'),'final change');};
+  const pending = files.next(); pending.catch(()=>{});
   assert.equal((await pending).value.previousRevision,changed.revision);
+  assert.ok(reads()>=before+3);
   assert.equal(requests.filter(r=>r.method==='fs.write').length,0);await files.return();
 });
 
@@ -84,11 +91,14 @@ test('file watch inputs are inert and bounded before HTTP work', async t => {
 });
 
 test('includeInitial false establishes a baseline and waits for an actual change', {timeout:10000}, async t => {
-  const {root,project,requests} = await fixture(t);
+  let samples=0;
+  const {root,project} = await fixture(t,undefined,{},async({request,send})=>{
+    const response=await send();
+    if(request.method==='fs.revision'&&++samples===2)await fs.writeFile(path.join(root,'design.sv'),'external change');
+    return response;
+  });
   const files = project.watchFiles(['design.sv'],{...observation,includeInitial:false});
   const pending=files.next();pending.catch(()=>{});
-  await until(()=>requests.filter(r=>r.method==='fs.revision').length>=2);
-  await fs.writeFile(path.join(root,'design.sv'),'external change');
   assert.equal((await pending).value.kind,'changed');await files.return();
 });
 
