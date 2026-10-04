@@ -38,7 +38,9 @@ a Node downloader with interruption, resumption and whole-file SHA-256 verificat
 
 Development on `main`: the next 0.9 release adds optional
 [project observation](docs/PROJECT_WATCH.md) with explicit roots, content-verified
-reconciliation and bounded resync events. Run its Node example from this checkout.
+reconciliation and bounded resync events, plus [project tree and search](docs/PROJECT_QUERIES.md)
+with scoped queries, content revisions and pages that identify external changes.
+Run the Node examples from this checkout.
 
 ## Run your first plugin
 

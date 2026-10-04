@@ -1,0 +1,289 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.8.0/schemas/project-query-options.schema.json",
+  "title": "project-query-options",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "root": {
+          "type": "string",
+          "maxLength": 1024,
+          "$comment": "Empty root requires explicit operator scope."
+        },
+        "include": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 1
+          },
+          "maxItems": 16,
+          "uniqueItems": true,
+          "$comment": "Runtime supports *, ?, and whole-segment ** only."
+        },
+        "exclude": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 1
+          },
+          "maxItems": 16,
+          "uniqueItems": true,
+          "$comment": "Runtime supports *, ?, and whole-segment ** only."
+        },
+        "maxDepth": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
+        },
+        "maxEntries": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        },
+        "maxFileBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16777216
+        },
+        "maxScanBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 67108864
+        },
+        "scanTimeoutMs": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 30000
+        },
+        "kind": {
+          "const": "tree"
+        },
+        "pageSize": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64
+        },
+        "maxResults": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 512
+        },
+        "maxResponseBytes": {
+          "type": "integer",
+          "minimum": 16384,
+          "maximum": 131072
+        },
+        "cursor": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}:[1-9][0-9]{0,2}$"
+        }
+      },
+      "required": [
+        "kind",
+        "root"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "root": {
+          "type": "string",
+          "maxLength": 1024,
+          "$comment": "Empty root requires explicit operator scope."
+        },
+        "include": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 1
+          },
+          "maxItems": 16,
+          "uniqueItems": true,
+          "$comment": "Runtime supports *, ?, and whole-segment ** only."
+        },
+        "exclude": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 1
+          },
+          "maxItems": 16,
+          "uniqueItems": true,
+          "$comment": "Runtime supports *, ?, and whole-segment ** only."
+        },
+        "maxDepth": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
+        },
+        "maxEntries": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        },
+        "maxFileBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16777216
+        },
+        "maxScanBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 67108864
+        },
+        "scanTimeoutMs": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 30000
+        },
+        "kind": {
+          "const": "files"
+        },
+        "pageSize": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64
+        },
+        "maxResults": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 512
+        },
+        "maxResponseBytes": {
+          "type": "integer",
+          "minimum": 16384,
+          "maximum": 131072
+        },
+        "cursor": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}:[1-9][0-9]{0,2}$"
+        },
+        "query": {
+          "type": "string",
+          "maxLength": 256,
+          "minLength": 1
+        },
+        "mode": {
+          "enum": [
+            "literal",
+            "glob"
+          ]
+        },
+        "caseSensitive": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "kind",
+        "root",
+        "query"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "root": {
+          "type": "string",
+          "maxLength": 1024,
+          "$comment": "Empty root requires explicit operator scope."
+        },
+        "include": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 1
+          },
+          "maxItems": 16,
+          "uniqueItems": true,
+          "$comment": "Runtime supports *, ?, and whole-segment ** only."
+        },
+        "exclude": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 1
+          },
+          "maxItems": 16,
+          "uniqueItems": true,
+          "$comment": "Runtime supports *, ?, and whole-segment ** only."
+        },
+        "maxDepth": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
+        },
+        "maxEntries": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        },
+        "maxFileBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 262144
+        },
+        "maxScanBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 67108864
+        },
+        "scanTimeoutMs": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 30000
+        },
+        "kind": {
+          "const": "text"
+        },
+        "pageSize": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64
+        },
+        "maxResults": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 512
+        },
+        "maxResponseBytes": {
+          "type": "integer",
+          "minimum": 16384,
+          "maximum": 131072
+        },
+        "cursor": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}:[1-9][0-9]{0,2}$"
+        },
+        "query": {
+          "type": "string",
+          "maxLength": 256,
+          "minLength": 1
+        },
+        "mode": {
+          "enum": [
+            "literal"
+          ]
+        },
+        "caseSensitive": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "kind",
+        "root",
+        "query"
+      ],
+      "additionalProperties": false
+    }
+  ],
+  "$comment": "Runtime validates protected paths, bounded glob syntax, control-free well-formed queries, scoped roots, and cursor offsets below the result limit."
+}

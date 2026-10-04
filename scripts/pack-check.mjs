@@ -53,6 +53,8 @@ try {
   assert.match(run(process.execPath, ['durable-job-example/run.mjs'], consumer), /killed child, current authorization and no automatic replay verified/);
   await cp(join(installed, 'examples', 'stored-artifacts'), join(consumer, 'stored-artifacts-example'), {recursive:true});
   assert.match(run(process.execPath, ['stored-artifacts-example/run.mjs'], consumer), /source deletion, verified resumed download and explicit retry verified/);
+  await cp(join(installed, 'examples', 'project-query'), join(consumer, 'project-query-example'), {recursive:true});
+  assert.match(run(process.execPath, ['project-query-example/run.mjs'], consumer), /scoped tree, glob, text ranges, stale page and shared observation verified/);
   await cp(join(installed, 'examples', 'project-watch'), join(consumer, 'project-watch-example'), {recursive:true});
   assert.match(run(process.execPath, ['project-watch-example/run.mjs'], consumer), /initial snapshot, atomic save and resource cleanup verified/);
   await cp(join(installed, 'examples', 'workspace-observation'), join(consumer, 'observation-example'), {recursive:true});
@@ -184,7 +186,7 @@ try {
   await cp(join(root, 'tests', 'types', 'jobs-devtools.mts'), join(consumer, 'jobs-devtools.mts'));
   await cp(join(root, 'tests', 'types', 'workspace-observation.mts'), join(consumer, 'workspace-observation.mts'));
   await cp(join(root, 'tests', 'types', 'artifacts.mts'), join(consumer, 'artifacts.mts'));
-  for(const name of ['job-storage.mts','job-history.mts','artifact-storage.mts']) await cp(join(root,'tests','types',name),join(consumer,name));
+  for(const name of ['job-storage.mts','job-history.mts','artifact-storage.mts','project-watch.mts','project-query.mts']) await cp(join(root,'tests','types',name),join(consumer,name));
   run(process.execPath, [join(installed, 'examples', 'binary-artifacts', 'run.mjs')], consumer);
   await cp(join(root, 'tests', 'types', 'tsconfig.json'), join(consumer, 'tsconfig.json'));
   const typescript = join(root, 'node_modules', 'typescript', 'bin', 'tsc');

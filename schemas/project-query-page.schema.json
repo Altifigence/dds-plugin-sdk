@@ -1,0 +1,481 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.8.0/schemas/project-query-page.schema.json",
+  "title": "project-query-page",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "viewId": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+    },
+    "kind": {
+      "enum": [
+        "tree",
+        "files",
+        "text"
+      ]
+    },
+    "root": {
+      "type": "string",
+      "maxLength": 1024,
+      "$comment": "Empty root requires explicit operator scope."
+    },
+    "queryHash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "snapshotRevision": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "observedAt": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "checkedAt": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "expiresAt": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "offset": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 512
+    },
+    "total": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 512
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "entry": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string",
+                "maxLength": 1024,
+                "minLength": 1,
+                "$comment": "Runtime applies workspace-relative protected-path and Windows-component rules."
+              },
+              "kind": {
+                "enum": [
+                  "file",
+                  "directory"
+                ]
+              },
+              "size": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "revision": {
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "fingerprint": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              }
+            },
+            "required": [
+              "path",
+              "kind",
+              "size",
+              "revision",
+              "fingerprint"
+            ],
+            "additionalProperties": false,
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "kind": {
+                      "const": "directory"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "size": {
+                      "const": 0
+                    },
+                    "revision": {
+                      "type": "null"
+                    }
+                  }
+                }
+              }
+            ],
+            "$comment": "For hashed files fingerprint equals the content revision. Otherwise it is opaque metadata, not a content checksum."
+          },
+          "match": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "range": {
+                    "type": "object",
+                    "properties": {
+                      "start": {
+                        "type": "object",
+                        "properties": {
+                          "line": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 262144
+                          },
+                          "character": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 262144
+                          }
+                        },
+                        "required": [
+                          "line",
+                          "character"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "end": {
+                        "type": "object",
+                        "properties": {
+                          "line": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 262144
+                          },
+                          "character": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 262144
+                          }
+                        },
+                        "required": [
+                          "line",
+                          "character"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": [
+                      "start",
+                      "end"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "snippet": {
+                    "type": "object",
+                    "properties": {
+                      "text": {
+                        "type": "string",
+                        "maxLength": 512
+                      },
+                      "startCharacter": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 262144
+                      },
+                      "leading": {
+                        "type": "boolean"
+                      },
+                      "trailing": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "text",
+                      "startCharacter",
+                      "leading",
+                      "trailing"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "range",
+                  "snippet"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "state": {
+            "enum": [
+              "current",
+              "changed",
+              "missing",
+              "unverified"
+            ]
+          },
+          "currentRevision": {
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "entry",
+          "match",
+          "state",
+          "currentRevision"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 64
+    },
+    "nextCursor": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}:[1-9][0-9]{0,2}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "complete": {
+      "type": "boolean"
+    },
+    "truncated": {
+      "type": "boolean"
+    },
+    "reasons": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "entry_limit",
+          "visit_limit",
+          "depth_limit",
+          "file_bytes",
+          "scan_bytes",
+          "snapshot_bytes",
+          "scan_timeout",
+          "unsafe_entries",
+          "unstable",
+          "result_limit",
+          "result_bytes",
+          "binary",
+          "invalid_utf8"
+        ]
+      },
+      "maxItems": 13,
+      "uniqueItems": true
+    },
+    "stale": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "version",
+    "viewId",
+    "kind",
+    "root",
+    "queryHash",
+    "snapshotRevision",
+    "observedAt",
+    "checkedAt",
+    "expiresAt",
+    "offset",
+    "total",
+    "items",
+    "nextCursor",
+    "complete",
+    "truncated",
+    "reasons",
+    "stale"
+  ],
+  "additionalProperties": false,
+  "x-maxUtf8Bytes": 131072,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "complete": {
+            "const": true
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "truncated": {
+            "const": false
+          },
+          "reasons": {
+            "maxItems": 0
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "truncated": {
+            "const": true
+          },
+          "reasons": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "text"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "items": {
+            "items": {
+              "properties": {
+                "entry": {
+                  "properties": {
+                    "kind": {
+                      "const": "file"
+                    },
+                    "revision": {
+                      "type": "string",
+                      "pattern": "^[a-f0-9]{64}$"
+                    }
+                  }
+                },
+                "match": {
+                  "type": "object",
+                  "properties": {
+                    "range": {
+                      "type": "object",
+                      "properties": {
+                        "start": {
+                          "type": "object",
+                          "properties": {
+                            "line": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 262144
+                            },
+                            "character": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 262144
+                            }
+                          },
+                          "required": [
+                            "line",
+                            "character"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "end": {
+                          "type": "object",
+                          "properties": {
+                            "line": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 262144
+                            },
+                            "character": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 262144
+                            }
+                          },
+                          "required": [
+                            "line",
+                            "character"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "start",
+                        "end"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "snippet": {
+                      "type": "object",
+                      "properties": {
+                        "text": {
+                          "type": "string",
+                          "maxLength": 512
+                        },
+                        "startCharacter": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 262144
+                        },
+                        "leading": {
+                          "type": "boolean"
+                        },
+                        "trailing": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "text",
+                        "startCharacter",
+                        "leading",
+                        "trailing"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "range",
+                    "snippet"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "items": {
+            "items": {
+              "properties": {
+                "match": {
+                  "type": "null"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$comment": "Runtime checks cursor/view/offset, sorted unique matches, scoped entries, valid single-line UTF-16 ranges inside snippets, state/revision agreement and timestamp order. Captured completeness is distinct from current revalidation."
+}

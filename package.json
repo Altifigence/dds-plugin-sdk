@@ -88,6 +88,14 @@
     "./project-watch-node": {
       "types": "./src/project-watch-node.d.mts",
       "import": "./src/project-watch-node.mjs"
+    },
+    "./project-query": {
+      "types": "./src/project-query.d.mts",
+      "import": "./src/project-query.mjs"
+    },
+    "./project-query-node": {
+      "types": "./src/project-query-node.d.mts",
+      "import": "./src/project-query-node.mjs"
     }
   },
   "bin": {
@@ -130,7 +138,9 @@
     "example:artifacts": "node examples/binary-artifacts/run.mjs",
     "benchmark:artifacts": "node scripts/benchmark-artifacts.mjs",
     "example:project-watch": "node examples/project-watch/run.mjs",
-    "benchmark:project-watch": "node scripts/benchmark-project-watch.mjs"
+    "benchmark:project-watch": "node scripts/benchmark-project-watch.mjs",
+    "example:project-query": "node examples/project-query/run.mjs",
+    "benchmark:project-query": "node scripts/benchmark-project-query.mjs"
   },
   "devDependencies": {
     "typescript": "5.9.3"
