@@ -17,7 +17,9 @@ async function fixture(t,{installed=true}={}) {
   await initPlugin(directory,{publisher:'author',id:'sample-plugin'});
   let linked;
   if(installed){const parent=path.join(directory,'node_modules','@altifigence');await fs.mkdir(parent,{recursive:true});linked=path.join(parent,'dds-plugin-sdk');await fs.symlink(sdkRoot,linked,process.platform==='win32'?'junction':'dir');}
-  t.after(async()=>{if(linked)await fs.unlink(linked);assert.equal(path.dirname(root),await fs.realpath(os.tmpdir()));await fs.rm(root,{recursive:true});});
+  // Windows can report EBUSY during final directory removal even after the
+  // owned-process exit assertions pass. Bound cleanup retries without skipping them.
+  t.after(async()=>{if(linked)await fs.unlink(linked);assert.equal(path.dirname(root),await fs.realpath(os.tmpdir()));await fs.rm(root,{recursive:true,maxRetries:10,retryDelay:100});});
   return{root,directory};
 }
 async function gone(pid) {for(let i=0;i<100;i++){try{process.kill(pid,0);}catch(failure){if(failure.code==='ESRCH')return;throw failure;}await delay(20);}throw Error('Dev child survived cleanup');}
