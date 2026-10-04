@@ -1,5 +1,8 @@
 # API reference — 0.7.0
 
+The main branch adds optional [job storage](JOB_STORAGE.md) for the 0.8 cycle;
+the 0.7 tagged archive retains the API described below.
+
 Workspace client helpers include connection-bound project edit sessions,
 `project.watchFiles(paths, options)`, `client.watchJob(jobId, options)` and
 `client.waitForJob(jobId, options)`. See [observation](OBSERVATION.md) for event

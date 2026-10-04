@@ -56,6 +56,14 @@
       "types": "./src/artifacts.d.mts",
       "import": "./src/artifacts.mjs"
     },
+    "./job-storage": {
+      "types": "./src/job-storage.d.mts",
+      "import": "./src/job-storage.mjs"
+    },
+    "./job-storage-node": {
+      "types": "./src/job-storage-node.d.mts",
+      "import": "./src/job-storage-node.mjs"
+    },
     "./devtools": {
       "types": "./src/devtools.d.mts",
       "import": "./src/devtools.mjs"
@@ -95,6 +103,7 @@
     "example:project": "node examples/project-session/run.mjs",
     "example:verify": "node examples/release-verification/run.mjs",
     "example:jobs": "node examples/command-jobs/run.mjs",
+    "example:durable-jobs": "node examples/durable-jobs/run.mjs",
     "example:observe": "node examples/workspace-observation/run.mjs",
     "benchmark:files": "node scripts/benchmark-file-reads.mjs",
     "example:artifacts": "node examples/binary-artifacts/run.mjs",

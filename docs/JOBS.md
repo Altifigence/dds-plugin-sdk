@@ -1,5 +1,8 @@
 # Long-running command jobs
 
+For opt-in durable checkpoints and restart receipts in 0.8 development, see
+[job storage](JOB_STORAGE.md). The v1 live job contract below is unchanged.
+
 SDK 0.5.0 also supplies [`watchJob()` and `waitForJob()`](OBSERVATION.md) over these
 existing requests. They drain event pages, support caller cancellation and
 explicit cursor resumption, and never start or cancel the underlying command.

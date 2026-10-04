@@ -2,17 +2,20 @@ import {parseJsonValue, parseScope, parseWorkspacePath, parseWorkspaceRead} from
 import {ErrorCode, PluginSdkError} from './limits.mjs';
 import {JOB_LIMITS, parseJobId, parseJobOptions, parseJobProgress, parseJobArtifact, parseJobEvent, parseJobSnapshot, parseJobEvents} from './jobs.mjs';
 import {BINARY_ARTIFACT_LIMITS, parseBinaryArtifact, parseBinaryArtifactSource, parseBinaryArtifactList, parseBinaryArtifactRange, parseBinaryArtifactChunk, decodeBinaryArtifactData} from './artifacts.mjs';
+import {createJobStorageSession} from './job-storage-session.mjs';
 
 const failure = code => new PluginSdkError(code, 'Job operation failed');
 const canonical = value => JSON.stringify(value, function (_key, v) {return v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.keys(v).sort().map(key => [key, v[key]])) : v;});
 const hash = async text => [...new Uint8Array(await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)))].map(v => v.toString(16).padStart(2, '0')).join('');
 
 /** Host-owned bounded jobs. Cancellation is cooperative; unsettled work keeps its slot. */
-export function createJobRegistry({scope, enabled = false, binaryArtifacts = false}) {
+export function createJobRegistry({scope, enabled = false, binaryArtifacts = false, jobStorage}) {
   scope = parseScope(scope); if (typeof enabled !== 'boolean' || typeof binaryArtifacts !== 'boolean') throw failure(ErrorCode.INVALID_CONTRACT);
   const records = new Map(); let closed = false, active = 0, binaryOperations = 0;
+  if (jobStorage !== undefined && !enabled) throw failure(ErrorCode.INVALID_CONTRACT);
+  const storage = createJobStorageSession(scope, jobStorage, snapshot);
   const assertOpen = () => {if (closed) throw failure(ErrorCode.DISPOSED); if (!enabled) throw failure(ErrorCode.CAPABILITY_UNAVAILABLE);};
-  const collect = () => {const cutoff = Date.now() - JOB_LIMITS.retentionMs; for (const [id, record] of records) if (record.settled && record.state !== 'running' && record.updatedAt <= cutoff) records.delete(id);};
+  const collect = () => {const cutoff = Date.now() - JOB_LIMITS.retentionMs; for (const [id, record] of records) if (record.settled && record.state !== 'running' && record.updatedAt <= cutoff) {records.delete(id); storage.forget(record);}};
   const find = id => {assertOpen(); parseJobId(id); collect(); const record = records.get(id); if (!record) throw failure(ErrorCode.CAPABILITY_UNAVAILABLE); record.assertActive(); return record;};
   function snapshot(r) {
     return parseJobSnapshot({protocolVersion: 1, jobId: r.jobId, scope, pluginId: r.pluginId, commandId: r.commandId, state: r.state, startedAt: r.startedAt, updatedAt: r.updatedAt, timeoutMs: r.timeoutMs, progress: r.progress, artifacts: [...r.artifacts.values()], lastSequence: r.sequence, ...(r.state === 'succeeded' ? {result: r.result} : {}), ...(r.error ? {error: {code: r.error}} : {})});
@@ -22,6 +25,7 @@ export function createJobRegistry({scope, enabled = false, binaryArtifacts = fal
     const bytes = new TextEncoder().encode(JSON.stringify(event)).byteLength;
     r.sequence++; r.updatedAt = event.at; r.events.push({event, bytes}); r.eventBytes += bytes;
     while (r.events.length > JOB_LIMITS.events || r.eventBytes > JOB_LIMITS.eventBytes) r.eventBytes -= r.events.shift().bytes;
+    storage.mark(r);
   }
   function terminal(r, state, code) {
     if (r.state !== 'running') return;
@@ -52,15 +56,21 @@ export function createJobRegistry({scope, enabled = false, binaryArtifacts = fal
   return Object.freeze({
     capabilities() {if (closed) throw failure(ErrorCode.DISPOSED); return Object.freeze({protocolVersion: 1, enabled, limits: JOB_LIMITS});},
     binaryCapabilities() {if (closed) throw failure(ErrorCode.DISPOSED); return Object.freeze({protocolVersion: 1, enabled: enabled && binaryArtifacts, limits: BINARY_ARTIFACT_LIMITS});},
-    start({pluginId, commandId, input, options, signal, assertActive, assertRead, execute, readFile, captureBinaryFile, readBinaryChunk, invokeBackend, registerController}) {
+    storageCapabilities() {if (closed) throw failure(ErrorCode.DISPOSED); return storage.capabilities();},
+    flushStorage() {return storage.flush();},
+    recover(pluginId, jobId, grants) {assertOpen(); return storage.recover(pluginId, jobId, grants, records.has(jobId));},
+    start({pluginId, commandId, input, options, grants = [], signal, assertActive, assertRead, execute, readFile, captureBinaryFile, readBinaryChunk, invokeBackend, registerController}) {
       assertOpen(); assertActive(); options = parseJobOptions(options); input = parseJsonValue(input); collect();
       const signature = canonical({pluginId, commandId, input, timeoutMs: options.timeoutMs});
       const old = records.get(options.jobId);
       if (old) {if (old.signature !== signature) throw failure(ErrorCode.CONFLICT); old.assertActive(); return snapshot(old);}
+      // A prior generation's ID is history, never an instruction to re-execute.
+      if (storage.has(options.jobId)) throw failure(ErrorCode.CONFLICT);
       if (active >= JOB_LIMITS.concurrent || records.size >= JOB_LIMITS.retained) throw failure(ErrorCode.BUDGET_EXCEEDED);
       if (signal.aborted) throw failure(ErrorCode.DISPOSED);
       const now = Date.now(), controller = new AbortController();
       const r = {...options, pluginId, commandId, signature, assertActive, assertRead, readFile, readBinaryChunk, controller, state: 'running', startedAt: now, updatedAt: now, progress: null, artifacts: new Map(), binaryArtifacts: new Map(), pendingArtifacts: new Set(), operations: new Set(), events: [], eventBytes: 0, sequence: 0, settled: false};
+      storage.register(r, grants);
       records.set(r.jobId, r); active++; emit(r, 'state', {state: 'running'});
       const onOwnerAbort = () => controller.abort(failure(ErrorCode.DISPOSED));
       const onAbort = () => {const code = controller.signal.reason instanceof PluginSdkError ? controller.signal.reason.code : ErrorCode.CANCELLED; terminal(r, code === ErrorCode.BUDGET_EXCEEDED ? 'timed_out' : 'cancelled', code);};
@@ -98,7 +108,7 @@ export function createJobRegistry({scope, enabled = false, binaryArtifacts = fal
         invokeBackend(id, value) {return track(r, async () => {live(r); const result = await invokeBackend(id, parseJsonValue(value), {signal: controller.signal, job}); live(r); return parseJsonValue(result);});},
       });
       // Keep this slot until the actual provider settles, even after cancellation.
-      Promise.resolve().then(() => {live(r); return execute(input, {signal: controller.signal, job});}).then(async result => {
+      Promise.resolve().then(async () => {if (storage.enabled) await storage.beforeExecute(r); live(r); return execute(input, {signal: controller.signal, job});}).then(async result => {
         await drain(r); live(r); const parsed = parseJsonValue(result);
         // Include metadata overhead in the snapshot budget before committing success.
         const candidate = {...r, state: 'succeeded', result: parsed}; snapshot(candidate);
@@ -107,7 +117,7 @@ export function createJobRegistry({scope, enabled = false, binaryArtifacts = fal
         if (r.state === 'running') terminal(r, 'failed', error instanceof PluginSdkError ? error.code : ErrorCode.PROVIDER_FAILED);
       }).finally(async () => {
         await drain(r);
-        active--; r.settled = true; clearTimeout(r.timer); signal.removeEventListener('abort', onOwnerAbort); controller.signal.removeEventListener('abort', onAbort); unregister();
+        active--; r.settled = true; storage.mark(r); storage.settle(r); clearTimeout(r.timer); signal.removeEventListener('abort', onOwnerAbort); controller.signal.removeEventListener('abort', onAbort); unregister();
       });
       return snapshot(r);
     },

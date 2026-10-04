@@ -1,6 +1,7 @@
 import { LIMITS, ErrorCode } from './limits.mjs';
 import {JOB_LIMITS, JOB_STATES} from './jobs.mjs';
 import {BINARY_ARTIFACT_LIMITS} from './artifacts.mjs';
+import {JOB_STORE_LIMITS} from './job-storage.mjs';
 import { SEMVER_PATTERN } from './patterns.mjs';
 import { THEME_SCHEMA } from './themes.mjs';
 import {WORKSPACE_LIMITS} from './workspace-protocol.mjs';
@@ -79,7 +80,15 @@ const fileRevision = {path: {...text(1024), $comment: 'Runtime enforces the prot
 const binaryArtifact = object({...jobArtifact.properties, byteLength: integer(BINARY_ARTIFACT_LIMITS.fileBytes)}, ['id', 'path', 'revision', 'byteLength']);
 const binaryReference = {jobId, scope, artifact: binaryArtifact};
 const binaryChunk = {offset: integer(BINARY_ARTIFACT_LIMITS.fileBytes), nextOffset: integer(BINARY_ARTIFACT_LIMITS.fileBytes), eof: {type: 'boolean'}, data: {type: 'string', maxLength: Math.ceil(BINARY_ARTIFACT_LIMITS.chunkBytes / 3) * 4, contentEncoding: 'base64', pattern: '^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$'}, sha256: {...text(64), pattern: '^[a-f0-9]{64}$'}};
+const storageSha = {...text(64), pattern: '^[a-f0-9]{64}$'};
+const storeIdentity = {schemaVersion: {const: 1}, storeId: jobId, workspaceId: text(128), workspaceIdentity: storageSha};
+const storeLimits = object(Object.fromEntries(Object.entries(JOB_STORE_LIMITS).map(([key, maximum]) => [key, ['recordBytes', 'pendingWrites'].includes(key) ? {const: maximum} : integer(maximum, 1)])));
+const storedJob = {...object({...storeIdentity, pluginArtifactSha256: storageSha, requestSha256: storageSha, revision: integer(Number.MAX_SAFE_INTEGER, 1), savedAt: integer(Number.MAX_SAFE_INTEGER), expiresAt: integer(Number.MAX_SAFE_INTEGER, 1), settled: {type: 'boolean'}, contentPolicy: {enum: ['metadata-only', 'host-redacted']}, grants: manifestV2.properties.permissions, snapshot: {$ref: base + 'job-snapshot.schema.json'}, events: list(jobEvent, JOB_LIMITS.events, 1), binaryArtifacts: list(binaryArtifact, JOB_LIMITS.artifacts), attemptOf: jobId}, [...Object.keys(storeIdentity), 'pluginArtifactSha256', 'requestSha256', 'revision', 'savedAt', 'expiresAt', 'settled', 'contentPolicy', 'grants', 'snapshot', 'events', 'binaryArtifacts']), 'x-maxUtf8Bytes': JOB_STORE_LIMITS.recordBytes, $comment: 'Runtime additionally enforces scope and identity, chronological contiguous events, shared artifact IDs, retention bounds, immutable metadata-only redaction and matching terminal state.'};
 export const SCHEMAS = Object.freeze({
+  'job-store-identity': define('job-store-identity', object(storeIdentity)),
+  'stored-job': define('stored-job', storedJob),
+  'job-storage-capabilities': define('job-storage-capabilities', {oneOf: [true, false].map(enabled => object({protocolVersion: {const: 1}, enabled: {const: enabled}, identity: enabled ? object(storeIdentity) : {type: 'null'}, limits: storeLimits}))}),
+  'job-recovery': define('job-recovery', {oneOf: ['live', 'completed', 'interrupted', 'expired', 'missing', 'corrupt', 'unsupported'].map(disposition => object({protocolVersion: {const: 1}, jobId, scope, storeId: jobId, disposition: {const: disposition}, unrecordedTail: {const: disposition === 'completed' ? 'none' : 'unknown'}, record: ['live', 'completed', 'interrupted'].includes(disposition) ? storedJob : {type: 'null'}})), $comment: 'Runtime checks the record job/store/workspace binding and settled state. The current response scope does not replace the recorded original scope.'}),
   'binary-artifact': define('binary-artifact', binaryArtifact),
   'binary-artifact-reference': define('binary-artifact-reference', object(binaryReference)),
   'binary-artifact-list': define('binary-artifact-list', object({jobId, scope, artifacts: list(binaryArtifact, BINARY_ARTIFACT_LIMITS.artifacts)})),
