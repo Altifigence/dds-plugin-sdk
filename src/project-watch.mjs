@@ -1,4 +1,4 @@
-import {copyWorkspaceJson, exactObject, requireWorkspacePath, requireSha256, requireUuid, workspaceFailure} from './workspace-protocol.mjs';
+import {copyWorkspaceJson, exactObject, requireWorkspacePath, requireSha256, requireUuid, workspaceFailure} from './workspace-values.mjs';
 
 export const PROJECT_WATCH_LIMITS = Object.freeze({
   observers:4, nativeHandles:128, entries:1_000, visited:10_000, depth:32,
@@ -8,12 +8,21 @@ export const PROJECT_WATCH_LIMITS = Object.freeze({
   maxDebounceMs:1_000, defaultDebounceMs:50, maxScanMs:30_000,
 });
 export const PROJECT_SCAN_REASONS = Object.freeze(['entry_limit','visit_limit','depth_limit','file_bytes','scan_bytes','snapshot_bytes','scan_timeout','unsafe_entries','unstable']);
-export const PROJECT_RESYNC_REASONS = Object.freeze(['initial_changed','scan_changed','scan_incomplete','scan_recovered','native_unavailable','native_unknown','native_overflow','watcher_limit','consumer_overflow','change_limit']);
+export const PROJECT_RESYNC_REASONS = Object.freeze(['initial_changed','scan_changed','scan_incomplete','scan_recovered','native_unavailable','native_unknown','native_overflow','watcher_limit','consumer_overflow','change_limit','cursor_gap','revision_mismatch']);
 const invalid = () => {throw workspaceFailure('invalid_request','Invalid project observation contract');};
 function projectInteger(value, maximum, minimum=0) {if(!Number.isSafeInteger(value)||value<minimum||value>maximum)invalid();return value;}
 const nullableSha = value => value===null ? null : requireSha256(value);
 const list = (value,max) => {if(!Array.isArray(value)||value.length>max)invalid();return value;};
 import {projectContains} from './project-patterns.mjs';
+
+export function parseProjectWatchCapabilities(input){
+  const value=copyWorkspaceJson(input);
+  exactObject(value,['version','supported','platform','fileSystem','filesystemType','mode','rename','roots','limits']);
+  if(value.version!==1||value.supported!==true||!['win32','linux'].includes(value.platform)||value.fileSystem!=='local'||typeof value.filesystemType!=='string'||!/^\d{1,20}$/.test(value.filesystemType)||value.mode!=='native-hints-with-reconciliation'||value.rename!=='delete-create')invalid();
+  list(value.roots,16);if(!value.roots.length||new Set(value.roots).size!==value.roots.length)invalid();for(const root of value.roots)requireWorkspacePath(root,true);
+  exactObject(value.limits,Object.keys(PROJECT_WATCH_LIMITS));for(const [key,limit] of Object.entries(PROJECT_WATCH_LIMITS))if(value.limits[key]!==limit)invalid();
+  return Object.freeze({...value,roots:Object.freeze([...value.roots]),limits:PROJECT_WATCH_LIMITS});
+}
 
 /** Deliberately small glob language: *, ?, and whole-segment **; no regex. */
 export function parseProjectPatterns(input) {

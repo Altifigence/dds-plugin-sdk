@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.9.0 — 2026-10-04
+
+- Add operator-scoped Node project observation with bounded native hints, content
+  reconciliation, initial snapshots, cursors and explicit full-view resync events.
+- Add paged tree, filename/glob and literal text queries. Captured content hashes,
+  UTF-16 ranges and snippets remain stable while later pages identify changed,
+  missing or unverified files. Byte, time, result and cursor limits stay explicit.
+- Add optional authenticated `projects.*` HTTP methods, subscription leases,
+  snapshot verification and client/project helpers. Reconnect starts a new view;
+  observation never overwrites edit snapshots or caller drafts. Known older hosts
+  report projects unavailable without unknown probes or broader file queries.
+- Include typed contracts, ten project schemas, installed consumer examples and a
+  local browser scenario covering creation, search, external edit, CAS conflict,
+  same-scope query refresh, resource cleanup and reconnect.
+- Verify existing process-backend cleanup before removing a cancelled job's
+  temporary working directory on Windows.
+- New plugin archives declare `>=0.9.0 <0.10.0`; the verifier preserves exact
+  0.3/0.4/0.5/0.6/0.7/0.8 package metadata without widening their peer ranges.
+
 ## 0.8.0 — 2026-10-04
 
 - Add bounded history queries with snapshot cursors, current-grant filtering and

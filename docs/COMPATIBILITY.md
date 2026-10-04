@@ -11,7 +11,7 @@
 | Browser-only DDS host | Native workspace transport is unavailable |
 | Language providers | Diagnostics plus completion, hover, definition, references and document symbols in SDK hosts since 0.3.0; no released DDS editor bridge is implied |
 | Project edit sessions | Client helpers in 0.3.0 over unchanged workspace protocol v1, including 0.2.x servers |
-| Download verification | Node API/CLI since 0.3.1; 0.8.0 accepts exact 0.3.x, 0.4.x, 0.5.x, 0.6.x, 0.7.x and 0.8.x package metadata; no extraction, code execution or publisher authentication |
+| Download verification | Node API/CLI since 0.3.1; 0.9.0 accepts exact 0.3.x, 0.4.x, 0.5.x, 0.6.x, 0.7.x, 0.8.x and 0.9.x package metadata; no extraction, code execution or publisher authentication |
 | Development tools | `init`, `doctor`, `dev` since 0.4.0; local Node tools, explicit trusted-code execution |
 | Command jobs | Opt-in SDK host/client extension since 0.4.0; progress/logs/UTF-8 artifacts; v1 hello unchanged |
 | File and job observation | Client helpers since 0.5.0; 0.6 uses revision reads when supported; job reads need enabled 0.4+ hosts |
@@ -98,3 +98,14 @@ New 0.8 archives declare `>=0.8.0 <0.9.0`. Verification preserves exact
 0.3/0.4/0.5/0.6/0.7 metadata. Validate and repack a new plugin version for 0.8;
 verification alone does not widen installation ranges. See [storage](JOB_STORAGE.md),
 [history](JOB_HISTORY.md) and [retained results](ARTIFACT_STORAGE.md).
+
+0.9.0 adds optional scoped project observation, tree/search and separate
+`projects.*` HTTP methods. Existing v1 hello, files, jobs, storage and snapshot
+methods retain their shapes. Known pre-0.9 SDK hosts receive no project discovery
+probe and report unsupported; no broader directory or command fallback occurs.
+Reconnect requires new project/watch sessions and a fresh query when relevant.
+See [project tools](PROJECT_TOOLS.md) for leases, resync and preserved drafts.
+
+New 0.9 plugin archives declare `>=0.9.0 <0.10.0`. Verification also preserves
+exact 0.8 and earlier metadata; installation still requires publisher validation
+and a newly packed plugin version for the selected SDK line.

@@ -1,4 +1,4 @@
-# API reference — 0.8.0
+# API reference — 0.9.0
 
 SDK 0.8 adds optional [job storage](JOB_STORAGE.md), [history and retry](JOB_HISTORY.md)
 and [stored result files](ARTIFACT_STORAGE.md). Existing v1 response shapes remain valid.
@@ -80,7 +80,7 @@ license eligibility or agreement acceptance. See [LICENSING](LICENSING.md).
 
 | Activation context member | Behavior |
 | --- | --- |
-| `host` | `{id: 'test-host' \| 'workspace-host', version: '0.8.0', protocolVersion: 1}` |
+| `host` | `{id: 'test-host' \| 'workspace-host', version: '0.9.0', protocolVersion: 1}` |
 | `pluginId`, `scope` | Manifest ID and opaque host `{projectId, sessionId}` |
 | `grants` | Frozen intersection of host grants and manifest permissions |
 | `signal` | Aborted on deactivation, host disposal or activation timeout |
@@ -280,3 +280,18 @@ adds `artifactStorageCapabilities`, `listStoredJobArtifacts`,
 corresponding capability/list/get/chunk methods and `readStoredJobArtifactText`;
 `/workspace-node` exports `downloadStoredJobArtifact`. Exact parameters and
 limits are in the declarations and [stored-result guide](ARTIFACT_STORAGE.md).
+
+## Scoped project tools (SDK 0.9.0)
+
+`/project-watch` and `/project-query` export pure contracts, validators and limits.
+`/project-watch-node` exports `createNodeProjectWatcher`, and `/project-query-node`
+exports `createNodeProjectQueries` sharing that watcher's scope and lifetime.
+The Node workspace server optionally accepts `projects:{roots,fileSystem:'local'}`.
+
+The HTTP client and `createWorkspaceProject` expose `getProjectCapabilities`,
+`getProjectSnapshot`, `listTree`, `searchFiles`, `searchText`, `releaseProjectQuery`
+and `watchProject`. `/workspace-client` also exports the transport limits and
+capability/poll validators. The server's `revokeProjects()` closes project resources
+and requires a new generation to re-enable them. Edit sessions retain their own
+snapshots. See [project tools](PROJECT_TOOLS.md), [observation](PROJECT_WATCH.md)
+and [tree/search](PROJECT_QUERIES.md).

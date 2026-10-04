@@ -1,8 +1,7 @@
-# Project observation (0.9 development)
+# Project observation (SDK 0.9.0)
 
-This optional Node port is implemented on `main` for the 0.9 release. Install a
-published release only after its release notes include project observation. It
-does not change the existing explicit-file `watchFiles()` API or grant a plugin
+This optional Node port is available in SDK 0.9.0, with
+[HTTP/client integration](PROJECT_TOOLS.md). It does not change the existing explicit-file `watchFiles()` API or grant a plugin
 access to a wider workspace. DDS product UI integration is a separate consumer.
 
 ```js

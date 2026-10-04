@@ -12,7 +12,7 @@ Install the released SDK in a tools directory, then create a sibling project:
 mkdir dds-tools
 cd dds-tools
 npm init -y
-npm install --ignore-scripts --save-exact https://github.com/Altifigence/dds-plugin-sdk/releases/download/v0.8.0/altifigence-dds-plugin-sdk-0.8.0.tgz
+npm install --ignore-scripts --save-exact https://github.com/Altifigence/dds-plugin-sdk/releases/download/v0.9.0/altifigence-dds-plugin-sdk-0.9.0.tgz
 npx --no-install dds-plugin init ../my-plugin --id my-plugin --publisher example
 cd ../my-plugin
 npm install --ignore-scripts

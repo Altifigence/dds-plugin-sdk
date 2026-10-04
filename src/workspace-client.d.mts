@@ -6,12 +6,24 @@ import type {JobStorageCapabilities,JobRecovery} from './job-storage.mjs';
 import type {JobHistoryQuery,JobHistoryPage} from './job-history.mjs';
 import type {ArtifactStorageCapabilities,StoredArtifactList,StoredArtifactReference,StoredArtifactChunk} from './artifact-storage.mjs';
 import type {WorkspaceJobWatchOptions,WorkspaceObserver,WorkspaceJobUpdate} from './workspace-observation.mjs';
+import type {ProjectWatchOptions,ProjectWatchEvent,ProjectSnapshot} from './project-watch.mjs';
+import type {ProjectTreeOptions,ProjectFileSearchOptions,ProjectTextSearchOptions,ProjectQueryPage} from './project-query.mjs';
+import type {WorkspaceProjectCapabilities,WorkspaceProjectWatchOptions} from './workspace-project-contracts.mjs';
+export {WORKSPACE_PROJECT_LIMITS,parseWorkspaceProjectCapabilities,parseWorkspaceProjectPoll} from './workspace-project-contracts.mjs';
+export type {WorkspaceProjectCapabilities,WorkspaceProjectPoll,WorkspaceProjectWatchOptions} from './workspace-project-contracts.mjs';
 export {createWorkspaceProject, applyTextEdits} from './workspace-project.mjs';
 export {WORKSPACE_OBSERVATION_LIMITS} from './workspace-observation.mjs';
 export type {WorkspaceObservationOptions,WorkspaceFileWatchOptions,WorkspaceJobWatchOptions,WorkspaceFileChange,WorkspaceJobUpdate,WorkspaceObserver} from './workspace-observation.mjs';
 export type {TextEdit, EditSnapshot, WorkspaceEditSession, WorkspaceProject} from './workspace-project.mjs';
 export interface WorkspaceRequestOptions {readonly signal?:AbortSignal;readonly timeoutMs?:number;}
 export interface WorkspaceClient {
+  getProjectCapabilities(options?:WorkspaceRequestOptions):Promise<WorkspaceProjectCapabilities>;
+  getProjectSnapshot(input:ProjectWatchOptions,options?:WorkspaceRequestOptions):Promise<ProjectSnapshot>;
+  listTree(input:ProjectTreeOptions,options?:WorkspaceRequestOptions):Promise<ProjectQueryPage>;
+  searchFiles(input:ProjectFileSearchOptions,options?:WorkspaceRequestOptions):Promise<ProjectQueryPage>;
+  searchText(input:ProjectTextSearchOptions,options?:WorkspaceRequestOptions):Promise<ProjectQueryPage>;
+  releaseProjectQuery(cursor:string,options?:WorkspaceRequestOptions):Promise<boolean>;
+  watchProject(input:ProjectWatchOptions,options?:WorkspaceProjectWatchOptions):AsyncIterableIterator<ProjectWatchEvent>;
   readonly binding:WorkspaceHello|undefined;
   connect(options?:WorkspaceRequestOptions):Promise<WorkspaceHello>;
   request(method:WorkspaceMethod,params:Readonly<Record<string,Json>>,options?:WorkspaceRequestOptions):Promise<Json>;

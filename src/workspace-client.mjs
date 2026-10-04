@@ -6,6 +6,8 @@ import {JOB_STORE_LIMITS} from './job-storage.mjs';
 import {parseJobHistoryQuery} from './job-history.mjs';
 import {ARTIFACT_STORE_LIMITS,parseStoredArtifactReference} from './artifact-storage.mjs';
 import {registerObservationClient, watchWorkspaceJob, waitForWorkspaceJob} from './workspace-observation.mjs';
+import {createWorkspaceProjectClient} from './workspace-project-client.mjs';
+export {WORKSPACE_PROJECT_LIMITS,parseWorkspaceProjectCapabilities,parseWorkspaceProjectPoll} from './workspace-project-contracts.mjs';
 export {createWorkspaceProject, applyTextEdits} from './workspace-project.mjs';
 export {WORKSPACE_OBSERVATION_LIMITS} from './workspace-observation.mjs';
 
@@ -85,14 +87,15 @@ export function createWorkspaceClient({url, token, fetch: transport = globalThis
       if (response.body) await response.body.cancel().catch(() => {});
     }
   }
-  async function cancelRemote(requestId, captured) {
+  async function detachedRequest(method,params,captured) {
     if (!captured || closed) return;
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 1_000);
-    try { await send({version: 1, requestId: `${instance}-${++sequence}`, method: 'request.cancel', workspaceId: captured.workspace.id, generation: captured.workspace.generation, params: {requestId}}, controller.signal); }
+    let timer;const timeout=new Promise(resolve=>{timer=setTimeout(()=>{controller.abort();resolve();},1_000);});
+    try { await Promise.race([send({version: 1, requestId: `${instance}-${++sequence}`, method, workspaceId: captured.workspace.id, generation: captured.workspace.generation, params}, controller.signal),timeout]); }
     catch { /* best effort only: timeout/disconnect do not prove rollback */ }
     finally { clearTimeout(timer); }
   }
+  const cancelRemote=(requestId,captured)=>detachedRequest('request.cancel',{requestId},captured);
   async function request(method, params, {signal, timeoutMs: requestTimeout = timeoutMs} = {}) {
     if (closed) throw workspaceFailure('disposed', 'Workspace client is disposed');
     if (signal !== undefined && !(signal instanceof AbortSignal)) throw workspaceFailure('invalid_request', 'Expected AbortSignal');
@@ -115,6 +118,7 @@ export function createWorkspaceClient({url, token, fetch: transport = globalThis
       const result = await Promise.race([send(envelope, controller.signal), aborted]);
       if (controller.signal.aborted) throw controller.signal.reason;
       if (closed || revision !== bindingSequence) throw workspaceFailure('disposed', 'Workspace connection changed');
+      if(method.startsWith('projects.')&&(result.scope.projectId!==captured.workspace.id||result.scope.sessionId!==captured.workspace.generation))throw workspaceFailure('invalid_request','Project reply workspace generation mismatch');
       if (method.startsWith('fs.') && result.path !== undefined && result.path !== params.path) throw workspaceFailure('invalid_request', 'Workspace reply path mismatch');
       if (method === 'fs.readIfChanged' && result.notModified !== (params.knownRevision !== null && result.revision === params.knownRevision)) throw workspaceFailure('invalid_request', 'Conditional file revision mismatch');
       if (method === 'fs.rename' && result.newPath !== params.newPath) throw workspaceFailure('invalid_request', 'Workspace reply path mismatch');
@@ -321,7 +325,9 @@ export function createWorkspaceClient({url, token, fetch: transport = globalThis
     if (['id', 'path', 'revision', 'byteLength', 'label'].some(key => result.artifact[key] !== reference.artifact[key])) throw workspaceFailure('invalid_request', 'Artifact metadata changed');
     return result;
   }
+  const projectAccess=createWorkspaceProjectClient({request,getBinding:()=>binding,getSignal:()=>connectionController.signal,checkConnection:checkFileConnection,detachedRequest,defaultTimeoutMs:timeoutMs});
   const client = Object.freeze({
+    ...projectAccess,
     async connect(options) {
       revoke();
       const connectSequence = bindingSequence;

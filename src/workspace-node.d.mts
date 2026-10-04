@@ -25,6 +25,8 @@ export type ProcessBackend=(input:JsonValue,options?:{readonly signal?:AbortSign
 export function createProcessBackend(options:{readonly executable:string;readonly args?:readonly string[];readonly cwd:string;readonly env?:Readonly<Record<string,string>>;readonly timeoutMs?:number;readonly maxOutputBytes?:number}):ProcessBackend;
 export interface ConfiguredWorkspacePlugin {readonly plugin:Plugin;readonly artifactSha256:string;readonly licenseText?:string;}
 export interface WorkspaceServerOptions {
+  /** Optional operator-scoped project tools on a server-owned Node workspace. */
+  readonly projects?:{readonly roots:readonly string[];readonly fileSystem:'local';readonly leaseMs?:number};
   /** Server-owned Node workspace only; the operator closes the store after server.close(). */
   readonly jobStorage?:{readonly store:JobStore;readonly artifacts?:ArtifactStore;readonly redact?:JobStorageOptions['redact']};
   readonly jobs?:boolean;
@@ -39,6 +41,7 @@ export interface WorkspaceServerOptions {
 export interface WorkspaceServer {
   readonly url:string;readonly workspaceId:string;readonly generation:string;
   hello():WorkspaceHello;
+  revokeProjects():void;
   close():Promise<void>;
 }
 /** Starts an authenticated HTTP server; closes owned plugin/workspace ports when closed. */

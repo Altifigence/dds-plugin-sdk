@@ -9,6 +9,7 @@ import {validatePluginPackage} from './publishing.mjs';
 import {JOB_LIMITS} from './jobs.mjs';
 
 const sdk = JSON.parse(await fs.readFile(new URL('../package.json', import.meta.url), 'utf8'));
+const sdkLine = sdk.version.split('.').slice(0, 2).join('.');
 const json = value => `${JSON.stringify(value, null, 2)}\n`;
 const error = message => new Error(message);
 const nodeSupported = version => /^(?:22|24)\./.test(version);
@@ -71,9 +72,9 @@ export async function doctorPlugin(directory) {
   try {
     const packagePath = createRequire(path.join(root, 'package.json')).resolve('@altifigence/dds-plugin-sdk/package.json');
     const installed = await readJson(packagePath);
-    if (installed.name !== sdk.name || !/^0\.8\.\d+(?:$|-)/.test(installed.version)) throw error('Install SDK 0.8.x for these development tools.');
+    if (installed.name !== sdk.name || typeof installed.version !== 'string' || installed.version.split('.').slice(0, 2).join('.') !== sdkLine || !/^\d+\.\d+\.\d+(?:$|[-+])/.test(installed.version)) throw error(`Install SDK ${sdkLine}.x for these development tools.`);
     check('sdk', 'pass', `SDK ${installed.version} resolves from this project.`);
-  } catch {check('sdk', 'error', 'SDK 0.8.x is not installed for this project.', 'Run npm install --ignore-scripts using the pinned SDK archive in package.json.');}
+  } catch {check('sdk', 'error', `SDK ${sdkLine}.x is not installed for this project.`, 'Run npm install --ignore-scripts using the pinned SDK archive in package.json.');}
   return Object.freeze({ok: checks.every(item => item.status !== 'error'), directory: root, checks: Object.freeze(checks)});
 }
 
