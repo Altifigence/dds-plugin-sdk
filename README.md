@@ -25,6 +25,9 @@ Start a standalone plugin with [`dds-plugin init`](docs/DEVTOOLS.md), diagnose i
 without executing code with `doctor`, and run trusted code with `dev --watch`.
 [Command jobs](docs/JOBS.md) add progress, logs, cancellation and pinned result
 files to explicitly enabled hosts while keeping existing API contracts.
+
+The main branch includes optional [durable job storage](docs/JOB_STORAGE.md)
+for the upcoming 0.8 release. Tagged 0.7 archives do not contain this extension.
 [Workspace observation](docs/OBSERVATION.md) follows explicit file revisions and
 job progress with cancellable async iterators, preserving edit drafts and job IDs.
 [File revisions and conditional reads](docs/FILE_REVISIONS.md) reduce response

@@ -58,6 +58,7 @@ export interface CommandDefinition {
 export interface RegisteredCommand extends CommandDefinition {readonly pluginId: string;}
 import type {JobReporter, JobOptions, JobSnapshot, JobEvents, JobArtifactContent, JobCapabilities} from './jobs.mjs';
 import type {BinaryArtifactSource, BinaryArtifactCapabilities, BinaryArtifactList, BinaryArtifactChunk} from './artifacts.mjs';
+import type {JobStorageOptions, JobStorageCapabilities, JobRecovery} from './job-storage.mjs';
 export type {JobReporter, JobOptions, JobSnapshot, JobEvents, JobArtifactContent, JobCapabilities} from './jobs.mjs';
 export type CommandHandler = (input: JsonValue, options: {readonly signal: AbortSignal; readonly job?: JobReporter}) => JsonValue | Promise<JsonValue>;
 export interface WorkspaceFile {readonly path: string; readonly content: string; readonly revision: string;}
@@ -147,6 +148,7 @@ export function definePlugin(manifest: PluginManifest, activate: Plugin['activat
 /** For trusted host implementers. Authorization and isolation belong to the host. */
 export function createDiagnosticsRegistry(options?: {readonly isCurrent?: (request: DiagnosticsRequest) => boolean}): DiagnosticsRegistry;
 export interface PluginHostOptions {
+  readonly jobStorage?: JobStorageOptions;
   readonly jobs?: boolean;
   readonly binaryArtifacts?: boolean;
   readonly hostId?: HostId; readonly scope?: Scope; readonly grants?: readonly Permission[];
@@ -161,6 +163,10 @@ export interface PluginHost extends Disposable {
   executeCommand(pluginId: string, commandId: string, input: JsonValue, options?: RequestOptions): Promise<JsonValue>;
   jobCapabilities(): JobCapabilities;
   binaryArtifactCapabilities(): BinaryArtifactCapabilities;
+  jobStorageCapabilities(): JobStorageCapabilities;
+  /** Flush the checkpoints requested before this call; allowed after dispose(). */
+  flushJobStore(): Promise<void>;
+  recoverJob(pluginId:string,jobId:string): JobRecovery;
   startCommandJob(pluginId: string, commandId: string, input: JsonValue, options: JobOptions): JobSnapshot;
   getJob(jobId: string): JobSnapshot;
   getJobEvents(jobId: string, after?: number): JobEvents;

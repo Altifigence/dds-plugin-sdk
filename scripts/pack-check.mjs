@@ -49,6 +49,8 @@ try {
   }
   await cp(join(installed, 'examples', 'command-jobs'), join(consumer, 'job-example'), {recursive:true});
   assert.match(run(process.execPath, ['job-example/run.mjs'], consumer), /pinned result file verified/);
+  await cp(join(installed, 'examples', 'durable-jobs'), join(consumer, 'durable-job-example'), {recursive:true});
+  assert.match(run(process.execPath, ['durable-job-example/run.mjs'], consumer), /killed child, current authorization and no automatic replay verified/);
   await cp(join(installed, 'examples', 'workspace-observation'), join(consumer, 'observation-example'), {recursive:true});
   assert.match(run(process.execPath, ['observation-example/run.mjs'], consumer), /file changes, retained draft and resumed job verified/);
   for (const entry of Object.values(metadata.exports)) {

@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — 0.8 development
+
+- Add opt-in durable job storage, bounded coalesced checkpoints, current-authority
+  recovery receipts and a single-writer Node filesystem implementation.
+- Preserve v1 responses and memory-only defaults. Recovery distinguishes settled,
+  interrupted, expired, corrupt and unsupported records without rerunning commands.
+- Default to metadata-only retention with explicit reviewed redaction, quotas,
+  pruning, stale-owner checks and an opt-in legacy import preserving original bytes.
+- Include types, four schemas and a packed real-process restart example.
+
 ## 0.7.0 — 2026-10-04
 
 - Add optional binary job result registration and discovery, with SHA-256-pinned

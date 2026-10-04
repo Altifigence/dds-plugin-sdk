@@ -124,6 +124,18 @@
     "src/artifact-download-node.d.mts",
     "src/artifact-download-node.mjs",
     "src/artifacts.d.mts",
-    "src/artifacts.mjs"
+    "src/artifacts.mjs",
+    "src/job-storage-validation.mjs",
+    "src/job-storage.mjs",
+    "src/job-storage.d.mts",
+    "src/job-storage-node.mjs",
+    "src/job-storage-node.d.mts",
+    "src/job-storage-session.mjs",
+    "docs/JOB_STORAGE.md",
+    "examples/durable-jobs/run.mjs",
+    "schemas/job-recovery.schema.json",
+    "schemas/job-storage-capabilities.schema.json",
+    "schemas/job-store-identity.schema.json",
+    "schemas/stored-job.schema.json"
   ]
 }

@@ -14,7 +14,7 @@ const error = (code, message) => {
 };
 
 /** Executes trusted local plugins in this process. This developer host is not a sandbox. */
-export function createPluginHost({hostId = 'test-host', scope = {projectId: 'example-project', sessionId: 'example-session'}, grants = [], workspace, backends = {}, jobs = false, binaryArtifacts = false} = {}) {
+export function createPluginHost({hostId = 'test-host', scope = {projectId: 'example-project', sessionId: 'example-session'}, grants = [], workspace, backends = {}, jobs = false, binaryArtifacts = false, jobStorage} = {}) {
   if (!['test-host', 'workspace-host'].includes(hostId)) throw error(ErrorCode.UNSUPPORTED_HOST, 'Unknown plugin host');
   scope = parseScope(scope);
   grants = parseGrants(grants);
@@ -35,7 +35,7 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
   const plugins = new Map();
   const pending = new Set();
   if (typeof binaryArtifacts !== 'boolean') throw error(ErrorCode.INVALID_CONTRACT, 'Invalid binary artifact capability');
-  const jobRegistry = createJobRegistry({scope, enabled: jobs, binaryArtifacts: binaryArtifacts && typeof workspace?.captureBinaryFile === 'function'});
+  const jobRegistry = createJobRegistry({scope, enabled: jobs, binaryArtifacts: binaryArtifacts && typeof workspace?.captureBinaryFile === 'function', jobStorage});
   function isCurrent(request) {
     return !!document && request.scope.projectId === scope.projectId && request.scope.sessionId === scope.sessionId &&
       ['uri', 'languageId', 'modelVersion', 'workspaceRevision', 'text'].every(key => request.snapshot[key] === document[key]);
@@ -304,6 +304,18 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
     },
     jobCapabilities() {assertOpen(); return jobRegistry.capabilities();},
     binaryArtifactCapabilities() {assertOpen(); return jobRegistry.binaryCapabilities();},
+    jobStorageCapabilities() {assertOpen(); return jobRegistry.storageCapabilities();},
+    // The owner can flush cancellation checkpoints after dispose(). The store
+    // itself remains owner-managed and must be closed after this promise settles.
+    flushJobStore() {return jobRegistry.flushStorage();},
+    recoverJob(pluginId, jobId) {
+      assertOpen(); const state = plugins.get(pluginId);
+      if (!state || !state.active || !state.ready) throw error(ErrorCode.DISPOSED, 'Plugin is not active');
+      permit(state, 'workspace.read');
+      const recovered = jobRegistry.recover(pluginId, jobId, state.grants);
+      if (recovered.record && !state.commands.has(recovered.record.snapshot.commandId)) throw error(ErrorCode.CAPABILITY_UNAVAILABLE, 'Recorded command is unavailable');
+      return recovered;
+    },
     startCommandJob(pluginId, commandId, input, options) {
       assertOpen();
       const state = plugins.get(pluginId);
@@ -311,7 +323,7 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
       const entry = state.commands.get(commandId);
       if (!entry) throw error(ErrorCode.CAPABILITY_UNAVAILABLE, 'Command is unavailable');
       const value = parseCommandInput(input, entry.command);
-      return jobRegistry.start({pluginId, commandId, input: value, options, signal: state.controller.signal,
+      return jobRegistry.start({pluginId, commandId, input: value, options, grants: state.grants, signal: state.controller.signal,
         assertActive: () => {assertActive(state); if (state.commands.get(commandId) !== entry) throw error(ErrorCode.DISPOSED, 'Command is disposed');},
         assertRead: () => permit(state, 'workspace.read'),
         execute: (input, options) => entry.handler(input, Object.freeze(options)),
