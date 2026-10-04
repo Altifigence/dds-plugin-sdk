@@ -9,6 +9,7 @@ export { createLanguageRegistry } from './lifecycle.mjs';
 export { LANGUAGE_FEATURES, LANGUAGE_CAPABILITIES, parseLanguageRequest, parseLanguageResult, createLanguageResult } from './contracts.mjs';
 export {LANGUAGE_LIMITS, parseSnippet, parseCompletionItem, parseSignatureHelp} from './language-assistance.mjs';
 export {CODE_ACTION_KINDS, LANGUAGE_EDIT_LIMITS, parseFormattingOptions, parseCodeAction} from './language-editing.mjs';
+export {SEMANTIC_STYLE_KEYS, LANGUAGE_DISPLAY_LIMITS, parseSemanticLegend, parseSemanticTokens, parseSemanticTokensDelta, validateSemanticTokens, decodeSemanticTokens, applySemanticTokensDelta, parseFoldingRanges, parseInlayHints, parseDocumentSymbolTree} from './language-display.mjs';
 export { createPluginHost } from './host.mjs';
 
 /** Declare an ESM plugin. Activation is performed by a host with explicit grants. */

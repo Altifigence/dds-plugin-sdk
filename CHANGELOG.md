@@ -1,6 +1,11 @@
 # Changelog
 
-## 0.11.0 — Unreleased
+## 0.11.0 — 2026-10-04
+
+- Add semantic full/delta tokens with bounded provider-bound caches and one full
+  fallback, folding ranges, literal inlay hints and hierarchical document symbols.
+  Validate actual host-owned results immediately before display. Add independent
+  Node and browser examples, public schemas and installed-package type checks.
 
 - Add document/range formatting and diagnostic-bound code action lists/resolution.
   Validate selection scope, newline policy and current snapshots; route proposed

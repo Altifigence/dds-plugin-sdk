@@ -104,6 +104,8 @@ assert.equal(typeof createDiagnosticsResult, 'function');
   assert.match(run(process.execPath, ['edits-example/run.mjs'], consumer), /rename preview, external-edit conflict, reviewed CAS and killed-process recovery verified/);
   await cp(join(installed, 'examples', 'language-editing'), join(consumer, 'format-example'), {recursive: true});
   assert.match(run(process.execPath, ['format-example/run.mjs'], consumer), /range formatting, CRLF preservation, diagnostic quick-fix, conflict and selected approval verified/);
+  await cp(join(installed, 'examples', 'language-display'), join(consumer, 'display-example'), {recursive: true});
+  assert.match(run(process.execPath, ['display-example/run.mjs'], consumer), /full, delta, lost-base fallback, folds, literal hints, symbol tree and stale disposal verified/);
   await cp(join(installed, 'examples', 'project-session'), join(consumer, 'project-example'), {recursive: true});
   run(process.execPath, ['project-example/run.mjs'], consumer);
   // Package and install a real independent plugin. npm sees generated metadata;
@@ -201,6 +203,7 @@ try {
   await cp(join(root, 'tests', 'types', 'language-assistance.mts'), join(consumer, 'language-assistance.mts'));
   await cp(join(root, 'tests', 'types', 'workspace-edits.mts'), join(consumer, 'workspace-edits.mts'));
   await cp(join(root, 'tests', 'types', 'language-editing.mts'), join(consumer, 'language-editing.mts'));
+  await cp(join(root, 'tests', 'types', 'language-display.mts'), join(consumer, 'language-display.mts'));
   await cp(join(root, 'tests', 'types', 'workspace-project.mts'), join(consumer, 'workspace-project.mts'));
   await cp(join(root, 'tests', 'types', 'jobs-devtools.mts'), join(consumer, 'jobs-devtools.mts'));
   await cp(join(root, 'tests', 'types', 'workspace-observation.mts'), join(consumer, 'workspace-observation.mts'));

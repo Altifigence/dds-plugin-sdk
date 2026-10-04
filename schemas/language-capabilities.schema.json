@@ -19,13 +19,20 @@
         "rename",
         "format-document",
         "format-range",
-        "code-actions"
+        "code-actions",
+        "semantic-tokens",
+        "folding-ranges",
+        "inlay-hints",
+        "document-symbol-tree"
       ]
     },
     "completionResolve": {
       "const": true
     },
     "codeActionResolve": {
+      "const": true
+    },
+    "semanticTokensDelta": {
       "const": true
     },
     "snippets": {
@@ -89,6 +96,62 @@
         "resolvePending"
       ],
       "additionalProperties": false
+    },
+    "displayLimits": {
+      "type": "object",
+      "properties": {
+        "semanticTokens": {
+          "const": 20000
+        },
+        "tokenTypes": {
+          "const": 64
+        },
+        "tokenModifiers": {
+          "const": 16
+        },
+        "deltaEdits": {
+          "const": 64
+        },
+        "semanticCacheEntries": {
+          "const": 8
+        },
+        "semanticCacheBytes": {
+          "const": 4194304
+        },
+        "semanticCacheTtlMs": {
+          "const": 60000
+        },
+        "foldingRanges": {
+          "const": 1000
+        },
+        "foldingDepth": {
+          "const": 32
+        },
+        "inlayHints": {
+          "const": 1000
+        },
+        "symbols": {
+          "const": 1000
+        },
+        "symbolDepth": {
+          "const": 16
+        }
+      },
+      "required": [
+        "semanticTokens",
+        "tokenTypes",
+        "tokenModifiers",
+        "deltaEdits",
+        "semanticCacheEntries",
+        "semanticCacheBytes",
+        "semanticCacheTtlMs",
+        "foldingRanges",
+        "foldingDepth",
+        "inlayHints",
+        "symbols",
+        "symbolDepth"
+      ],
+      "additionalProperties": false
     }
   },
   "required": [
@@ -96,9 +159,11 @@
     "features",
     "completionResolve",
     "codeActionResolve",
+    "semanticTokensDelta",
     "snippets",
     "positions",
-    "limits"
+    "limits",
+    "displayLimits"
   ],
   "additionalProperties": false
 }

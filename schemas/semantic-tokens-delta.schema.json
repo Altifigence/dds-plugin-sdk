@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.11.0/schemas/semantic-tokens-delta.schema.json",
+  "title": "semantic-tokens-delta",
+  "type": "object",
+  "properties": {
+    "baseResultId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+    },
+    "resultId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+    },
+    "edits": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "start": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000
+          },
+          "deleteCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2147483647
+            },
+            "maxItems": 100000,
+            "minItems": 0
+          }
+        },
+        "required": [
+          "start",
+          "deleteCount"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 64,
+      "minItems": 0
+    }
+  },
+  "required": [
+    "baseResultId",
+    "resultId",
+    "edits"
+  ],
+  "additionalProperties": false,
+  "$comment": "Edits address the original integer array, are ordered and disjoint, and share the total insertion budget. The complete reconstructed result is validated against the new document."
+}

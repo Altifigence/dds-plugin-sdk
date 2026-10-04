@@ -5,6 +5,8 @@ Run `node examples/hello-language/run.mjs` after installing the SDK. The example
 implements a tiny teaching language; it is not a SystemVerilog compiler or LSP server.
 
 SDK 0.11 adds [signature help, lazy completion resolution and opt-in snippets](LANGUAGE_ASSISTANCE.md).
+It also adds [reviewed rename edits](WORKSPACE_EDITS.md), [formatting and code actions](LANGUAGE_EDITING.md),
+and [semantic tokens, folding, hints and hierarchical symbols](LANGUAGE_DISPLAY.md).
 The original literal contracts below continue to work without these capabilities.
 
 Declare each feature in manifest v2 `capabilities`, and declare `document.read`
@@ -60,7 +62,8 @@ additional 16,384-character limits. Type declarations and JSON Schemas accompany
 runtime validation; the runtime additionally checks UTF-8 budgets and document ranges.
 
 Provider selection uses the highest selector priority, then earliest registration.
-One provider answers each request. Document symbols are flat; this version does
+One provider answers each request. `document-symbols` remains flat; the separate
+`document-symbol-tree` feature returns a validated hierarchy. This version does
 not merge providers, auto-apply edits, execute completion commands or start LSP processes.
 
 These APIs run in the SDK's trusted in-process host. They do not add editor UI

@@ -192,13 +192,18 @@
               "format-document",
               "format-range",
               "code-actions",
+              "semantic-tokens",
+              "folding-ranges",
+              "inlay-hints",
+              "document-symbol-tree",
               "completion-resolve",
               "completion-snippets",
-              "code-action-resolve"
+              "code-action-resolve",
+              "semantic-tokens-delta"
             ]
           },
           "minItems": 1,
-          "maxItems": 16,
+          "maxItems": 21,
           "uniqueItems": true
         },
         "permissions": {
@@ -345,6 +350,26 @@
               "capabilities": {
                 "contains": {
                   "const": "code-actions"
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "capabilities": {
+                "contains": {
+                  "const": "semantic-tokens-delta"
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "capabilities": {
+                "contains": {
+                  "const": "semantic-tokens"
                 }
               }
             }

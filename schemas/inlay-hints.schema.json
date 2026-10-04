@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.11.0/schemas/inlay-hints.schema.json",
+  "title": "inlay-hints",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "position": {
+        "type": "object",
+        "properties": {
+          "line": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 262144
+          },
+          "character": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 262144
+          }
+        },
+        "required": [
+          "line",
+          "character"
+        ],
+        "additionalProperties": false
+      },
+      "label": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 1024,
+        "pattern": "^[^\\r\\n\\u0000]+$"
+      },
+      "kind": {
+        "enum": [
+          "type",
+          "parameter"
+        ]
+      },
+      "paddingLeft": {
+        "type": "boolean"
+      },
+      "paddingRight": {
+        "type": "boolean"
+      },
+      "tooltip": {
+        "type": "string",
+        "maxLength": 4096
+      }
+    },
+    "required": [
+      "position",
+      "label"
+    ],
+    "additionalProperties": false
+  },
+  "maxItems": 1000,
+  "minItems": 0,
+  "$comment": "Plain text only. Runtime checks sorted positions within the requested range and document."
+}

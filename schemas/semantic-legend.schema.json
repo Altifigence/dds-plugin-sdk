@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.11.0/schemas/semantic-legend.schema.json",
+  "title": "semantic-legend",
+  "type": "object",
+  "properties": {
+    "tokenTypes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z][A-Za-z0-9_.-]*$"
+          },
+          "style": {
+            "enum": [
+              "plain",
+              "keyword",
+              "type",
+              "function",
+              "variable",
+              "number",
+              "string",
+              "comment",
+              "operator"
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "style"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 64,
+      "minItems": 1
+    },
+    "tokenModifiers": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64,
+        "pattern": "^[A-Za-z][A-Za-z0-9_.-]*$"
+      },
+      "maxItems": 16,
+      "minItems": 0,
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "tokenTypes",
+    "tokenModifiers"
+  ],
+  "additionalProperties": false,
+  "$comment": "Runtime enforces unique type names."
+}

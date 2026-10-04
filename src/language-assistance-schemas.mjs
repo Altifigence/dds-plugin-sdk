@@ -1,4 +1,5 @@
 import {LANGUAGE_LIMITS as limits} from './language-assistance.mjs';
+import {LANGUAGE_DISPLAY_LIMITS} from './language-display.mjs';
 import {LANGUAGE_FEATURES} from './contracts.mjs';
 const object = (properties, required = Object.keys(properties)) => ({type: 'object', properties, required, additionalProperties: false});
 const text = (maxLength, minLength = 0) => ({type: 'string', minLength, maxLength});
@@ -25,5 +26,5 @@ export const LANGUAGE_ASSISTANCE_SCHEMAS = Object.freeze({
   'completion-item': COMPLETION_ITEM_SCHEMA,
   'signature-help': SIGNATURE_HELP_SCHEMA,
   'language-snippet': {...text(limits.snippetChars), $comment: 'Runtime accepts $n, ${n}, ${n:literal}, one $0 and escapes for backslash/dollar/braces. Indices are 0..99; no variables, nesting, choices or transforms. Mirrored defaults must agree; expansion is <=16384 UTF-16 units and <=128 explicit stops.'},
-  'language-capabilities': object({protocolVersion: {const: 1}, features: {const: LANGUAGE_FEATURES}, completionResolve: {const: true}, codeActionResolve: {const: true}, snippets: {const: true}, positions: {const: 'utf16-zero-based'}, limits: object(Object.fromEntries(Object.entries(limits).map(([key, value]) => [key, {const: value}])))}),
+  'language-capabilities': object({protocolVersion: {const: 1}, features: {const: LANGUAGE_FEATURES}, completionResolve: {const: true}, codeActionResolve: {const: true}, semanticTokensDelta: {const: true}, snippets: {const: true}, positions: {const: 'utf16-zero-based'}, limits: object(Object.fromEntries(Object.entries(limits).map(([key, value]) => [key, {const: value}]))), displayLimits: object(Object.fromEntries(Object.entries(LANGUAGE_DISPLAY_LIMITS).map(([key, value]) => [key, {const: value}])))}),
 });

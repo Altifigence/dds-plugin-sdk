@@ -4,6 +4,7 @@ import { createDiagnosticsRegistry } from './lifecycle.mjs';
 import { createLanguageRegistry } from './lifecycle.mjs';
 import { LANGUAGE_FEATURES, parseLanguageRequest } from './contracts.mjs';
 import {LANGUAGE_LIMITS} from './language-assistance.mjs';
+import {LANGUAGE_DISPLAY_LIMITS} from './language-display.mjs';
 import {SDK_VERSION} from './version.mjs';
 import { ErrorCode, LIMITS, PluginSdkError } from './limits.mjs';
 import {createJobRegistry} from './job-registry.mjs';
@@ -178,6 +179,7 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
         try { registration = languages.get(kind).register(manifest.id, selector, provider, {
           resolve: kind === 'completion' && manifest.capabilities.includes('completion-resolve') || kind === 'code-actions' && manifest.capabilities.includes('code-action-resolve'),
           snippets: kind === 'completion' && manifest.capabilities.includes('completion-snippets'),
+          semanticDelta: kind === 'semantic-tokens' && manifest.capabilities.includes('semantic-tokens-delta'),
         }); }
         catch (failure) { throw error(failure instanceof PluginSdkError ? failure.code : ErrorCode.PROVIDER_FAILED, 'Language provider registration failed'); }
         state.registrations.add(registration);
@@ -340,7 +342,8 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
         throw error(ErrorCode.INVALID_CONTRACT, 'Changed document requires a newer modelVersion or workspaceRevision');
       }
       registry.invalidate();
-      for (const language of languages.values()) language.invalidate();
+      const retainSemantic = !!document && document.uri === updated.uri && document.languageId === updated.languageId && updated.modelVersion > document.modelVersion;
+      for (const language of languages.values()) language.invalidate({retainSemantic});
       diagnosticItems = Object.freeze([]); diagnosticRevision++; acceptedDiagnosticSequence = ++diagnosticSequence;
       document = updated;
       revision++;
@@ -361,7 +364,7 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
       if (!document) throw error(ErrorCode.INVALID_CONTRACT, 'Set a document before requesting language features');
       if (!languages.has(kind)) throw error(ErrorCode.INVALID_CONTRACT, 'Unknown language feature');
       const value = parseJsonValue(input);
-      if (!value || Array.isArray(value) || typeof value !== 'object' || Object.keys(value).some(key => !['position', 'includeDeclaration', 'context', 'newName', 'range', 'path', 'formatOptions'].includes(key))) throw error(ErrorCode.INVALID_CONTRACT, 'Expected language request input');
+      if (!value || Array.isArray(value) || typeof value !== 'object' || Object.keys(value).some(key => !['position', 'includeDeclaration', 'context', 'newName', 'range', 'path', 'formatOptions', 'previousResultId'].includes(key))) throw error(ErrorCode.INVALID_CONTRACT, 'Expected language request input');
       const diagnostics = kind === 'code-actions' ? {diagnosticContext: {revision: diagnosticRevision, diagnostics: diagnosticItems}} : {};
       const request = parseLanguageRequest({protocolVersion: 1, requestId: `request-${++nextRequest}`, scope, snapshot: document, kind, ...value, ...diagnostics});
       const currentRevision = revision;
@@ -370,7 +373,17 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
       if (revision !== currentRevision || kind === 'code-actions' && diagnosticRevision !== currentDiagnostics) throw error(ErrorCode.STALE_SNAPSHOT, 'Document or diagnostics changed while language features were pending');
       return result;
     },
-    languageCapabilities() {assertOpen(); return Object.freeze({protocolVersion: 1, features: LANGUAGE_FEATURES, completionResolve: true, codeActionResolve: true, snippets: true, positions: 'utf16-zero-based', limits: LANGUAGE_LIMITS});},
+    languageCapabilities() {assertOpen(); return Object.freeze({protocolVersion: 1, features: LANGUAGE_FEATURES, completionResolve: true, codeActionResolve: true, semanticTokensDelta: true, snippets: true, positions: 'utf16-zero-based', limits: LANGUAGE_LIMITS, displayLimits: LANGUAGE_DISPLAY_LIMITS});},
+    validateLanguageResult(result) {
+      assertOpen(); const kind = Object.getOwnPropertyDescriptor(result ?? {}, 'kind')?.value;
+      if (!languages.has(kind)) throw error(ErrorCode.INVALID_CONTRACT, 'Expected a language result');
+      return languages.get(kind).validateResult(result);
+    },
+    releaseLanguageResult(result) {
+      assertOpen(); const kind = Object.getOwnPropertyDescriptor(result ?? {}, 'kind')?.value;
+      if (!languages.has(kind)) throw error(ErrorCode.INVALID_CONTRACT, 'Expected a language result');
+      languages.get(kind).release(result);
+    },
     async resolveCompletion(token, options = {}) {
       assertOpen(); const currentRevision = revision;
       const result = await languages.get('completion').resolve(token, options);

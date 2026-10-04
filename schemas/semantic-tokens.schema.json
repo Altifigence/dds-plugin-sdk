@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.11.0/schemas/semantic-tokens.schema.json",
+  "title": "semantic-tokens",
+  "type": "object",
+  "properties": {
+    "resultId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+    },
+    "legend": {
+      "type": "object",
+      "properties": {
+        "tokenTypes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[A-Za-z][A-Za-z0-9_.-]*$"
+              },
+              "style": {
+                "enum": [
+                  "plain",
+                  "keyword",
+                  "type",
+                  "function",
+                  "variable",
+                  "number",
+                  "string",
+                  "comment",
+                  "operator"
+                ]
+              }
+            },
+            "required": [
+              "name",
+              "style"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 64,
+          "minItems": 1
+        },
+        "tokenModifiers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z][A-Za-z0-9_.-]*$"
+          },
+          "maxItems": 16,
+          "minItems": 0,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "tokenTypes",
+        "tokenModifiers"
+      ],
+      "additionalProperties": false,
+      "$comment": "Runtime enforces unique type names."
+    },
+    "data": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 2147483647
+      },
+      "maxItems": 100000,
+      "minItems": 0
+    },
+    "updateKind": {
+      "enum": [
+        "full",
+        "delta",
+        "fallback"
+      ]
+    }
+  },
+  "required": [
+    "resultId",
+    "legend",
+    "data"
+  ],
+  "additionalProperties": false,
+  "$comment": "Five integers per token. Runtime validates legend references, sorted nonoverlapping UTF-16 ranges and the current document. Host overwrites resultId and updateKind."
+}

@@ -18,6 +18,7 @@ import {LANGUAGE_ASSISTANCE_SCHEMAS, COMPLETION_ITEM_SCHEMA, SIGNATURE_HELP_SCHE
 import {SDK_VERSION} from './version.mjs';
 import {WORKSPACE_EDIT_SCHEMA, WORKSPACE_EDIT_SCHEMAS} from './workspace-edit-schemas.mjs';
 import {FORMATTING_OPTIONS_SCHEMA, CODE_ACTION_SCHEMA, CODE_ACTION_CONTEXT_SCHEMA, LANGUAGE_EDITING_SCHEMAS} from './language-editing-schemas.mjs';
+import {LANGUAGE_DISPLAY_SCHEMAS, SEMANTIC_TOKENS_SCHEMA, FOLDING_SCHEMA, INLAY_SCHEMA} from './language-display-schemas.mjs';
 
 const schema = 'https://json-schema.org/draft/2020-12/schema';
 const base = `https://github.com/Altifigence/dds-plugin-sdk/blob/v${SDK_VERSION}/schemas/`;
@@ -65,6 +66,7 @@ const manifestV2 = object({
 manifestV2.allOf = [{if: {properties: {runtime: {const: 'ui'}}}, then: {properties: {permissions: {items: {enum: ['document.read', 'diagnostics.publish', 'language.provide']}}}}}];
 manifestV2.allOf.push({if: {properties: {capabilities: {contains: {enum: ['completion-resolve', 'completion-snippets']}}}}, then: {properties: {capabilities: {contains: {const: 'completion'}}}}});
 manifestV2.allOf.push({if: {properties: {capabilities: {contains: {const: 'code-action-resolve'}}}}, then: {properties: {capabilities: {contains: {const: 'code-actions'}}}}});
+manifestV2.allOf.push({if: {properties: {capabilities: {contains: {const: 'semantic-tokens-delta'}}}}, then: {properties: {capabilities: {contains: {const: 'semantic-tokens'}}}}});
 const commandParameter = object({
   name: identifier(128), label: text(128), type: {enum: ['string', 'number', 'boolean']}, required: {type: 'boolean'},
   choices: list(text(256), 32, 1, true),
@@ -78,6 +80,8 @@ function define(name, body) {
 const range = object({start: position, end: position});
 const location = object({path: {...text(1024), $comment: 'Runtime additionally enforces a relative, traversal-free workspace path.'}, range});
 const languageData = {
+  'semantic-tokens': SEMANTIC_TOKENS_SCHEMA, 'folding-ranges': FOLDING_SCHEMA, 'inlay-hints': INLAY_SCHEMA,
+  'document-symbol-tree': {$ref: base + 'document-symbol-tree.schema.json'},
   completion: list(COMPLETION_ITEM_SCHEMA, LIMITS.maxLanguageItems),
   'signature-help': SIGNATURE_HELP_SCHEMA,
   'prepare-rename': {oneOf: [{type: 'null'}, object({range, placeholder: text(256)})]},
@@ -113,6 +117,7 @@ const historyDisposition = {enum:['live','completed','interrupted','expired']};
 const historyCursor = {...text(40),pattern:'^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}:(?:0|[1-9][0-9]{0,2})$'};
 const historyItem = object({jobId,commandId:text(128),state:{enum:JOB_STATES},disposition:historyDisposition,startedAt:integer(Number.MAX_SAFE_INTEGER),updatedAt:integer(Number.MAX_SAFE_INTEGER),expiresAt:integer(Number.MAX_SAFE_INTEGER,1),revision:integer(Number.MAX_SAFE_INTEGER,1),attemptOf:{oneOf:[jobId,{type:'null'}]},contentPolicy:{enum:['metadata-only','host-redacted']},artifactCount:integer(JOB_LIMITS.artifacts),snapshotCount:integer(JOB_LIMITS.artifacts),resultAvailability:{enum:['none','source-references','snapshot-references','mixed-references','expired']}});
 export const SCHEMAS = Object.freeze({
+  ...Object.fromEntries(Object.entries(LANGUAGE_DISPLAY_SCHEMAS).map(([name, body]) => [name, define(name, body)])),
   ...Object.fromEntries(Object.entries(LANGUAGE_EDITING_SCHEMAS).map(([name, body]) => [name, define(name, body)])),
   ...Object.fromEntries(Object.entries(WORKSPACE_EDIT_SCHEMAS).map(([name, body]) => [name, define(name, body)])),
   ...Object.fromEntries(Object.entries(LANGUAGE_ASSISTANCE_SCHEMAS).map(([name, body]) => [name, define(name, body)])),
@@ -167,18 +172,19 @@ export const SCHEMAS = Object.freeze({
     diagnostics: list(diagnostic, LIMITS.maxDiagnostics),
   })),
   'language-request': define('language-request', {oneOf: LANGUAGE_FEATURES.map(kind => {
-    const positional = !['document-symbols', 'format-document', 'format-range', 'code-actions'].includes(kind);
+    const positional = !['document-symbols', 'format-document', 'format-range', 'code-actions', 'semantic-tokens', 'folding-ranges', 'inlay-hints', 'document-symbol-tree'].includes(kind);
     const formatting = ['format-document', 'format-range'].includes(kind), action = kind === 'code-actions';
     const fields = {
       protocolVersion: {const: 1}, requestId: text(128), scope,
       snapshot: object({...identity, text: {type: 'string', maxLength: LIMITS.documentBytes, 'x-maxUtf8Bytes': LIMITS.documentBytes}}), kind: {const: kind},
       ...(positional ? {position} : {}), ...(kind === 'references' ? {includeDeclaration: {type: 'boolean'}} : {}),
       ...(['completion', 'signature-help'].includes(kind) ? {context: languageContextSchema(kind)} : {}), ...(kind === 'rename' ? {newName: text(256)} : {}),
-      ...(formatting || action ? {path: text(1024)} : {}), ...(kind === 'format-range' || action ? {range} : {}),
+      ...(formatting || action ? {path: text(1024)} : {}), ...(kind === 'format-range' || action || kind === 'inlay-hints' ? {range} : {}),
+      ...(kind === 'semantic-tokens' ? {previousResultId: {...text(36), pattern: '^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$'}} : {}),
       ...(formatting ? {formatOptions: FORMATTING_OPTIONS_SCHEMA} : {}),
       ...(action ? {context: CODE_ACTION_CONTEXT_SCHEMA, diagnosticContext: object({revision: integer(Number.MAX_SAFE_INTEGER), diagnostics: list(diagnostic, LIMITS.maxDiagnostics)})} : {}),
     };
-    return object(fields, Object.keys(fields).filter(key => !['includeDeclaration', 'context'].includes(key)));
+    return object(fields, Object.keys(fields).filter(key => !['includeDeclaration', 'context', 'previousResultId'].includes(key)));
   })}),
   'language-result': define('language-result', {oneOf: LANGUAGE_FEATURES.map(kind => object({
     protocolVersion: {const: 1}, requestId: text(128), scope, snapshot: object(identity), kind: {const: kind}, data: languageData[kind],

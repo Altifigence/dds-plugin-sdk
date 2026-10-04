@@ -191,7 +191,9 @@
     "example:browser-resume": "node examples/browser-resume/serve.mjs",
     "example:assistance": "node examples/language-assistance/run.mjs",
     "example:workspace-edits": "node examples/workspace-edits/run.mjs",
-    "example:language-editing": "node examples/language-editing/run.mjs"
+    "example:language-editing": "node examples/language-editing/run.mjs",
+    "example:language-display": "node examples/language-display/run.mjs",
+    "example:language-display-browser": "node examples/language-display/serve.mjs"
   },
   "devDependencies": {
     "typescript": "5.9.3"
