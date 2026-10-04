@@ -10,6 +10,10 @@ a small ESM package, TypeScript declarations and versioned contracts. Connect
 your own workspace and tools with the Node.js host and HTTP client. The SDK has
 **zero runtime dependencies**.
 
+The next 0.10 line is in development: [browser artifact streaming](docs/BROWSER_ARTIFACTS.md)
+adds bounded sinks, incremental whole-file hashes, explicit storage readback and
+main-thread/Worker examples. These additions are not in the published 0.9 archive.
+
 This is the intentionally public SDK for external plugin developers. The DDS
 application, private engines/services and production signing systems are outside
 this repository. Read the [public scope](docs/PUBLIC_SCOPE.md) and

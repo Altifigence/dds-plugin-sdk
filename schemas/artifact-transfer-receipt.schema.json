@@ -1,0 +1,171 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.9.0/schemas/artifact-transfer-receipt.schema.json",
+  "title": "artifact-transfer-receipt",
+  "type": "object",
+  "properties": {
+    "protocolVersion": {
+      "const": 1
+    },
+    "artifact": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "byteLength": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1073741824
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      },
+      "required": [
+        "id",
+        "path",
+        "revision",
+        "byteLength"
+      ],
+      "additionalProperties": false
+    },
+    "receivedBytes": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1073741824
+    },
+    "resumedBytes": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1073741824
+    },
+    "receivedSha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "storedSha256": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "verification": {
+      "enum": [
+        "received",
+        "stored"
+      ]
+    },
+    "committed": {
+      "const": true
+    },
+    "sink": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "caller",
+            "file-system-access",
+            "opfs"
+          ]
+        },
+        "seek": {
+          "type": "boolean"
+        },
+        "readback": {
+          "type": "boolean"
+        },
+        "persistence": {
+          "enum": [
+            "none",
+            "on-commit",
+            "per-checkpoint"
+          ]
+        },
+        "abort": {
+          "enum": [
+            "discard",
+            "retain",
+            "unknown"
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "seek",
+        "readback",
+        "persistence",
+        "abort"
+      ],
+      "additionalProperties": false
+    },
+    "metrics": {
+      "type": "object",
+      "properties": {
+        "chunks": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1073741825
+        },
+        "peakQueuedChunks": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "peakDecodedBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65536
+        },
+        "maxChunkWorkMs": {
+          "type": "number",
+          "minimum": 0
+        },
+        "elapsedMs": {
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "chunks",
+        "peakQueuedChunks",
+        "peakDecodedBytes",
+        "maxChunkWorkMs",
+        "elapsedMs"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "protocolVersion",
+    "artifact",
+    "receivedBytes",
+    "resumedBytes",
+    "receivedSha256",
+    "storedSha256",
+    "verification",
+    "committed",
+    "sink",
+    "metrics"
+  ],
+  "additionalProperties": false,
+  "$comment": "Runtime verifies exact byte totals, whole hashes equal the reference, and stored verification iff the sink supports and completed readback."
+}
