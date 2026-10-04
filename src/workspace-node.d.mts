@@ -3,6 +3,7 @@ import type {WorkspaceEntry,WorkspaceHello} from './workspace-protocol.mjs';
 import type {BinaryArtifactSource} from './artifacts.mjs';
 import type {JobStore,JobStorageOptions} from './job-storage.mjs';
 import type {ArtifactStore} from './artifact-storage.mjs';
+import type {NodeUploadConfiguration} from './uploads-node.mjs';
 export {downloadJobBinaryArtifact} from './artifact-download-node.mjs';
 export {downloadStoredJobArtifact} from './stored-artifact-download-node.mjs';
 export type {StoredArtifactDownloadReceipt} from './stored-artifact-download-node.mjs';
@@ -25,6 +26,8 @@ export type ProcessBackend=(input:JsonValue,options?:{readonly signal?:AbortSign
 export function createProcessBackend(options:{readonly executable:string;readonly args?:readonly string[];readonly cwd:string;readonly env?:Readonly<Record<string,string>>;readonly timeoutMs?:number;readonly maxOutputBytes?:number}):ProcessBackend;
 export interface ConfiguredWorkspacePlugin {readonly plugin:Plugin;readonly artifactSha256:string;readonly licenseText?:string;}
 export interface WorkspaceServerOptions {
+  /** Optional durable upload store; the server owns and closes this store. */
+  readonly uploads?:NodeUploadConfiguration;
   /** Optional operator-scoped project tools on a server-owned Node workspace. */
   readonly projects?:{readonly roots:readonly string[];readonly fileSystem:'local';readonly leaseMs?:number};
   /** Server-owned Node workspace only; the operator closes the store after server.close(). */
@@ -42,6 +45,7 @@ export interface WorkspaceServer {
   readonly url:string;readonly workspaceId:string;readonly generation:string;
   hello():WorkspaceHello;
   revokeProjects():void;
+  revokeUploads():void;
   close():Promise<void>;
 }
 /** Starts an authenticated HTTP server; closes owned plugin/workspace ports when closed. */

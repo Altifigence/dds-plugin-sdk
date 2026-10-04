@@ -9,6 +9,7 @@ import type {WorkspaceJobWatchOptions,WorkspaceObserver,WorkspaceJobUpdate} from
 import type {ProjectWatchOptions,ProjectWatchEvent,ProjectSnapshot} from './project-watch.mjs';
 import type {ProjectTreeOptions,ProjectFileSearchOptions,ProjectTextSearchOptions,ProjectQueryPage} from './project-query.mjs';
 import type {WorkspaceProjectCapabilities,WorkspaceProjectWatchOptions} from './workspace-project-contracts.mjs';
+import type {UploadCapabilities,UploadSpec,UploadQuery,UploadReference,UploadChunk,UploadStatus} from './uploads.mjs';
 export {WORKSPACE_PROJECT_LIMITS,parseWorkspaceProjectCapabilities,parseWorkspaceProjectPoll} from './workspace-project-contracts.mjs';
 export type {WorkspaceProjectCapabilities,WorkspaceProjectPoll,WorkspaceProjectWatchOptions} from './workspace-project-contracts.mjs';
 export {createWorkspaceProject, applyTextEdits} from './workspace-project.mjs';
@@ -17,6 +18,12 @@ export type {WorkspaceObservationOptions,WorkspaceFileWatchOptions,WorkspaceJobW
 export type {TextEdit, EditSnapshot, WorkspaceEditSession, WorkspaceProject} from './workspace-project.mjs';
 export interface WorkspaceRequestOptions {readonly signal?:AbortSignal;readonly timeoutMs?:number;}
 export interface WorkspaceClient {
+  getUploadCapabilities(options?:WorkspaceRequestOptions):Promise<UploadCapabilities>;
+  beginUpload(spec:UploadSpec,options?:WorkspaceRequestOptions):Promise<UploadStatus>;
+  queryUpload(query:UploadQuery,options?:WorkspaceRequestOptions):Promise<UploadStatus>;
+  writeUploadChunk(reference:UploadReference,chunk:UploadChunk,options?:WorkspaceRequestOptions):Promise<UploadStatus>;
+  commitUpload(reference:UploadReference,options?:WorkspaceRequestOptions):Promise<UploadStatus>;
+  abortUpload(reference:UploadReference,options?:WorkspaceRequestOptions):Promise<UploadStatus>;
   getProjectCapabilities(options?:WorkspaceRequestOptions):Promise<WorkspaceProjectCapabilities>;
   getProjectSnapshot(input:ProjectWatchOptions,options?:WorkspaceRequestOptions):Promise<ProjectSnapshot>;
   listTree(input:ProjectTreeOptions,options?:WorkspaceRequestOptions):Promise<ProjectQueryPage>;

@@ -9,9 +9,10 @@ import {parseStoredArtifactReference,parseStoredArtifactChunk,parseStoredArtifac
 import {parseProjectWatchOptions} from './project-watch.mjs';
 import {parseProjectQueryOptions,parseProjectQueryCursor} from './project-query.mjs';
 import {WORKSPACE_PROJECT_LIMITS,parseWorkspaceProjectResult} from './workspace-project-contracts.mjs';
+import {parseUploadRequest,parseUploadResult} from './uploads.mjs';
 export const WORKSPACE_PROTOCOL_VERSION = 1;
 export const WORKSPACE_PATH = '/dds/workspace/v1';
-export const WORKSPACE_METHODS = Object.freeze(['hello', 'fs.list', 'fs.read', 'fs.capabilities', 'fs.revision', 'fs.readIfChanged', 'fs.write', 'fs.mkdir', 'fs.rename', 'fs.remove', 'plugins.list', 'commands.run', 'request.cancel', 'jobs.capabilities', 'jobs.start', 'jobs.get', 'jobs.events', 'jobs.cancel', 'jobs.artifact', 'artifacts.capabilities', 'artifacts.list', 'artifacts.read', 'history.capabilities', 'history.list', 'history.recover', 'history.retry', 'snapshots.capabilities', 'snapshots.list', 'snapshots.get', 'snapshots.read', 'projects.capabilities', 'projects.snapshot', 'projects.query', 'projects.query.release', 'projects.watch.start', 'projects.watch.next', 'projects.watch.stop']);
+export const WORKSPACE_METHODS = Object.freeze(['hello', 'fs.list', 'fs.read', 'fs.capabilities', 'fs.revision', 'fs.readIfChanged', 'fs.write', 'fs.mkdir', 'fs.rename', 'fs.remove', 'plugins.list', 'commands.run', 'request.cancel', 'jobs.capabilities', 'jobs.start', 'jobs.get', 'jobs.events', 'jobs.cancel', 'jobs.artifact', 'artifacts.capabilities', 'artifacts.list', 'artifacts.read', 'history.capabilities', 'history.list', 'history.recover', 'history.retry', 'snapshots.capabilities', 'snapshots.list', 'snapshots.get', 'snapshots.read', 'projects.capabilities', 'projects.snapshot', 'projects.query', 'projects.query.release', 'projects.watch.start', 'projects.watch.next', 'projects.watch.stop', 'uploads.capabilities', 'uploads.begin', 'uploads.query', 'uploads.write', 'uploads.commit', 'uploads.abort']);
 const encoder=new TextEncoder();
 const invalid=()=>{throw workspaceFailure('invalid_request','Invalid workspace contract');};
 
@@ -30,6 +31,7 @@ export function parseWorkspaceRequest(value) {
   if (value.method !== 'hello') { requireUuid(value.workspaceId); requireUuid(value.generation); }
   else { if (value.workspaceId !== undefined) requireUuid(value.workspaceId); if (value.generation !== undefined) requireUuid(value.generation); }
   const p = value.params;
+  if(value.method.startsWith('uploads.')){parseUploadRequest(value.method,p);return value;}
   switch (value.method) {
     case 'hello': case 'plugins.list': case 'jobs.capabilities': case 'fs.capabilities': case 'artifacts.capabilities': case 'history.capabilities': case 'snapshots.capabilities': case 'projects.capabilities': exactObject(p, []); break;
     case 'projects.snapshot':exactObject(p,['options']);parseProjectWatchOptions(p.options);break;
@@ -122,6 +124,7 @@ export function parseWorkspaceHello(value) {
 export function parseWorkspaceMethodResult(method, value) {
   value = wireInput(value);
   if (method === 'hello') return parseWorkspaceHello(value);
+  if(method.startsWith('uploads.'))return parseUploadResult(method,value);
   if(method.startsWith('projects.'))return parseWorkspaceProjectResult(method,value);
   if(method.startsWith('snapshots.')){
     try{

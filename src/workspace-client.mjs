@@ -7,6 +7,7 @@ import {parseJobHistoryQuery} from './job-history.mjs';
 import {ARTIFACT_STORE_LIMITS,parseStoredArtifactReference} from './artifact-storage.mjs';
 import {registerObservationClient, watchWorkspaceJob, waitForWorkspaceJob} from './workspace-observation.mjs';
 import {createWorkspaceProjectClient} from './workspace-project-client.mjs';
+import {createWorkspaceUploadClient,validateUploadReply} from './workspace-upload-client.mjs';
 export {WORKSPACE_PROJECT_LIMITS,parseWorkspaceProjectCapabilities,parseWorkspaceProjectPoll} from './workspace-project-contracts.mjs';
 export {createWorkspaceProject, applyTextEdits} from './workspace-project.mjs';
 export {WORKSPACE_OBSERVATION_LIMITS} from './workspace-observation.mjs';
@@ -119,6 +120,7 @@ export function createWorkspaceClient({url, token, fetch: transport = globalThis
       if (controller.signal.aborted) throw controller.signal.reason;
       if (closed || revision !== bindingSequence) throw workspaceFailure('disposed', 'Workspace connection changed');
       if(method.startsWith('projects.')&&(result.scope.projectId!==captured.workspace.id||result.scope.sessionId!==captured.workspace.generation))throw workspaceFailure('invalid_request','Project reply workspace generation mismatch');
+      if(method.startsWith('uploads.'))validateUploadReply(method,params,result,captured);
       if (method.startsWith('fs.') && result.path !== undefined && result.path !== params.path) throw workspaceFailure('invalid_request', 'Workspace reply path mismatch');
       if (method === 'fs.readIfChanged' && result.notModified !== (params.knownRevision !== null && result.revision === params.knownRevision)) throw workspaceFailure('invalid_request', 'Conditional file revision mismatch');
       if (method === 'fs.rename' && result.newPath !== params.newPath) throw workspaceFailure('invalid_request', 'Workspace reply path mismatch');
@@ -326,8 +328,10 @@ export function createWorkspaceClient({url, token, fetch: transport = globalThis
     return result;
   }
   const projectAccess=createWorkspaceProjectClient({request,getBinding:()=>binding,getSignal:()=>connectionController.signal,checkConnection:checkFileConnection,detachedRequest,defaultTimeoutMs:timeoutMs});
+  const uploadAccess=createWorkspaceUploadClient({request,getBinding:()=>binding,checkConnection:checkFileConnection});
   const client = Object.freeze({
     ...projectAccess,
+    ...uploadAccess,
     async connect(options) {
       revoke();
       const connectSequence = bindingSequence;

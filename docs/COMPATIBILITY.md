@@ -18,6 +18,7 @@
 | Binary job results | Optional 0.7.0 extension; explicit host opt-in; 1 GiB files and 64 KiB chunks; Node resume/full-file verification |
 | Durable jobs, history and results | Optional 0.8.0 host stores; current authorization after restart; explicit retry and verified snapshot downloads |
 | File revision / conditional read | Optional methods since 0.6.0; bounded full-read fallback on old hosts; v1 hello unchanged |
+| Browser streaming and selected-file uploads | In the 0.10 development checkout; explicit file/OPFS sinks and optional server upload store; not in the published 0.9 archive |
 
 This is a developer preview. Pin the exact package release and read the changelog
 before updating. SDK, protocol, plugin and DDS product versions are distinct.

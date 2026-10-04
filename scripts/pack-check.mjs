@@ -56,6 +56,8 @@ try {
   await cp(join(installed, 'examples', 'project-tools'), join(consumer, 'project-tools-example'), {recursive:true});
   await cp(join(installed, 'examples', 'browser-artifacts'), join(consumer, 'browser-artifacts-example'), {recursive:true});
   run(process.execPath, [join(consumer, 'browser-artifacts-example', 'run.mjs')], consumer);
+  await cp(join(installed, 'examples', 'uploads'), join(consumer, 'uploads-example'), {recursive:true});
+  run(process.execPath, ['uploads-example/run.mjs'], consumer);
   assert.match(run(process.execPath, ['project-tools-example/run.mjs'], consumer), /create, search, external update, resync query, retained draft, CAS conflict and reconnect verified/);
   await cp(join(installed, 'examples', 'project-query'), join(consumer, 'project-query-example'), {recursive:true});
   assert.match(run(process.execPath, ['project-query-example/run.mjs'], consumer), /scoped tree, glob, text ranges, stale page and shared observation verified/);
@@ -183,6 +185,7 @@ try {
 `);
   run(process.execPath, ['workspace-smoke.mjs'], consumer);
   await cp(join(root, 'tests', 'types', 'consumer.mts'), join(consumer, 'consumer.mts'));
+  await cp(join(root, 'tests', 'types', 'uploads.mts'), join(consumer, 'uploads.mts'));
   await cp(join(root, 'tests', 'types', 'public-apis.mts'), join(consumer, 'public-apis.mts'));
   await cp(join(root, 'tests', 'types', 'core-v2.mts'), join(consumer, 'core-v2.mts'));
   await cp(join(root, 'tests', 'types', 'language.mts'), join(consumer, 'language.mts'));
