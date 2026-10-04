@@ -1,0 +1,198 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.10.0/schemas/transfer-snapshot.schema.json",
+  "title": "transfer-snapshot",
+  "type": "object",
+  "properties": {
+    "protocolVersion": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "connectionId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "kind": {
+      "enum": [
+        "upload",
+        "download",
+        "stored-download"
+      ]
+    },
+    "state": {
+      "enum": [
+        "queued",
+        "running",
+        "paused",
+        "completed",
+        "failed",
+        "cancelled"
+      ]
+    },
+    "phase": {
+      "enum": [
+        "queued",
+        "preparing",
+        "hashing",
+        "verifying-prefix",
+        "uploading",
+        "receiving",
+        "committing",
+        "verifying-storage",
+        "completed"
+      ]
+    },
+    "priority": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 3
+    },
+    "active": {
+      "type": "boolean"
+    },
+    "pauseRequested": {
+      "type": "boolean"
+    },
+    "totalBytes": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1073741824
+    },
+    "acknowledgedBytes": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1073741824
+    },
+    "transferredBytes": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1073741824
+    },
+    "attemptedBytes": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 5368709120
+    },
+    "retriedBytes": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 5368709120
+    },
+    "resumedBytes": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1073741824
+    },
+    "remainingBytes": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1073741824
+    },
+    "retries": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 4294967300
+    },
+    "verified": {
+      "type": "boolean"
+    },
+    "verification": {
+      "enum": [
+        "pending",
+        "received",
+        "stored",
+        "upload-commit"
+      ]
+    },
+    "commit": {
+      "enum": [
+        "not-committed",
+        "unknown",
+        "committed"
+      ]
+    },
+    "partialDisposition": {
+      "enum": [
+        "discarded",
+        "retained",
+        "unknown"
+      ]
+    },
+    "error": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "code": {
+              "enum": [
+                "invalid_request",
+                "authentication_required",
+                "permission_denied",
+                "workspace_mismatch",
+                "generation_mismatch",
+                "not_found",
+                "conflict",
+                "unsafe_path",
+                "budget_exceeded",
+                "cancelled",
+                "disposed",
+                "plugin_mismatch",
+                "provider_failed",
+                "unsupported",
+                "unavailable",
+                "transport_failed"
+              ]
+            },
+            "message": {
+              "type": "string",
+              "maxLength": 2048
+            }
+          },
+          "required": [
+            "code",
+            "message"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "required": [
+    "protocolVersion",
+    "id",
+    "connectionId",
+    "sequence",
+    "kind",
+    "state",
+    "phase",
+    "priority",
+    "active",
+    "pauseRequested",
+    "totalBytes",
+    "acknowledgedBytes",
+    "transferredBytes",
+    "attemptedBytes",
+    "retriedBytes",
+    "resumedBytes",
+    "remainingBytes",
+    "retries",
+    "verified",
+    "verification",
+    "commit",
+    "partialDisposition",
+    "error"
+  ],
+  "additionalProperties": false,
+  "$comment": "Runtime enforces byte totals, verified iff completed with matching final receipt, active/state and error/state consistency. attemptedBytes counts scheduled raw-payload attempts, not measured HTTP wire bytes."
+}

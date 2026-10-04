@@ -1,4 +1,5 @@
 import {storageEqual} from './job-storage-validation.mjs';
+import {markTransferTransient} from './transfer-transient.mjs';
 import {WORKSPACE_PATH, WORKSPACE_LIMITS, WorkspaceError, workspaceFailure, exactObject, requireText, requireToken, requireWorkspacePath, requireSha256, copyWorkspaceJson, parseWorkspaceRequest, parseWorkspaceReply, parseWorkspaceHello, parseWorkspaceMethodResult} from './workspace-protocol.mjs';
 import {parseJobId, parseJobOptions} from './jobs.mjs';
 import {BINARY_ARTIFACT_LIMITS, parseBinaryArtifactReference, parseBinaryArtifactRange, decodeBinaryArtifactData} from './artifacts.mjs';
@@ -41,7 +42,8 @@ async function readResponse(response, signal) {
   try {
     for (;;) {
       signal.throwIfAborted();
-      const {done, value} = await reader.read();
+      let item;try { item = await reader.read(); } catch { signal.throwIfAborted(); throw markTransferTransient(workspaceFailure('transport_failed', 'Workspace response stream failed')); }
+      const {done, value} = item;
       if (done) break;
       total += value.byteLength;
       if (total > WORKSPACE_LIMITS.wireBytes) throw workspaceFailure('budget_exceeded', 'Workspace response limit exceeded');
@@ -74,11 +76,14 @@ export function createWorkspaceClient({url, token, fetch: transport = globalThis
   };
   async function send(envelope, signal) {
     const request = parseWorkspaceRequest(envelope);
-    const response = await transport(endpoint, {method: 'POST', redirect: 'error', credentials: 'omit', cache: 'no-store', headers: {'content-type': 'application/json', authorization: `Bearer ${token}`}, body: JSON.stringify(request), signal});
+    let response;
+    try { response = await transport(endpoint, {method: 'POST', redirect: 'error', credentials: 'omit', cache: 'no-store', headers: {'content-type': 'application/json', authorization: `Bearer ${token}`}, body: JSON.stringify(request), signal}); }
+    catch (failure) { signal.throwIfAborted(); if(failure instanceof WorkspaceError)throw failure; throw markTransferTransient(workspaceFailure('transport_failed', 'Workspace transport failed')); }
     try {
       signal.throwIfAborted();
       if (response.redirected || response.status >= 300 && response.status < 400) throw workspaceFailure('transport_failed', 'Workspace redirects are forbidden');
       if (response.status === 401 || response.status === 403) throw workspaceFailure('authentication_required', 'Workspace server rejected authentication or origin');
+      if (response.status === 429 || response.status === 503) throw markTransferTransient(workspaceFailure('transport_failed', 'Workspace server temporarily rejected the request'));
       if (!response.ok) throw workspaceFailure('transport_failed', 'Workspace server rejected the request');
       const reply = parseWorkspaceReply(await readResponse(response, signal), request.requestId);
       if (!reply.ok) throw workspaceFailure(reply.error.code, `Workspace request failed (${reply.error.code})`);
@@ -112,7 +117,7 @@ export function createWorkspaceClient({url, token, fetch: transport = globalThis
     const controller = new AbortController(); pending.add(controller);
     const onAbort = () => controller.abort(workspaceFailure('cancelled', 'Workspace request cancelled'));
     signal?.addEventListener('abort', onAbort, {once: true});
-    const timer = setTimeout(() => controller.abort(workspaceFailure('budget_exceeded', 'Workspace request timed out')), requestTimeout);
+    const timer = setTimeout(() => controller.abort(markTransferTransient(workspaceFailure('budget_exceeded', 'Workspace request timed out'))), requestTimeout);
     let rejectAbort;
     const aborted = new Promise((_, reject) => { rejectAbort = () => reject(controller.signal.reason); controller.signal.addEventListener('abort', rejectAbort, {once: true}); });
     try {

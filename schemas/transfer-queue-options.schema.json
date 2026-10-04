@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.10.0/schemas/transfer-queue-options.schema.json",
+  "title": "transfer-queue-options",
+  "type": "object",
+  "properties": {
+    "maxTransfers": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 32
+    },
+    "concurrency": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4
+    },
+    "perConnection": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4
+    },
+    "bufferBytes": {
+      "type": "integer",
+      "minimum": 65536,
+      "maximum": 262144,
+      "multipleOf": 65536
+    },
+    "bytesPerSecond": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1073741824
+    },
+    "attempts": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "baseDelayMs": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000
+    },
+    "maxDelayMs": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10000
+    }
+  },
+  "required": [],
+  "additionalProperties": false,
+  "$comment": "Runtime checks perConnection <= concurrency and maxDelayMs >= baseDelayMs, with documented defaults."
+}

@@ -14,7 +14,7 @@ export interface UploadStatus {readonly reference:UploadReference;readonly state
 export interface UploadChunk {readonly offset:number;readonly data:string;readonly sha256:string;}
 export interface UploadCapabilities {readonly protocolVersion:1;readonly enabled:boolean;readonly scope:{readonly projectId:string;readonly sessionId:string};readonly identity:UploadIdentity|null;readonly roots:readonly string[];readonly limits:UploadLimits;readonly profile:'local-node-v1';}
 export interface UploadSource {readonly byteLength:number;read(offset:number,length:number,options?:{readonly signal?:AbortSignal}):Promise<Uint8Array>;}
-export interface UploadProgress {readonly phase:'hashing'|'verifying-prefix'|'uploading'|'committed';readonly completed:number;readonly total:number;readonly status:UploadStatus|undefined;}
+export interface UploadProgress {readonly phase:'hashing'|'verifying-prefix'|'uploading'|'committing'|'committed';readonly completed:number;readonly total:number;readonly status:UploadStatus|undefined;}
 export interface UploadFileOptions extends Omit<UploadSpec,'byteLength'|'sha256'> {readonly recover?:boolean;readonly signal?:AbortSignal;readonly timeoutMs?:number;readonly requestTimeoutMs?:number;readonly onProgress?:(progress:UploadProgress)=>void;}
 export function uploadFile(client:WorkspaceClient,source:UploadSource,options:UploadFileOptions):Promise<UploadStatus>;
 export function parseUploadLimits(value:unknown):UploadLimits;
