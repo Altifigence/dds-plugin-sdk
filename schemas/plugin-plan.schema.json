@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.13.0/schemas/plugin-plan.schema.json",
+  "title": "plugin-plan",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "directory": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 32768
+    },
+    "pluginId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "template": {
+      "enum": [
+        "command",
+        "language",
+        "theme",
+        "job",
+        "browser",
+        "configuration"
+      ]
+    },
+    "sdkVersion": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[a-z0-9.-]+)?$"
+    },
+    "generationDigest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240,
+            "pattern": "^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*$"
+          },
+          "bytes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1048576
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "required": [
+          "path",
+          "bytes",
+          "sha256"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 256
+    },
+    "conflicts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "const": "."
+          },
+          "reason": {
+            "const": "destination_exists"
+          }
+        },
+        "required": [
+          "path",
+          "reason"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 1
+    },
+    "writes": {
+      "const": false
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "directory",
+    "pluginId",
+    "template",
+    "sdkVersion",
+    "generationDigest",
+    "files",
+    "conflicts",
+    "writes"
+  ],
+  "additionalProperties": false
+}

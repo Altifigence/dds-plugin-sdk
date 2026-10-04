@@ -9,8 +9,8 @@ export class DataValidationError extends PluginSdkError {
   }
 }
 export function configurationFailure(reason, path = '', budget = false) {throw new DataValidationError(reason, path, budget);}
-export function configurationCopy(value, maxBytes = 65_536) {
-  try {return copyWorkspaceJson(value, {maxBytes, maxDepth: 32, maxNodes: 10_000});}
+export function configurationCopy(value, maxBytes = 65_536,maxNodes=10_000) {
+  try {return copyWorkspaceJson(value, {maxBytes, maxDepth: 32, maxNodes});}
   catch (error) {configurationFailure(error instanceof WorkspaceError && error.code === 'budget_exceeded' ? 'budget' : 'invalid_json', '', error instanceof WorkspaceError && error.code === 'budget_exceeded');}
 }
 export function configurationObject(value, required, optional = [], path = '') {

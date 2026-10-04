@@ -43,6 +43,19 @@ try {
   const diagnosed = JSON.parse(run(process.execPath, [devCli, 'doctor', 'scaffold', '--json'], consumer));
   assert.equal(diagnosed.ok, true);
   run(process.execPath, ['--test', 'plugin.test.mjs'], join(consumer, 'scaffold'));
+  const generatedTypeScript=join(root,'node_modules','typescript','bin','tsc');
+  run(process.execPath,[generatedTypeScript,'--noEmit','-p','tsconfig.json'],join(consumer,'scaffold'));
+  for(const template of ['language','theme','job','browser','configuration']){
+    const name='scaffold-'+template,directory=join(consumer,name);
+    run(process.execPath,[devCli,'init',name,'--template',template],consumer);
+    assert.equal(JSON.parse(run(process.execPath,[devCli,'doctor',name,'--json'],consumer)).ok,true);
+    assert.equal(JSON.parse(run(process.execPath,[devCli,'generate',name,'--check'],consumer)).ok,true);
+    run(process.execPath,['--test','plugin.test.mjs'],directory);
+    run(process.execPath,[generatedTypeScript,'--noEmit','-p','tsconfig.json'],directory);
+    assert.equal(JSON.parse(run(process.execPath,['run.mjs'],directory)).verified,true);
+    const packedPlugin=JSON.parse(run(process.execPath,[devCli,'pack',name,'--out',name+'-dist'],consumer));
+    assert.equal(JSON.parse(run(process.execPath,[devCli,'verify',packedPlugin.archivePath,'--sha256',packedPlugin.artifact.sha256],consumer)).checksumPinned,true);
+  }
   for (const job of [false, true]) {
     const output = run(process.execPath, [devCli, 'dev', 'scaffold', '--trust-local-code', '--command', 'greet', '--input', JSON.stringify({name:'Packed'}), ...(job ? ['--job'] : [])], consumer);
     assert.ok(output.includes('Hello, Packed!')); assert.ok(output.includes('"ok": true'));
@@ -195,6 +208,9 @@ try {
 `);
   run(process.execPath, ['workspace-smoke.mjs'], consumer);
   await cp(join(root, 'tests', 'types', 'consumer.mts'), join(consumer, 'consumer.mts'));
+  await cp(join(root,'tests','types','development.mts'),join(consumer,'development.mts'));
+  await cp(join(installed,'examples','development-tools'),join(consumer,'development-example'),{recursive:true});
+  assert.match(run(process.execPath,['development-example/run.mjs'],consumer),/pure trace replay and bounded diagnostics verified/);
   await cp(join(root, 'tests', 'types', 'configuration.mts'), join(consumer, 'configuration.mts'));
   await cp(join(root, 'tests', 'types', 'localization.mts'), join(consumer, 'localization.mts'));
   await cp(join(installed, 'examples', 'configuration'), join(consumer, 'configuration-example'), {recursive: true});

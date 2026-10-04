@@ -10,6 +10,120 @@ grants by default. `createPluginHost()` from the core accepts workspace/backend
 ports and defaults to no grants. Both run explicitly imported trusted modules
 in-process; neither follows a manifest entry or establishes an OS sandbox.
 
+## Deterministic scenarios (0.13)
+
+`createScenarioHost()` from `/testing` defaults to no grants or mounted file,
+backend, settings, secret or job capability. Select each explicitly:
+
+```js
+const scenario = createScenarioHost({
+  seed: 7, start: 1000,
+  files: {'result.txt': 'synthetic example'},
+  backends: {analyzer: {count: 3}},
+  grants: ['workspace.read', 'backend.invoke'],
+  jobs: true, binaryArtifacts: true,
+});
+try {
+  // Activate your trusted plugin on scenario.host.
+  scenario.faults.enqueue({operation: 'backend.analyzer', kind: 'delay', delayMs: 25});
+  const pending = scenario.host.executeCommand('your-plugin', 'analyze', {});
+  await scenario.clock.advance(25);
+  const result = await pending;
+} finally {
+  await scenario.dispose();
+  scenario.assertClean();
+}
+```
+
+Await `clock.advance()` before awaiting an operation blocked on its virtual timer.
+`createTestClock({seed,start})` exposes a trusted `runtime` port containing `now`,
+`setTimeout`, `clearTimeout` and `randomUUID`. Core host/diagnostic/language/job
+lifecycles, resolve-cache expiry, job checkpoint/history clocks, settings migrations
+and secret leases can use this port without patching globals. Test UUIDs are
+deterministic and are **not cryptographic production entropy**. The existing
+`now` secret-resolver option remains available but cannot be combined with `runtime`.
+
+Read-only resource `inspect()` methods remain available after disposal, including
+settings-store inspection (new in 0.13). Data reads and mutations still reject a
+disposed owner. This lets teardown checks observe a provider that ignored abort
+until it actually settles instead of reporting it as already released.
+
+Equal-time timers run in registration order. Each advance has at most 10,000
+steps and 4,096 scheduled timers; concurrent advances fail. An advance accepts
+at most one day, and drains bounded microtask turns between callbacks.
+`flushTestMicrotasks(turns)` helps settle explicitly bounded promise chains.
+Real I/O, WebCrypto completion, arbitrary plugin timers, OS watchers/processes
+and network transports are not made virtual. Do not call `runUntilIdle()` for a
+deliberately repeating timer without a suitable finite step budget.
+
+`scenario.capabilities` lists mounted fixtures. `replaceGrants(next)` deactivates
+plugins losing any grant, cancels their pending work and changes subsequent
+activations; newly added grants apply when a plugin next activates. These are
+operator controls, never a plugin API. Mounting a fixture does not grant access.
+
+| Fixture | Contract and limit |
+| --- | --- |
+| `createMemoryWorkspace` / `scenario.workspace` | UTF-8 reads, exact revision CAS writes, bounded lists, immutable binary sources and parsed project snapshots; 256 files, 256 KiB/file, 4 MiB total |
+| Workspace `subscribe` | Explicit synthetic snapshot callback; no native filesystem watching; 32 subscriptions |
+| Scenario `backends` | Named JSON fixture responses; explicit `backend.invoke` grant |
+| Scenario `settings` | Real bounded `SettingsStore` validation/CAS/migration with virtual operation timers; explicit supplied definitions |
+| Scenario `secrets` | Explicit synthetic byte arrays with real scoped resolver leases, virtual expiry and owned-copy zeroing |
+| `createMemoryJobStore` | Checksummed bounded contract snapshots, CAS and synthetic unavailable/corrupt records; no disk durability claim |
+
+Faults are queued for `file.read`, `file.write`, `file.list`, `file.capture`,
+`file.chunk`, `backend.<name>`, `settings.read`, `secret.resolve` or `store.write`.
+`delay` requires `delayMs`; `deny`, `disconnect`, `drop` and `exhaust` simulate
+their corresponding failure. `corrupt` returns the explicitly supplied JSON
+value without executing the real fixture operation. A dropped operation waits
+for cancellation or fault-controller disposal. `faults.events()` can drop,
+duplicate or reverse returned fixture events; it never duplicates actual effects.
+Standalone ports/controllers remain owner-managed. Attach an external job store
+via `jobStorage` and await `host.flushJobStore()` before inspecting its checkpoints.
+
+`scenario.inspect()` and `host.inspect()` count actual owned work, including
+pending activation/provider operations that ignored cancellation. Disposal cannot
+stop that code; `assertClean()` fails until it really settles. `createTestResources`
+tracks only explicitly registered file handles, processes, subscriptions, timers
+or operations. Supply their cleanup callback, retain failed cleanup entries and
+call `assertEmpty()`. It does not discover unrelated operating-system handles.
+The scenario's fake clock is also inspectable after disposal so leaked fixture
+timers are not silently hidden by clearing them.
+
+## Synthetic trace recording and pure replay
+
+```js
+const fixtures = {
+  synthetic: true, seed: 7, fixtureVersion: 1,
+  fixtures: [{id: 'greeting', operation: 'command',
+    input: {name: 'Example'}, output: {message: 'Hello, Example!'}}],
+};
+const recorder = createTestRecorder({...fixtures, now: scenario.clock.now});
+recorder.record('greeting', {name: 'Example'}, {message: 'Hello, Example!'});
+const trace = recorder.snapshot();
+const replay = createTestReplay(trace, fixtures);
+const result = replay.next('greeting', {name: 'Example'});
+replay.assertComplete();
+```
+
+Recording requires the caller's explicit assertion that every selected fixture is
+synthetic. The trace contains only its schema/fixture version, seed, selected
+fixture IDs, fixed operation names, virtual time, ordered input/output hashes and
+a hash chain. It contains no raw payloads, paths or secret bytes. Fixture IDs must
+also be non-sensitive. A hash is not encryption or anonymization: low-entropy
+values may be guessable. Keep customer, credential and PDK data out of fixtures.
+The SDK cannot establish that caller-provided material is actually synthetic.
+
+`parseTestTrace` checks exact fields, at most 1,024 events/1 MiB, sequence and hash
+integrity. Replay checks the seed, fixture version, complete fixture digest and
+request order, then returns the supplied frozen synthetic response. It accepts
+no execution callback and performs no filesystem/backend/secret effects. Job-store
+snapshots are separate full contract checkpoints and are not privacy-filtered
+trace exports; their default persisted job content policy remains metadata-only.
+
+Run `npm run example:devtools` for language, workspace, backend, settings, secrets,
+binary jobs and trace/profiler examples. Memory restart/corruption fixtures do not
+replace the separate real killed-child, HTTP, filesystem and browser examples.
+
 ## Test the included diagnostics plugin
 
 In a clone of the SDK repository, save `plugin.test.mjs` at the repository root:

@@ -2,6 +2,7 @@ import {parseProviderSelector, parseLanguageRequest, parseLanguageResult, assert
 import {LANGUAGE_LIMITS, parseCompletionItem, completionInsertion} from './language-assistance.mjs';
 import {languageObject, languageInteger, invalidLanguage, freezeLanguage} from './language-values.mjs';
 import {ErrorCode, LIMITS, PluginSdkError} from './limits.mjs';
+import {hostRuntime} from './host-runtime.mjs';
 import {parseCodeAction, sameCodeActionSelection, validateFormattingEdit} from './language-editing.mjs';
 import {LANGUAGE_DISPLAY_LIMITS as displayLimits, parseSemanticTokensDelta, applySemanticTokensDelta} from './language-display.mjs';
 
@@ -18,7 +19,8 @@ function providerMethod(provider, name) {
 }
 
 /** Trusted host primitive. Plugins remain in-process; grants belong to the owning host. */
-export function createLanguageRegistry(kind, {isCurrent = () => true} = {}) {
+export function createLanguageRegistry(kind, {isCurrent = () => true,runtime:runtimeInput} = {}) {
+  const runtime=hostRuntime(runtimeInput);
   if (!LANGUAGE_FEATURES.includes(kind) || typeof isCurrent !== 'function') invalidLanguage();
   const registrations = new Set(), live = new Set(), tokens = new Map(), results = new WeakMap(), semantic = new Map();
   const resolvable = kind === 'completion' || kind === 'code-actions';
@@ -29,11 +31,11 @@ export function createLanguageRegistry(kind, {isCurrent = () => true} = {}) {
     if (epoch !== expectedEpoch || !isCurrent(request)) throw failure(ErrorCode.STALE_SNAPSHOT, 'Language snapshot is no longer current');
   };
   function removeToken(id) {const entry = tokens.get(id); if (entry) {tokenBytes -= entry.bytes; tokens.delete(id);}}
-  function purgeTokens() {const now = Date.now(); for (const [id, entry] of tokens) if (entry.expiresAt <= now || !entry.provider.active) removeToken(id);}
+  function purgeTokens() {const now = runtime.now(); for (const [id, entry] of tokens) if (entry.expiresAt <= now || !entry.provider.active) removeToken(id);}
   function clearTokens() {tokens.clear(); tokenBytes = 0;}
   function removeSemantic(id) {const saved = semantic.get(id); if (saved) {semanticBytes -= saved.bytes; semantic.delete(id);}}
   function clearSemantic() {semantic.clear(); semanticBytes = 0;}
-  function purgeSemantic() {const now = Date.now(); for (const [id, saved] of semantic) if (saved.expiresAt <= now || !saved.entry.active) removeSemantic(id);}
+  function purgeSemantic() {const now = runtime.now(); for (const [id, saved] of semantic) if (saved.expiresAt <= now || !saved.entry.active) removeSemantic(id);}
   function abortEntry(entry, code) {for (const ticket of live) if (ticket.entry === entry) ticket.controller.abort(failure(code, 'Language provider is no longer active'));}
   function register(pluginId, selector, provider, options = {}) {
     open();
@@ -70,7 +72,7 @@ export function createLanguageRegistry(kind, {isCurrent = () => true} = {}) {
     signal?.addEventListener('abort', abort, {once: true});
     let onAbort;
     const cancelled = new Promise((_, reject) => {onAbort = () => reject(controller.signal.reason); controller.signal.addEventListener('abort', onAbort, {once: true});});
-    const timer = setTimeout(() => controller.abort(failure(ErrorCode.BUDGET_EXCEEDED, 'Language request timed out')), timeoutMs);
+    const timer = runtime.setTimeout(() => controller.abort(failure(ErrorCode.BUDGET_EXCEEDED, 'Language request timed out')), timeoutMs);
     const operationPromise = Promise.resolve().then(() => {
       if (controller.signal.aborted) throw controller.signal.reason;
       current(request, generation);
@@ -86,7 +88,7 @@ export function createLanguageRegistry(kind, {isCurrent = () => true} = {}) {
       if (!entry.active) throw failure(ErrorCode.DISPOSED, 'Language provider is no longer active');
       return raw;
     } finally {
-      clearTimeout(timer); signal?.removeEventListener('abort', abort); controller.signal.removeEventListener('abort', onAbort);
+      runtime.clearTimeout(timer); signal?.removeEventListener('abort', abort); controller.signal.removeEventListener('abort', onAbort);
       // An ignored cancellation retains its live slot until the provider actually settles.
     }
   }
@@ -102,9 +104,9 @@ export function createLanguageRegistry(kind, {isCurrent = () => true} = {}) {
         const {resolveData, ...visible} = item;
         if (resolveData !== undefined && allowTokens) {
           if (!entry.resolve) throw failure(ErrorCode.CAPABILITY_UNAVAILABLE, 'Language resolver is unavailable');
-          if (typeof globalThis.crypto?.randomUUID !== 'function') throw failure(ErrorCode.CAPABILITY_UNAVAILABLE, 'Secure token generation is unavailable');
-          const id = globalThis.crypto.randomUUID(), size = new TextEncoder().encode(JSON.stringify({request, item})).byteLength;
-          additions.push([id, {provider: entry, request, item, epoch, bytes: size, expiresAt: Date.now() + LANGUAGE_LIMITS.resolveTtlMs}]); bytes += size;
+          if (typeof runtime.randomUUID !== 'function') throw failure(ErrorCode.CAPABILITY_UNAVAILABLE, 'Secure token generation is unavailable');
+          const id = runtime.randomUUID(), size = new TextEncoder().encode(JSON.stringify({request, item})).byteLength;
+          additions.push([id, {provider: entry, request, item, epoch, bytes: size, expiresAt: runtime.now() + LANGUAGE_LIMITS.resolveTtlMs}]); bytes += size;
           visible.resolveToken = id;
         }
         return visible;
@@ -164,8 +166,8 @@ export function createLanguageRegistry(kind, {isCurrent = () => true} = {}) {
       current(request, generation);
       const parsed = parseLanguageResult(raw); assertLanguageResultMatchesRequest(parsed, request); data = parsed.data;
     }
-    if (typeof globalThis.crypto?.randomUUID !== 'function') throw failure(ErrorCode.CAPABILITY_UNAVAILABLE, 'Secure token generation is unavailable');
-    const id = globalThis.crypto.randomUUID(), {text: _text, ...snapshot} = request.snapshot;
+    if (typeof runtime.randomUUID !== 'function') throw failure(ErrorCode.CAPABILITY_UNAVAILABLE, 'Secure token generation is unavailable');
+    const id = runtime.randomUUID(), {text: _text, ...snapshot} = request.snapshot;
     const tokens = freezeLanguage({resultId: data.resultId, legend: data.legend, data: data.data});
     const previous = freezeLanguage({resultId: data.resultId, snapshot, legend: data.legend, data: data.data});
     const bytes = new TextEncoder().encode(JSON.stringify({previous, scope: request.scope})).byteLength;
@@ -173,11 +175,12 @@ export function createLanguageRegistry(kind, {isCurrent = () => true} = {}) {
     const result = checkedResult(createLanguageResult(request, {...data, resultId: id, updateKind}), request, entry, false);
     purgeSemantic();
     while (semantic.size >= displayLimits.semanticCacheEntries || semanticBytes + bytes > displayLimits.semanticCacheBytes) removeSemantic(semantic.keys().next().value);
-    semantic.set(id, {entry, scope: request.scope, previous, tokens, bytes, expiresAt: Date.now() + displayLimits.semanticCacheTtlMs}); semanticBytes += bytes;
+    semantic.set(id, {entry, scope: request.scope, previous, tokens, bytes, expiresAt: runtime.now() + displayLimits.semanticCacheTtlMs}); semanticBytes += bytes;
     results.get(result).semanticId = id;
     return result;
   }
   return Object.freeze({
+    inspect(){purgeTokens();purgeSemantic();return Object.freeze({disposed,registrations:registrations.size,pending:live.size,resolving,tokens:tokens.size,tokenBytes,semanticEntries:semantic.size,semanticBytes});},
     register,
     validateResult,
     async request(input, options) {

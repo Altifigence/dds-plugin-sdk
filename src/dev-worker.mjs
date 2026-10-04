@@ -3,14 +3,21 @@ import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {isDeepStrictEqual} from 'node:util';
 import {createPluginHost, parseManifest} from './index.mjs';
+import * as inspector from 'node:inspector';
+import {createDiagnosticSession,profileHost} from './diagnostics.mjs';
 
 // Remain alive until the parent terminates this process tree after completion.
 // This also lets the parent clean up children started during activation.
 const keepAlive = setInterval(() => {}, 60_000);
 process.once('disconnect', () => {clearInterval(keepAlive); process.exit(1);});
-process.once('message', async ({directory, command, input, job, timeoutMs}) => {
-  const host = createPluginHost({jobs: true}); let ok = false;
+process.once('message', async ({directory, command, input, job, timeoutMs,profile=false,debug=false,debugWait=false}) => {
+  const diagnostics=createDiagnosticSession({enabled:profile}),originalHost=createPluginHost({jobs:true}),host=profile?profileHost(originalHost,diagnostics):originalHost;let ok = false;
   try {
+    if(debug){
+      inspector.open(0,'127.0.0.1',false);
+      if(process.connected)await new Promise((resolve,reject)=>process.send({type:'debug',url:inspector.url()},error=>error?reject(error):resolve()));
+      if(debugWait)inspector.waitForDebugger();
+    }
     const manifest = JSON.parse(await readFile(path.join(directory, 'plugin.json'), 'utf8'));
     const module = await import(pathToFileURL(path.join(directory, manifest.entry)).href);
     if (!isDeepStrictEqual(module.default?.manifest, parseManifest(manifest))) throw new Error('Entry manifest must match plugin.json');
@@ -31,6 +38,8 @@ process.once('message', async ({directory, command, input, job, timeoutMs}) => {
   finally {
     host.dispose();
     await Promise.all([new Promise(resolve => process.stdout.write('', resolve)), new Promise(resolve => process.stderr.write('', resolve))]);
-    if (process.connected) process.send({type: 'complete', ok});
+    const report=profile?diagnostics.snapshot():undefined;diagnostics.dispose();
+    // The owning parent ends the inspector with this child, including attached or paused sessions.
+    if (process.connected) process.send({type: 'complete', ok,...(profile?{profile:report}:{})});
   }
 });

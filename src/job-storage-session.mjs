@@ -5,15 +5,18 @@ import {JOB_STORE_LIMITS, parseJobStoreIdentity, parseJobStoreLimits, parseStore
 import {storageObject, storageSha} from './job-storage-validation.mjs';
 import {createJobHistoryIndex} from './job-history-index.mjs';
 import {createArtifactStorageSession} from './artifact-storage-session.mjs';
+import {hostRuntime} from './host-runtime.mjs';
 
 const failure = code => new PluginSdkError(code, 'Job persistence operation failed');
 const hash = async text => [...new Uint8Array(await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)))].map(value => value.toString(16).padStart(2, '0')).join('');
 const noLabel = artifact => {const {label: _label, ...result} = artifact; return result;};
 
 /** Coalesced, bounded asynchronous checkpoints; the existing synchronous v1 API stays live-only. */
-export function createJobStorageSession(scope, options, snapshot) {
+export function createJobStorageSession(scope, options, snapshot, runtimeInput) {
+  const runtime=hostRuntime(runtimeInput);
   scope = parseScope(scope);
   if (options === undefined) return Object.freeze({
+    inspect:()=>Object.freeze({pending:0}),
     enabled: false, capabilities: () => parseJobStorageCapabilities({protocolVersion: 1, enabled: false, identity: null, limits: JOB_STORE_LIMITS}),
     has: () => false, register() {}, mark() {}, settle() {}, forget() {}, beforeExecute: async () => {}, flush: async () => {},
     recover() {throw failure(ErrorCode.CAPABILITY_UNAVAILABLE);},
@@ -39,7 +42,7 @@ export function createJobStorageSession(scope, options, snapshot) {
     if (!Array.isArray(records) || records.length > limits.records) throw failure(ErrorCode.BUDGET_EXCEEDED);
     return records.map(parseStoredJob).filter(record => record.storeId === identity.storeId && record.workspaceId === scope.projectId && record.workspaceIdentity === identity.workspaceIdentity && record.snapshot.pluginId === pluginId && record.pluginArtifactSha256 === artifactSha256 && record.grants.every(grant => grants.includes(grant)) && commands.has(record.snapshot.commandId));
   }
-  const history = createJobHistoryIndex(scope, identity, pluginId => artifacts[pluginId], authorizedRecords, jobId => entries.has(jobId) && !entries.get(jobId).forgotten);
+  const history = createJobHistoryIndex(scope, identity, pluginId => artifacts[pluginId], authorizedRecords, jobId => entries.has(jobId) && !entries.get(jobId).forgotten,runtime);
 
   function redactValue(entry, kind, value) {
     if (!redact) return null;
@@ -63,7 +66,7 @@ export function createJobStorageSession(scope, options, snapshot) {
     });
     // Capture all mutable state before the first await. An in-flight write can
     // therefore never claim a later event/settlement was included in its digest.
-    const savedAt = Math.max(Date.now(), current.updatedAt, entry.savedAt), settled = entry.r.settled;
+    const savedAt = Math.max(runtime.now(), current.updatedAt, entry.savedAt), settled = entry.r.settled;
     const binaryArtifacts = [...entry.r.binaryArtifacts.values()].map(value => noLabel(value.artifact));
     const retainedArtifacts=[...entry.r.storedArtifacts.values()];
     const signature = entry.r.signature;
@@ -109,6 +112,7 @@ export function createJobStorageSession(scope, options, snapshot) {
     return new Promise((resolve, reject) => {entry.waiting.push({version: entry.version, resolve, reject}); void pump();});
   }
   return Object.freeze({
+    inspect:()=>Object.freeze({pending:dirty.size+[...entries.values()].filter(entry=>entry.writing).length}),
     enabled: true,
     capabilities: () => parseJobStorageCapabilities({protocolVersion: 1, enabled: true, identity, limits}),
     history,
@@ -151,7 +155,7 @@ export function createJobStorageSession(scope, options, snapshot) {
       record = parseStoredJob(record);
       if (record.storeId !== identity.storeId || record.workspaceId !== scope.projectId || record.workspaceIdentity !== identity.workspaceIdentity || record.snapshot.pluginId !== pluginId || record.pluginArtifactSha256 !== artifactSha256) throw failure(ErrorCode.CONFLICT);
       if (!record.grants.every(grant => grants.includes(grant))) throw failure(ErrorCode.PERMISSION_DENIED);
-      if (record.expiresAt <= Date.now()) return response('expired');
+      if (record.expiresAt <= runtime.now()) return response('expired');
       return response(record.settled ? 'completed' : live ? 'live' : 'interrupted', record);
     },
   });

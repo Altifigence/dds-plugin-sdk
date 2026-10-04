@@ -1,13 +1,15 @@
 import {JOB_HISTORY_LIMITS, parseJobHistoryQuery, parseJobHistoryItem, parseJobHistoryPage} from './job-history.mjs';
 import {ErrorCode, PluginSdkError} from './limits.mjs';
+import {hostRuntime} from './host-runtime.mjs';
 
 const failure = code => new PluginSdkError(code, 'Job history operation failed');
 /** Snapshot membership/order; current authorization and removal are checked per page. */
-export function createJobHistoryIndex(scope, identity, artifactFor, authorizedRecords, isLive) {
+export function createJobHistoryIndex(scope, identity, artifactFor, authorizedRecords, isLive,runtimeInput) {
+  const runtime=hostRuntime(runtimeInput);
   const views = new Map();
   return (pluginId, query, grants, commands) => {
     query = parseJobHistoryQuery(query);
-    const now = Date.now(), {cursor, ...filters} = query;
+    const now = runtime.now(), {cursor, ...filters} = query;
     const signature = JSON.stringify(Object.fromEntries(Object.entries(filters).sort(([a],[b]) => a.localeCompare(b))));
     for (const [id, view] of views) if (view.expiresAt <= now) views.delete(id);
     const current = new Map(authorizedRecords(pluginId, grants, commands).map(record => [record.snapshot.jobId, record]));
@@ -27,7 +29,7 @@ export function createJobHistoryIndex(scope, identity, artifactFor, authorizedRe
       }
       items.sort((a,b) => b.startedAt-a.startedAt || a.jobId.localeCompare(b.jobId));
       view = {pluginId, signature, asOf:now, expiresAt:now + JOB_HISTORY_LIMITS.cursorMs, items};
-      viewId = globalThis.crypto.randomUUID();
+      viewId = runtime.randomUUID();
       if (items.length > filters.limit) {
         if (views.size >= JOB_HISTORY_LIMITS.snapshots) throw failure(ErrorCode.BUDGET_EXCEEDED);
         views.set(viewId, view);

@@ -1,0 +1,277 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.13.0/schemas/diagnostic-report.schema.json",
+  "title": "diagnostic-report",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "enabled": {
+      "type": "boolean"
+    },
+    "sampleEvery": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000
+    },
+    "retentionMs": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 300000
+    },
+    "capacity": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 256
+    },
+    "attempted": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000000000000
+    },
+    "sampled": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000000000000
+    },
+    "dropped": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000000000000
+    },
+    "pending": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 64
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^d[1-9][0-9]{0,15}$"
+          },
+          "parentId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^d[1-9][0-9]{0,15}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "operation": {
+            "enum": [
+              "activation",
+              "command",
+              "language",
+              "transport",
+              "workspace",
+              "project",
+              "job",
+              "binary",
+              "settings",
+              "secret",
+              "backend",
+              "dispose"
+            ]
+          },
+          "startedAt": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "durationMs": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "cancelled",
+              "error",
+              "disposed"
+            ]
+          },
+          "inputBytes": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000000000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "outputBytes": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000000000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "queueDepth": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000000000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "resources": {
+            "type": "object",
+            "properties": {
+              "plugins": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000000000
+              },
+              "commands": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000000000
+              },
+              "registrations": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000000000
+              },
+              "pendingActivations": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000000000
+              },
+              "pendingOperations": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000000000
+              },
+              "providerOperations": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000000000
+              },
+              "pendingJobs": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000000000
+              },
+              "binaryOperations": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000000000
+              },
+              "pendingCheckpoints": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000000000
+              },
+              "retainedJobs": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000000000
+              },
+              "resolveTokens": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000000000
+              },
+              "semanticEntries": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000000000
+              },
+              "timers": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000000000
+              },
+              "subscriptions": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000000000
+              },
+              "fileHandles": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000000000
+              },
+              "processes": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000000000
+              },
+              "memoryBytes": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000000000
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          },
+          "errorCode": {
+            "enum": [
+              "invalid_contract",
+              "permission_denied",
+              "unsupported_host",
+              "version_mismatch",
+              "cancelled",
+              "stale_snapshot",
+              "budget_exceeded",
+              "disposed",
+              "provider_failed",
+              "provider_unavailable",
+              "capability_unavailable",
+              "conflict"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "parentId",
+          "operation",
+          "startedAt",
+          "durationMs",
+          "status",
+          "inputBytes",
+          "outputBytes",
+          "queueDepth",
+          "resources"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 256
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "enabled",
+    "sampleEvery",
+    "retentionMs",
+    "capacity",
+    "attempted",
+    "sampled",
+    "dropped",
+    "pending",
+    "events"
+  ],
+  "additionalProperties": false
+}

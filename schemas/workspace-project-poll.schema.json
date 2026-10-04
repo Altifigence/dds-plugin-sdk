@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.12.0/schemas/workspace-project-poll.schema.json",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.13.0/schemas/workspace-project-poll.schema.json",
   "title": "workspace-project-poll",
   "type": "object",
   "properties": {
