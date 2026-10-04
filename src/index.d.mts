@@ -57,12 +57,14 @@ export interface CommandDefinition {
 }
 export interface RegisteredCommand extends CommandDefinition {readonly pluginId: string;}
 import type {JobReporter, JobOptions, JobSnapshot, JobEvents, JobArtifactContent, JobCapabilities} from './jobs.mjs';
+import type {BinaryArtifactSource, BinaryArtifactCapabilities, BinaryArtifactList, BinaryArtifactChunk} from './artifacts.mjs';
 export type {JobReporter, JobOptions, JobSnapshot, JobEvents, JobArtifactContent, JobCapabilities} from './jobs.mjs';
 export type CommandHandler = (input: JsonValue, options: {readonly signal: AbortSignal; readonly job?: JobReporter}) => JsonValue | Promise<JsonValue>;
 export interface WorkspaceFile {readonly path: string; readonly content: string; readonly revision: string;}
 export interface WorkspaceWriteResult {readonly path: string; readonly revision: string;}
 export interface WorkspaceEntry {readonly path: string; readonly kind: 'file' | 'directory'; readonly revision?: string; readonly name?: string; readonly size?: number;}
 export interface WorkspacePort {
+  captureBinaryFile?(path: string, options: {readonly signal: AbortSignal}): BinaryArtifactSource | Promise<BinaryArtifactSource>;
   readFile?(path: string, options: {readonly signal: AbortSignal}): WorkspaceFile | Promise<WorkspaceFile>;
   writeFile?(path: string, content: string, options: {readonly expectedRevision: string | null; readonly signal: AbortSignal}): WorkspaceWriteResult | Promise<WorkspaceWriteResult>;
   listFiles?(path: string, options: {readonly signal: AbortSignal}): readonly WorkspaceEntry[] | Promise<readonly WorkspaceEntry[]>;
@@ -146,6 +148,7 @@ export function definePlugin(manifest: PluginManifest, activate: Plugin['activat
 export function createDiagnosticsRegistry(options?: {readonly isCurrent?: (request: DiagnosticsRequest) => boolean}): DiagnosticsRegistry;
 export interface PluginHostOptions {
   readonly jobs?: boolean;
+  readonly binaryArtifacts?: boolean;
   readonly hostId?: HostId; readonly scope?: Scope; readonly grants?: readonly Permission[];
   readonly workspace?: WorkspacePort; readonly backends?: Readonly<Record<string, BackendHandler>>;
 }
@@ -157,11 +160,14 @@ export interface PluginHost extends Disposable {
   listCommands(): readonly RegisteredCommand[];
   executeCommand(pluginId: string, commandId: string, input: JsonValue, options?: RequestOptions): Promise<JsonValue>;
   jobCapabilities(): JobCapabilities;
+  binaryArtifactCapabilities(): BinaryArtifactCapabilities;
   startCommandJob(pluginId: string, commandId: string, input: JsonValue, options: JobOptions): JobSnapshot;
   getJob(jobId: string): JobSnapshot;
   getJobEvents(jobId: string, after?: number): JobEvents;
   cancelJob(jobId: string): JobSnapshot;
   readJobArtifact(jobId: string, artifactId: string, options?: RequestOptions): Promise<JobArtifactContent>;
+  listJobBinaryArtifacts(jobId: string): BinaryArtifactList;
+  readJobBinaryArtifactChunk(jobId:string, artifactId:string, revision:string, offset:number, length:number, options?:RequestOptions):Promise<BinaryArtifactChunk>;
   listPlugins(): readonly PluginManifest[];
   deactivate(pluginId: string): void;
 }

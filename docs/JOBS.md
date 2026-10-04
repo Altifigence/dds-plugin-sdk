@@ -129,8 +129,8 @@ workspace. It does not copy or expose arbitrary host files. `readJobArtifact`
 requires the plugin to remain active and the same read grant, checks that the
 current content still matches the captured hash, and returns `conflict` if it has
 changed. The server does not retain file bytes. Only UTF-8 files up to 256 KiB are
-supported; binary/large simulation traces require a separate authorized artifact
-service. Already registered files remain readable after cancellation while the
+supported through this existing API. SDK 0.7.0 adds separately enabled
+[binary artifacts](BINARY_ARTIFACTS.md), chunk reads and a resumable Node downloader. Already registered files remain readable after cancellation while the
 job is retained; they can be partial output and are not proof of success.
 
 | Limit | Value |
@@ -142,7 +142,7 @@ job is retained; they can be partial output and are not proof of success.
 | Terminal retention once settled | 15 minutes from last event; cleaned on next access |
 | Events per job | 256 and 64 KiB, whichever is reached first |
 | Events per page | 64 |
-| Artifacts per job | 16 |
+| Artifacts per job | 16, shared by text and binary registrations |
 | File content | 256 KiB UTF-8 |
 | JSON snapshot including result/metadata | 256 KiB, existing JSON depth/node limits |
 
@@ -159,7 +159,8 @@ ID로 조회할 수 있지만, 재시작이나 보관 기간 만료 후에는 �
 
 명령의 `job` 객체가 진행률·로그·백엔드 호출·결과 파일 등록을 제공합니다. 기존
 파일 읽기·쓰기·백엔드 권한을 그대로 적용합니다. 결과 파일은 상대 경로와 해시로
-고정되며 내용이 바뀌면 읽기를 거부합니다. UTF-8 256 KiB까지만 지원하고 큰 바이너리
-파형 파일은 포함하지 않습니다. 취소·시간 초과는 이전 파일 변경을 되돌리지 않으며,
+고정되며 내용이 바뀌면 읽기를 거부합니다. 기존 API는 UTF-8 256 KiB까지만 지원합니다. 0.7.0의 별도
+[바이너리 결과 API](BINARY_ARTIFACTS.md)는 운영자가 활성화한 경우 큰 결과 파일을
+분할 다운로드하고 Node에서 전체 해시를 검증한 뒤 확정합니다. 취소·시간 초과는 이전 파일 변경을 되돌리지 않으며,
 등록된 일부 결과는 성공 판정과 별개입니다. SDK 기능 추가가 DDS 제품 화면에 적용됐다는
 뜻은 아닙니다.

@@ -1,5 +1,6 @@
-import {WORKSPACE_PATH, WORKSPACE_LIMITS, WorkspaceError, workspaceFailure, requireToken, requireWorkspacePath, requireSha256, parseWorkspaceRequest, parseWorkspaceReply, parseWorkspaceHello, parseWorkspaceMethodResult} from './workspace-protocol.mjs';
-import {parseJobOptions} from './jobs.mjs';
+import {WORKSPACE_PATH, WORKSPACE_LIMITS, WorkspaceError, workspaceFailure, exactObject, requireText, requireToken, requireWorkspacePath, requireSha256, parseWorkspaceRequest, parseWorkspaceReply, parseWorkspaceHello, parseWorkspaceMethodResult} from './workspace-protocol.mjs';
+import {parseJobId, parseJobOptions} from './jobs.mjs';
+import {BINARY_ARTIFACT_LIMITS, parseBinaryArtifactReference, parseBinaryArtifactRange, decodeBinaryArtifactData} from './artifacts.mjs';
 import {registerObservationClient, watchWorkspaceJob, waitForWorkspaceJob} from './workspace-observation.mjs';
 export {createWorkspaceProject, applyTextEdits} from './workspace-project.mjs';
 export {WORKSPACE_OBSERVATION_LIMITS} from './workspace-observation.mjs';
@@ -49,7 +50,7 @@ export function createWorkspaceClient({url, token, fetch: transport = globalThis
   const endpoint = normalizeWorkspaceUrl(url);
   token = requireToken(token);
   if (typeof transport !== 'function') throw workspaceFailure('invalid_request', 'A fetch transport is required');
-  let binding, fileCapabilities, closed = false, sequence = 0, bindingSequence = 0;
+  let binding, fileCapabilities, binaryCapabilities, closed = false, sequence = 0, bindingSequence = 0;
   let connectionController = new AbortController();
   const pending = new Set();
   const instance = globalThis.crypto.randomUUID();
@@ -59,7 +60,7 @@ export function createWorkspaceClient({url, token, fetch: transport = globalThis
   };
   budget(timeoutMs);
   const revoke = (reason = workspaceFailure('disposed', 'Workspace connection changed')) => {
-    binding = undefined; fileCapabilities = undefined; bindingSequence++;
+    binding = undefined; fileCapabilities = undefined; binaryCapabilities = undefined; bindingSequence++;
     connectionController.abort(reason);
     connectionController = new AbortController();
     for (const controller of pending) controller.abort(workspaceFailure('disposed', 'Workspace connection changed'));
@@ -117,6 +118,16 @@ export function createWorkspaceClient({url, token, fetch: transport = globalThis
       if (method === 'plugins.list' && JSON.stringify(result.plugins) !== JSON.stringify(captured.plugins)) {
         const error = workspaceFailure('plugin_mismatch', 'Workspace plugin metadata changed; reconnect and obtain consent again');
         revoke(error); throw error;
+      }
+      if (method.startsWith('artifacts.') && method !== 'artifacts.capabilities') {
+        if (result.jobId !== params.jobId || result.scope.projectId !== captured.workspace.id || result.scope.sessionId !== captured.workspace.generation) throw workspaceFailure('invalid_request', 'Artifact reply identity mismatch');
+        if (method === 'artifacts.read') {
+          if (result.artifact.id !== params.artifactId || result.artifact.revision !== params.revision || result.offset !== params.offset || result.nextOffset !== params.offset + Math.min(params.length, result.artifact.byteLength - params.offset)) throw workspaceFailure('invalid_request', 'Artifact range or revision mismatch');
+          const digest = [...new Uint8Array(await globalThis.crypto.subtle.digest('SHA-256', decodeBinaryArtifactData(result.data)))].map(byte => byte.toString(16).padStart(2, '0')).join('');
+          if (controller.signal.aborted) throw controller.signal.reason;
+          if (closed || revision !== bindingSequence) throw workspaceFailure('disposed', 'Workspace connection changed');
+          if (digest !== result.sha256) throw workspaceFailure('invalid_request', 'Artifact chunk digest mismatch');
+        }
       }
       if (method.startsWith('jobs.') && method !== 'jobs.capabilities') {
         if (result.jobId !== params.jobId || result.scope.projectId !== captured.workspace.id || result.scope.sessionId !== captured.workspace.generation) throw workspaceFailure('invalid_request', 'Job reply identity mismatch');
@@ -180,6 +191,43 @@ export function createWorkspaceClient({url, token, fetch: transport = globalThis
     const file = await request('fs.read', {path}, options);
     return Object.freeze(file.revision === knownRevision ? {path: file.path, revision: file.revision, notModified: true} : {...file, notModified: false});
   }
+  async function getBinaryArtifactCapabilities(options) {
+    const captured = binding; checkFileConnection(captured, options);
+    if (binaryCapabilities) return binaryCapabilities;
+    const unavailable = Object.freeze({protocolVersion: 1, enabled: false, limits: BINARY_ARTIFACT_LIMITS});
+    if (captured.hostId === 'workspace-host' && /^0\.[0-6]\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(captured.hostVersion)) return binaryCapabilities = unavailable;
+    let result;
+    try {result = await request('artifacts.capabilities', {}, options);}
+    catch (error) {if (!(error instanceof WorkspaceError) || error.code !== 'unsupported') throw error; result = unavailable;}
+    checkFileConnection(captured, options); return binaryCapabilities = result;
+  }
+  async function requireBinaryConnection(captured, options) {
+    const capabilities = await getBinaryArtifactCapabilities(options); checkFileConnection(captured, options);
+    if (!capabilities.enabled) throw workspaceFailure('unsupported', 'This host has not enabled binary artifacts'); return capabilities;
+  }
+  async function listJobBinaryArtifacts(jobId, options) {
+    parseJobId(jobId); const captured = binding; await requireBinaryConnection(captured, options);
+    return request('artifacts.list', {jobId}, options);
+  }
+  async function getJobBinaryArtifact(jobId, artifactId, options) {
+    requireText(artifactId); const result = await listJobBinaryArtifacts(jobId, options);
+    const artifact = result.artifacts.find(artifact => artifact.id === artifactId);
+    if (!artifact) throw workspaceFailure('not_found', 'Binary artifact is not registered');
+    return Object.freeze({jobId: result.jobId, scope: result.scope, artifact});
+  }
+  async function readJobBinaryArtifactChunk(reference, offset, options = {}) {
+    reference = parseBinaryArtifactReference(reference); exactObject(options, [], ['length', 'signal', 'timeoutMs']);
+    const {length: requestedLength, ...requestOptions} = options;
+    parseBinaryArtifactRange(offset, requestedLength ?? BINARY_ARTIFACT_LIMITS.chunkBytes, reference.artifact.byteLength);
+    const captured = binding; checkFileConnection(captured, requestOptions);
+    if (reference.scope.projectId !== captured.workspace.id || reference.scope.sessionId !== captured.workspace.generation) throw workspaceFailure('generation_mismatch', 'Artifact belongs to another workspace generation');
+    const capabilities = await requireBinaryConnection(captured, requestOptions);
+    const length = requestedLength ?? capabilities.limits.chunkBytes;
+    if (length > capabilities.limits.chunkBytes || reference.artifact.byteLength > capabilities.limits.fileBytes) throw workspaceFailure('budget_exceeded', 'Artifact exceeds the host transfer budget');
+    const result = await request('artifacts.read', {jobId: reference.jobId, artifactId: reference.artifact.id, revision: reference.artifact.revision, offset, length}, requestOptions);
+    if (['id', 'path', 'revision', 'byteLength', 'label'].some(key => result.artifact[key] !== reference.artifact[key])) throw workspaceFailure('invalid_request', 'Artifact metadata changed');
+    return result;
+  }
   const client = Object.freeze({
     async connect(options) {
       revoke();
@@ -212,6 +260,10 @@ export function createWorkspaceClient({url, token, fetch: transport = globalThis
     getJobEvents: (jobId, after = 0, options) => request('jobs.events', {jobId, after}, options),
     cancelJob: (jobId, options) => request('jobs.cancel', {jobId}, options),
     readJobArtifact: (jobId, artifactId, options) => request('jobs.artifact', {jobId, artifactId}, options),
+    getBinaryArtifactCapabilities,
+    listJobBinaryArtifacts,
+    getJobBinaryArtifact,
+    readJobBinaryArtifactChunk,
     watchJob: (jobId, options) => watchWorkspaceJob(client, jobId, options),
     waitForJob: (jobId, options) => waitForWorkspaceJob(client, jobId, options),
     disconnect() { revoke(); },

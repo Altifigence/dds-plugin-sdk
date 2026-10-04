@@ -1,12 +1,13 @@
 import { LIMITS, ErrorCode } from './limits.mjs';
 import {JOB_LIMITS, JOB_STATES} from './jobs.mjs';
+import {BINARY_ARTIFACT_LIMITS} from './artifacts.mjs';
 import { SEMVER_PATTERN } from './patterns.mjs';
 import { THEME_SCHEMA } from './themes.mjs';
 import {WORKSPACE_LIMITS} from './workspace-protocol.mjs';
 import { LANGUAGE_FEATURES } from './contracts.mjs';
 
 const schema = 'https://json-schema.org/draft/2020-12/schema';
-const base = 'https://github.com/Altifigence/dds-plugin-sdk/blob/v0.6.0/schemas/';
+const base = 'https://github.com/Altifigence/dds-plugin-sdk/blob/v0.7.0/schemas/';
 const text = maxLength => ({type: 'string', minLength: 1, maxLength});
 const integer = (maximum, minimum = 0) => ({type: 'integer', minimum, maximum});
 const object = (properties, required = Object.keys(properties)) => ({type: 'object', properties, required, additionalProperties: false});
@@ -75,7 +76,15 @@ const jobArtifact = object({id: text(128), path: {...text(1024), $comment: 'Runt
 const jobBase = {protocolVersion: {const: 1}, jobId, scope, pluginId: text(128), commandId: text(128), startedAt: integer(Number.MAX_SAFE_INTEGER), updatedAt: integer(Number.MAX_SAFE_INTEGER), timeoutMs: integer(JOB_LIMITS.maxTimeoutMs, 1), progress: {oneOf: [{type: 'null'}, jobProgress]}, artifacts: list(jobArtifact, JOB_LIMITS.artifacts), lastSequence: integer(Number.MAX_SAFE_INTEGER, 1)};
 const jobEvent = {oneOf: Object.entries({progress: jobProgress, artifact: jobArtifact, state: object({state: {enum: JOB_STATES}}), log: object({level: {enum: ['debug', 'info', 'warning', 'error']}, message: {...text(JOB_LIMITS.messageBytes), 'x-maxUtf8Bytes': JOB_LIMITS.messageBytes}})}).map(([kind, data]) => object({sequence: integer(Number.MAX_SAFE_INTEGER, 1), at: integer(Number.MAX_SAFE_INTEGER), kind: {const: kind}, data}))};
 const fileRevision = {path: {...text(1024), $comment: 'Runtime enforces the protected relative workspace path policy.'}, revision: {...text(64), pattern: '^[a-f0-9]{64}$'}};
+const binaryArtifact = object({...jobArtifact.properties, byteLength: integer(BINARY_ARTIFACT_LIMITS.fileBytes)}, ['id', 'path', 'revision', 'byteLength']);
+const binaryReference = {jobId, scope, artifact: binaryArtifact};
+const binaryChunk = {offset: integer(BINARY_ARTIFACT_LIMITS.fileBytes), nextOffset: integer(BINARY_ARTIFACT_LIMITS.fileBytes), eof: {type: 'boolean'}, data: {type: 'string', maxLength: Math.ceil(BINARY_ARTIFACT_LIMITS.chunkBytes / 3) * 4, contentEncoding: 'base64', pattern: '^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$'}, sha256: {...text(64), pattern: '^[a-f0-9]{64}$'}};
 export const SCHEMAS = Object.freeze({
+  'binary-artifact': define('binary-artifact', binaryArtifact),
+  'binary-artifact-reference': define('binary-artifact-reference', object(binaryReference)),
+  'binary-artifact-list': define('binary-artifact-list', object({jobId, scope, artifacts: list(binaryArtifact, BINARY_ARTIFACT_LIMITS.artifacts)})),
+  'binary-artifact-chunk': define('binary-artifact-chunk', {...object({...binaryReference, ...binaryChunk}), $comment: 'Runtime enforces canonical base64, exact decoded byte count, offsets/EOF and identity. Transfer clients verify chunk SHA-256; whole-file verification is required before publication.'}),
+  'binary-artifact-capabilities': define('binary-artifact-capabilities', object({protocolVersion: {const: 1}, enabled: {type: 'boolean'}, limits: object(Object.fromEntries(Object.entries(BINARY_ARTIFACT_LIMITS).map(([key, value]) => [key, integer(value, 1)])))})),
   'workspace-file-capabilities': define('workspace-file-capabilities', object({protocolVersion: {const: 1}, revision: {type: 'boolean'}, conditionalRead: {type: 'boolean'}})),
   'workspace-file-revision': define('workspace-file-revision', object(fileRevision)),
   'workspace-conditional-file': define('workspace-conditional-file', {oneOf: [object({...fileRevision, notModified: {const: true}}), object({...fileRevision, notModified: {const: false}, content: {type: 'string', maxLength: WORKSPACE_LIMITS.fileBytes, 'x-maxUtf8Bytes': WORKSPACE_LIMITS.fileBytes}})], $comment: 'Runtime additionally correlates notModified and revision with the request knownRevision.'}),

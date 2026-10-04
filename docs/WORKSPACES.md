@@ -141,7 +141,9 @@ Listing skips protected entries and hardlinks and never recursively walks them.
 This explicit list is not a scanner for every possible secret. Trusted modules
 and tools are still governed by their OS account.
 
-Files must be valid UTF-8 and at most 262,144 bytes. New-file writes require
+Text file APIs require valid UTF-8 and at most 262,144 bytes.
+The optional [binary job result extension](BINARY_ARTIFACTS.md) has separate
+registration and chunk-read limits; it does not widen text edits. New-file writes require
 `expectedRevision:null`; existing writes require their SHA-256 revision. Server
 mutations are serialized; stale writers through the same host conflict. External
 editors do not participate in that lock: checks are best effort against them,

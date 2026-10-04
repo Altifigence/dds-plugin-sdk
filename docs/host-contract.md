@@ -131,3 +131,11 @@ capture, effective grants, consent, replacement/unload cleanup, cancellation,
 stale identities, denied calls, port CAS and resource enforcement on the exact
 advertised build. Report native product acceptance separately from SDK and
 Node workspace test results.
+
+For SDK 0.7 binary results, explicitly enable `binaryArtifacts` along with jobs.
+A custom workspace port provides `captureBinaryFile(path,{signal})`, returning
+`{path,revision,byteLength,readChunk}`. Capture must pin a coherent file snapshot
+and `readChunk(offset,length,{signal})` must reject source changes, return exactly
+the bounded range and honor cancellation. The Node port supplies guarded streaming
+reads. Custom ports own their isolation and I/O budgets. See
+[binary results](BINARY_ARTIFACTS.md) for the complete contract.

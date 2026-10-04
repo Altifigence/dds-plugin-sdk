@@ -6,6 +6,8 @@ import {createServer} from 'node:http';
 import {spawn} from 'node:child_process';
 import {createPluginHost} from './index.mjs';
 import {JOB_LIMITS} from './jobs.mjs';
+import {BINARY_ARTIFACT_LIMITS, parseBinaryArtifactRange} from './artifacts.mjs';
+export {downloadJobBinaryArtifact} from './artifact-download-node.mjs';
 import {WORKSPACE_PATH, WORKSPACE_LIMITS, WORKSPACE_ERROR_CODES, WorkspaceError, workspaceFailure, requireText, requireUuid, requireSha256, requireToken, requireWorkspacePath, requireFileContent, copyWorkspaceJson, parseWorkspaceRequest, parseWorkspaceHello, parseWorkspaceMethodResult} from './workspace-protocol.mjs';
 
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -23,13 +25,13 @@ function fileError(failure) {
 }
 
 /** User-owned UTF-8 workspace. API paths never select an absolute host root. */
-export async function createNodeWorkspace({root, writable = true, manage = writable} = {}) {
-  if (typeof writable !== 'boolean' || typeof manage !== 'boolean') throw workspaceFailure('invalid_request', 'Invalid workspace capabilities');
+export async function createNodeWorkspace({root, writable = true, manage = writable, binaryArtifacts = false} = {}) {
+  if (typeof writable !== 'boolean' || typeof manage !== 'boolean' || typeof binaryArtifacts !== 'boolean') throw workspaceFailure('invalid_request', 'Invalid workspace capabilities');
   if (typeof root !== 'string' || !path.isAbsolute(root)) throw workspaceFailure('invalid_request', 'An absolute operator workspace root is required');
   const supplied = await fs.lstat(root, {bigint: true});
   if (supplied.isSymbolicLink() || !supplied.isDirectory()) throw workspaceFailure('unsafe_path', 'Workspace root must be a real directory');
   const canonical = await fs.realpath(root), initial = await fs.lstat(canonical, {bigint: true});
-  let closed = false, queued = 0, tail = Promise.resolve();
+  let closed = false, queued = 0, binaryOperations = 0, tail = Promise.resolve();
   async function checkRoot() {
     if (closed) throw workspaceFailure('disposed', 'Workspace is disposed');
     const now = await fs.lstat(canonical, {bigint: true});
@@ -86,6 +88,33 @@ export async function createNodeWorkspace({root, writable = true, manage = writa
     catch (failure) { throw fileError(failure); }
     finally { queued--; release(); }
   }
+  async function binaryOperation(operation) {
+    if (!binaryArtifacts) throw workspaceFailure('unsupported', 'Binary artifacts are disabled');
+    if (binaryOperations >= BINARY_ARTIFACT_LIMITS.concurrent) throw workspaceFailure('budget_exceeded', 'Binary read capacity exceeded');
+    binaryOperations++;
+    try {await checkRoot(); return await operation();}
+    catch (failure) {throw fileError(failure);}
+    finally {binaryOperations--;}
+  }
+  async function openBinary(relative, expected) {
+    const {target, stat} = await resolve(relative);
+    if (!stat.isFile()) throw workspaceFailure('invalid_request', 'Expected a regular artifact file');
+    requireSingleLink(stat);
+    if (stat.size > BigInt(BINARY_ARTIFACT_LIMITS.fileBytes)) throw workspaceFailure('budget_exceeded', 'Binary artifact size limit exceeded');
+    if (expected && !sameBytesState(stat, expected)) throw workspaceFailure('conflict', 'Binary artifact changed');
+    const handle = await fs.open(target, flags.O_RDONLY | (flags.O_NOFOLLOW ?? 0));
+    try {
+      const opened = await handle.stat({bigint: true}); requireSingleLink(opened);
+      if (!opened.isFile() || !sameBytesState(stat, opened)) throw workspaceFailure('conflict', 'Binary artifact changed');
+      return {handle, opened};
+    } catch (failure) {await handle.close(); throw failure;}
+  }
+  async function verifyBinary(relative, handle, expected, signal) {
+    const after = await handle.stat({bigint: true}), current = await resolve(relative);
+    requireSingleLink(after); requireSingleLink(current.stat);
+    if (!sameBytesState(after, expected) || !sameBytesState(current.stat, expected)) throw workspaceFailure('conflict', 'Binary artifact changed');
+    aborted(signal);
+  }
   const requireManage = () => { if (!manage || !writable) throw workspaceFailure('permission_denied', 'Workspace management is disabled'); };
   async function verifyParent(target, expected) {
     await checkRoot(); const parent = path.dirname(target), current = await fs.lstat(parent, {bigint:true});
@@ -116,6 +145,42 @@ export async function createNodeWorkspace({root, writable = true, manage = writa
       } catch(failure){throw fileError(failure);}
     },
     async readFile(relative, {signal} = {}) {try {const {stat:_,...result}=await rawRead(relative,signal);return Object.freeze(result);}catch(failure){throw fileError(failure);}},
+    ...(binaryArtifacts ? {captureBinaryFile(relative, {signal} = {}) {
+      return binaryOperation(async () => {
+        aborted(signal); const {handle, opened} = await openBinary(relative);
+        let revision;
+        try {
+          const hash = createHash('sha256'), buffer = Buffer.alloc(BINARY_ARTIFACT_LIMITS.chunkBytes); let offset = 0;
+          for (;;) {
+            aborted(signal); const {bytesRead} = await handle.read(buffer, 0, buffer.length, offset);
+            if (!bytesRead) break;
+            offset += bytesRead;
+            if (offset > BINARY_ARTIFACT_LIMITS.fileBytes) throw workspaceFailure('budget_exceeded', 'Binary artifact size limit exceeded');
+            hash.update(buffer.subarray(0, bytesRead));
+          }
+          if (BigInt(offset) !== opened.size) throw workspaceFailure('conflict', 'Binary artifact changed');
+          await verifyBinary(relative, handle, opened, signal); revision = hash.digest('hex');
+        } finally {await handle.close();}
+        const byteLength = Number(opened.size);
+        return Object.freeze({path: relative, revision, byteLength,
+          readChunk(offset, length, {signal: readSignal} = {}) {
+            return binaryOperation(async () => {
+              try {parseBinaryArtifactRange(offset, length, byteLength);} catch {throw workspaceFailure('invalid_request', 'Invalid artifact range');}
+              aborted(readSignal); const {handle: chunkHandle} = await openBinary(relative, opened);
+              try {
+                const bytes = Buffer.alloc(Math.min(length, byteLength - offset)); let received = 0;
+                while (received < bytes.length) {
+                  aborted(readSignal); const {bytesRead} = await chunkHandle.read(bytes, received, bytes.length - received, offset + received);
+                  if (!bytesRead) throw workspaceFailure('conflict', 'Binary artifact changed'); received += bytesRead;
+                }
+                await verifyBinary(relative, chunkHandle, opened, readSignal);
+                return Object.freeze({offset, nextOffset: offset + received, eof: offset + received === byteLength, data: bytes.toString('base64'), sha256: sha256(bytes)});
+              } finally {await chunkHandle.close();}
+            });
+          },
+        });
+      });
+    }} : {}),
     async writeFile(relative, content, {expectedRevision,signal} = {}) {
       requireWorkspacePath(relative);requireFileContent(content);if(expectedRevision!==null)requireSha256(expectedRevision);
       return mutate(async()=>{
@@ -213,9 +278,9 @@ function safeOperationFailure(failure) {
 }
 
 /** HTTP server for explicitly configured trusted plugins in the user environment. */
-export async function createWorkspaceServer({workspace,root,workspaceId,name='User workspace',token,plugins=[],pluginHost,grants=[],backends={},jobs=false,notice,host='127.0.0.1',port=0,writable=true,manage=writable,allowedOrigins=[],timeoutMs=WORKSPACE_LIMITS.defaultTimeoutMs}={}) {
+export async function createWorkspaceServer({workspace,root,workspaceId,name='User workspace',token,plugins=[],pluginHost,grants=[],backends={},jobs=false,binaryArtifacts=false,notice,host='127.0.0.1',port=0,writable=true,manage=writable,allowedOrigins=[],timeoutMs=WORKSPACE_LIMITS.defaultTimeoutMs}={}) {
   requireUuid(workspaceId);requireText(name,128);requireText(host,253);token=requireToken(token);
-  if(typeof jobs!=='boolean')throw workspaceFailure('invalid_request','Invalid job capability');
+  if(typeof jobs!=='boolean'||typeof binaryArtifacts!=='boolean')throw workspaceFailure('invalid_request','Invalid job capability');
   const ownsPluginHost=pluginHost===undefined;
   if(!Number.isInteger(port)||port<0||port>65535||!Number.isInteger(timeoutMs)||timeoutMs<1||timeoutMs>WORKSPACE_LIMITS.maxTimeoutMs)throw workspaceFailure('invalid_request','Invalid workspace server configuration');
   if(!Array.isArray(allowedOrigins)||allowedOrigins.length>16)throw workspaceFailure('invalid_request','Invalid allowed origins');
@@ -224,9 +289,9 @@ export async function createWorkspaceServer({workspace,root,workspaceId,name='Us
   if(!notice||typeof notice.text!=='string'||!notice.text||Buffer.byteLength(notice.text)>65536)throw workspaceFailure('invalid_request','An operator notice is required');
   const noticePayload=Object.freeze({id:requireText(notice.id),version:requireText(notice.version,64),sha256:sha256(Buffer.from(notice.text)),text:notice.text});
   if(notice.sha256!==undefined&&notice.sha256!==noticePayload.sha256)throw workspaceFailure('invalid_request','Operator notice digest mismatch');
-  workspace??=await createNodeWorkspace({root,writable,manage});
+  workspace??=await createNodeWorkspace({root,writable,manage,binaryArtifacts});
   const generation=randomUUID(),scope=Object.freeze({projectId:workspaceId,sessionId:generation});
-  pluginHost??=createPluginHost({hostId:'workspace-host',scope,grants,workspace,backends,jobs});
+  pluginHost??=createPluginHost({hostId:'workspace-host',scope,grants,workspace,backends,jobs,binaryArtifacts});
   const pins=new Map();
   try{
     for(const item of plugins){const hash=requireSha256(item.artifactSha256);if(!item.plugin?.manifest?.id||pins.has(item.plugin.manifest.id))throw workspaceFailure('invalid_request','Duplicate or invalid configured plugin');if(item.licenseText!==undefined&&(typeof item.licenseText!=='string'||Buffer.byteLength(item.licenseText)>65536))throw workspaceFailure('invalid_request','Invalid plugin license text');await pluginHost.activate(item.plugin);pins.set(item.plugin.manifest.id,{artifactSha256:hash,...(item.licenseText===undefined?{}:{licenseText:item.licenseText})});}
@@ -235,7 +300,7 @@ export async function createWorkspaceServer({workspace,root,workspaceId,name='Us
     const commands=pluginHost.listCommands();
     return pluginHost.listPlugins().map(manifest=>({manifest,...pins.get(manifest.id),commands:commands.filter(command=>command.pluginId===manifest.id)}));
   };
-  const description=()=>parseWorkspaceHello({hostId:'workspace-host',hostVersion:'0.6.0',protocolVersion:1,workspace:{id:workspaceId,name,generation},capabilities:{read:true,write:workspace.capabilities?.write===true,manage:workspace.capabilities?.manage===true,commands:pins.size>0},plugins:metadata(),notice:noticePayload});
+  const description=()=>parseWorkspaceHello({hostId:'workspace-host',hostVersion:'0.7.0',protocolVersion:1,workspace:{id:workspaceId,name,generation},capabilities:{read:true,write:workspace.capabilities?.write===true,manage:workspace.capabilities?.manage===true,commands:pins.size>0},plugins:metadata(),notice:noticePayload});
   let originalDescription;
   try{originalDescription=description();}catch(failure){pluginHost.dispose();workspace.dispose?.();throw safeOperationFailure(failure);}
   const originalMetadata=JSON.stringify({plugins:originalDescription.plugins,capabilities:originalDescription.capabilities});
@@ -252,6 +317,7 @@ export async function createWorkspaceServer({workspace,root,workspaceId,name='Us
   async function dispatch(request,signal) {
     const p=request.params;
     if(request.method.startsWith('jobs.')&&request.method!=='jobs.capabilities'&&(!jobs||!ownsPluginHost))throw workspaceFailure('unsupported','Enable jobs on the server-owned plugin host');
+    if(request.method.startsWith('artifacts.')&&request.method!=='artifacts.capabilities'&&(!jobs||!binaryArtifacts||!ownsPluginHost))throw workspaceFailure('unsupported','Enable binary artifacts on the server-owned job host');
     switch(request.method){
       case 'hello':return checkedDescription();
       case 'fs.list':return{entries:await workspace.listFiles(p.path,{signal})};
@@ -276,6 +342,9 @@ export async function createWorkspaceServer({workspace,root,workspaceId,name='Us
       case 'jobs.events':checkedDescription();if(!pluginHost.getJobEvents)throw workspaceFailure('unsupported','Jobs are unavailable');return pluginHost.getJobEvents(p.jobId,p.after);
       case 'jobs.cancel':checkedDescription();if(!pluginHost.cancelJob)throw workspaceFailure('unsupported','Jobs are unavailable');return pluginHost.cancelJob(p.jobId);
       case 'jobs.artifact':checkedDescription();if(!pluginHost.readJobArtifact)throw workspaceFailure('unsupported','Jobs are unavailable');return pluginHost.readJobArtifact(p.jobId,p.artifactId,{signal});
+      case 'artifacts.capabilities':checkedDescription();return ownsPluginHost?pluginHost.binaryArtifactCapabilities():{protocolVersion:1,enabled:false,limits:BINARY_ARTIFACT_LIMITS};
+      case 'artifacts.list':checkedDescription();return pluginHost.listJobBinaryArtifacts(p.jobId);
+      case 'artifacts.read':checkedDescription();return pluginHost.readJobBinaryArtifactChunk(p.jobId,p.artifactId,p.revision,p.offset,p.length,{signal,timeoutMs});
       case 'request.cancel':{const target=pending.get(p.requestId);if(target)target.abort(workspaceFailure('cancelled','Workspace request cancelled'));return{cancelled:!!target};}
     }
   }

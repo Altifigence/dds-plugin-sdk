@@ -1,6 +1,6 @@
 {
   "name": "@altifigence/dds-plugin-sdk",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Plugin, theme and user-owned workspace tools for Digital Design Studio",
   "type": "module",
   "license": "Apache-2.0",
@@ -52,6 +52,10 @@
       "types": "./src/jobs.d.mts",
       "import": "./src/jobs.mjs"
     },
+    "./artifacts": {
+      "types": "./src/artifacts.d.mts",
+      "import": "./src/artifacts.mjs"
+    },
     "./devtools": {
       "types": "./src/devtools.d.mts",
       "import": "./src/devtools.mjs"
@@ -92,7 +96,9 @@
     "example:verify": "node examples/release-verification/run.mjs",
     "example:jobs": "node examples/command-jobs/run.mjs",
     "example:observe": "node examples/workspace-observation/run.mjs",
-    "benchmark:files": "node scripts/benchmark-file-reads.mjs"
+    "benchmark:files": "node scripts/benchmark-file-reads.mjs",
+    "example:artifacts": "node examples/binary-artifacts/run.mjs",
+    "benchmark:artifacts": "node scripts/benchmark-artifacts.mjs"
   },
   "devDependencies": {
     "typescript": "5.9.3"

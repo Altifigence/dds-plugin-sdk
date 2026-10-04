@@ -11,10 +11,11 @@
 | Browser-only DDS host | Native workspace transport is unavailable |
 | Language providers | Diagnostics plus completion, hover, definition, references and document symbols in SDK hosts since 0.3.0; no released DDS editor bridge is implied |
 | Project edit sessions | Client helpers in 0.3.0 over unchanged workspace protocol v1, including 0.2.x servers |
-| Download verification | Node API/CLI since 0.3.1; 0.6.0 accepts exact 0.3.x, 0.4.x, 0.5.x and 0.6.x package metadata; no extraction, code execution or publisher authentication |
+| Download verification | Node API/CLI since 0.3.1; 0.7.0 accepts exact 0.3.x, 0.4.x, 0.5.x, 0.6.x and 0.7.x package metadata; no extraction, code execution or publisher authentication |
 | Development tools | `init`, `doctor`, `dev` since 0.4.0; local Node tools, explicit trusted-code execution |
 | Command jobs | Opt-in SDK host/client extension since 0.4.0; progress/logs/UTF-8 artifacts; v1 hello unchanged |
 | File and job observation | Client helpers since 0.5.0; 0.6 uses revision reads when supported; job reads need enabled 0.4+ hosts |
+| Binary job results | Optional 0.7.0 extension; explicit host opt-in; 1 GiB files and 64 KiB chunks; Node resume/full-file verification |
 | File revision / conditional read | Optional methods since 0.6.0; bounded full-read fallback on old hosts; v1 hello unchanged |
 
 This is a developer preview. Pin the exact package release and read the changelog
@@ -75,3 +76,12 @@ transport failures never trigger fallback. See [file revisions](FILE_REVISIONS.m
 New 0.6 archives declare `>=0.6.0 <0.7.0`. Verification also preserves exact
 0.3/0.4/0.5 metadata, without widening peers; publishers must validate and repack
 for 0.6. SDK and DDS product releases remain separate.
+
+0.7.0 adds binary job results through separate optional methods. Existing v1
+hello, text file, snapshot and event contracts remain valid for older clients;
+binary registrations are listed separately. New clients report binary support
+as disabled on known pre-0.7 SDK hosts, without falling back to text transfer.
+See [binary artifacts](BINARY_ARTIFACTS.md).
+
+New 0.7 archives declare `>=0.7.0 <0.8.0`. Verification retains exact older
+0.3/0.4/0.5/0.6 peer metadata. Validate and repack a new plugin version for 0.7.

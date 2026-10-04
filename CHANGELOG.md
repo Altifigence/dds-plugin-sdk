@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.7.0 — 2026-10-04
+
+- Add optional binary job result registration and discovery, with SHA-256-pinned
+  metadata, 1 GiB files and bounded 64 KiB reads. Existing v1 text/job shapes remain
+  compatible; enabling jobs alone does not enable binary artifacts.
+- Add a Node downloader with explicit partial-file resumption, streaming whole-file
+  and staging-file verification, cancellation and no-overwrite publication.
+- Preserve scope, permission, protected-path, link, mutation and resource boundaries.
+  Known older hosts report the extension disabled; no text/command fallback occurs.
+- Publish matching types, five schemas, a real HTTP example and transfer benchmark.
+  New archives declare `>=0.7.0 <0.8.0`; old 0.3/0.4/0.5/0.6 metadata remains verifiable.
+
 ## 0.6.0 — 2026-10-04
 
 - Add optional file capability discovery, revision-only reads and conditional

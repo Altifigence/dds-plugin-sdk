@@ -113,6 +113,17 @@
     "docs/FILE_REVISIONS.md",
     "schemas/workspace-file-capabilities.schema.json",
     "schemas/workspace-file-revision.schema.json",
-    "schemas/workspace-conditional-file.schema.json"
+    "schemas/workspace-conditional-file.schema.json",
+    "docs/BINARY_ARTIFACTS.md",
+    "examples/binary-artifacts/run.mjs",
+    "schemas/binary-artifact-capabilities.schema.json",
+    "schemas/binary-artifact-chunk.schema.json",
+    "schemas/binary-artifact-list.schema.json",
+    "schemas/binary-artifact-reference.schema.json",
+    "schemas/binary-artifact.schema.json",
+    "src/artifact-download-node.d.mts",
+    "src/artifact-download-node.mjs",
+    "src/artifacts.d.mts",
+    "src/artifacts.mjs"
   ]
 }

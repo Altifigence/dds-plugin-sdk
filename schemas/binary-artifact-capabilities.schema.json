@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.7.0/schemas/binary-artifact-capabilities.schema.json",
+  "title": "binary-artifact-capabilities",
+  "type": "object",
+  "properties": {
+    "protocolVersion": {
+      "const": 1
+    },
+    "enabled": {
+      "type": "boolean"
+    },
+    "limits": {
+      "type": "object",
+      "properties": {
+        "fileBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1073741824
+        },
+        "chunkBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65536
+        },
+        "artifacts": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16
+        },
+        "concurrent": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4
+        }
+      },
+      "required": [
+        "fileBytes",
+        "chunkBytes",
+        "artifacts",
+        "concurrent"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "protocolVersion",
+    "enabled",
+    "limits"
+  ],
+  "additionalProperties": false
+}

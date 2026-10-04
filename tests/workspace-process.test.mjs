@@ -5,7 +5,7 @@ import path from 'node:path';
 import os from 'node:os';
 import {createProcessBackend} from '../src/workspace-node.mjs';
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-async function fixture(t){const root=await fs.mkdtemp(path.join(os.tmpdir(),'dds-workspace-process-'));t.after(async()=>{assert.ok(root.startsWith(path.join(os.tmpdir(),'dds-workspace-process-')));await fs.rm(root,{recursive:true});});return root;}
+async function fixture(t){const root=await fs.mkdtemp(path.join(os.tmpdir(),'dds-workspace-process-'));t.after(async()=>{assert.ok(root.startsWith(path.join(os.tmpdir(),'dds-workspace-process-')));await fs.rm(root,{recursive:true,maxRetries:10,retryDelay:100});});return root;}
 test('fixed process adapter bounds JSON, excludes inherited secrets, hides stderr and freezes args',async t=>{
   const root=await fixture(t);const previous=process.env.DDS_TEST_PRIVATE_SECRET;process.env.DDS_TEST_PRIVATE_SECRET='fixture-secret';t.after(()=>{if(previous===undefined)delete process.env.DDS_TEST_PRIVATE_SECRET;else process.env.DDS_TEST_PRIVATE_SECRET=previous;});
   const args=['-e',"process.stdin.resume(); process.stdin.on('end',()=>process.stdout.write(JSON.stringify({secretInherited:Object.hasOwn(process.env,'DDS_TEST_PRIVATE_SECRET')})))"];

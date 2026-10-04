@@ -40,3 +40,4 @@ jobs:
         run: |
           npm run benchmark
           npm run benchmark:files
+          npm run benchmark:artifacts
