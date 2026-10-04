@@ -137,7 +137,7 @@ const server=createServer(async(req,res)=>{
     if(/^\\/sdk\\/[a-z][a-z0-9.-]*\\.mjs$/.test(pathname))filename=path.join(sdk,pathname.slice(5));
     else{const relative=pathname==='/'?'browser.html':pathname.slice(1);if(!allowed.has(relative)){res.writeHead(404).end();return;}filename=path.join(root,relative);}
     const info=await lstat(filename);if(!info.isFile()||info.isSymbolicLink()||info.size>1_048_576){res.writeHead(404).end();return;}
-    const body=await readFile(filename);res.writeHead(200,{'Content-Type':filename.endsWith('.html')?'text/html; charset=utf-8':filename.endsWith('.json')?'application/json':'text/javascript; charset=utf-8','Content-Security-Policy':"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'none'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",'X-Content-Type-Options':'nosniff','Cache-Control':'no-store'});res.end(body);
+    const body=await readFile(filename);res.writeHead(200,{'Content-Type':filename.endsWith('.html')?'text/html; charset=utf-8':filename.endsWith('.json')?'application/json':'text/javascript; charset=utf-8','Content-Security-Policy':"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",'X-Content-Type-Options':'nosniff','Cache-Control':'no-store'});res.end(body);
   }catch{res.writeHead(404).end();}
 });
 await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve);});origin='http://127.0.0.1:'+server.address().port;console.log(origin+'/');
