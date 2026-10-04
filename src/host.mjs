@@ -345,7 +345,7 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
       if (!document) throw error(ErrorCode.INVALID_CONTRACT, 'Set a document before requesting language features');
       if (!languages.has(kind)) throw error(ErrorCode.INVALID_CONTRACT, 'Unknown language feature');
       const value = parseJsonValue(input);
-      if (!value || Array.isArray(value) || typeof value !== 'object' || Object.keys(value).some(key => !['position', 'includeDeclaration', 'context'].includes(key))) throw error(ErrorCode.INVALID_CONTRACT, 'Expected language request input');
+      if (!value || Array.isArray(value) || typeof value !== 'object' || Object.keys(value).some(key => !['position', 'includeDeclaration', 'context', 'newName'].includes(key))) throw error(ErrorCode.INVALID_CONTRACT, 'Expected language request input');
       const request = parseLanguageRequest({protocolVersion: 1, requestId: `request-${++nextRequest}`, scope, snapshot: document, kind, ...value});
       const currentRevision = revision;
       const result = await languages.get(kind).request(request, options);

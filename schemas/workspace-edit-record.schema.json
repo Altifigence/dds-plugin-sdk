@@ -1,0 +1,598 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.11.0/schemas/workspace-edit-record.schema.json",
+  "title": "workspace-edit-record",
+  "type": "object",
+  "properties": {
+    "formatVersion": {
+      "const": 1
+    },
+    "preview": {
+      "type": "object",
+      "properties": {
+        "formatVersion": {
+          "const": 1
+        },
+        "planId": {
+          "type": "string",
+          "minLength": 36,
+          "maxLength": 36,
+          "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+        },
+        "workspace": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 36,
+              "maxLength": 36,
+              "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+            },
+            "generation": {
+              "type": "string",
+              "minLength": 36,
+              "maxLength": 36,
+              "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+            }
+          },
+          "required": [
+            "id",
+            "generation"
+          ],
+          "additionalProperties": false
+        },
+        "edit": {
+          "type": "object",
+          "properties": {
+            "formatVersion": {
+              "const": 1
+            },
+            "id": {
+              "type": "string",
+              "minLength": 36,
+              "maxLength": 36,
+              "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "changes": {
+              "type": "array",
+              "items": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "const": "edit"
+                      },
+                      "path": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 1024,
+                        "$comment": "Runtime enforces the shared relative workspace path policy, protected components and cross-platform case-insensitive disjoint paths."
+                      },
+                      "baseRevision": {
+                        "type": "string",
+                        "minLength": 64,
+                        "maxLength": 64,
+                        "pattern": "^[a-f0-9]{64}$"
+                      },
+                      "edits": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "range": {
+                              "type": "object",
+                              "properties": {
+                                "start": {
+                                  "type": "object",
+                                  "properties": {
+                                    "line": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 262144
+                                    },
+                                    "character": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 262144
+                                    }
+                                  },
+                                  "required": [
+                                    "line",
+                                    "character"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "end": {
+                                  "type": "object",
+                                  "properties": {
+                                    "line": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 262144
+                                    },
+                                    "character": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 262144
+                                    }
+                                  },
+                                  "required": [
+                                    "line",
+                                    "character"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "required": [
+                                "start",
+                                "end"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "text": {
+                              "type": "string",
+                              "minLength": 0,
+                              "maxLength": 262144,
+                              "x-maxUtf8Bytes": 262144
+                            }
+                          },
+                          "required": [
+                            "range",
+                            "text"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "minItems": 1,
+                        "maxItems": 500
+                      },
+                      "reason": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 2048
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "path",
+                      "baseRevision",
+                      "edits"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "const": "create"
+                      },
+                      "path": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 1024,
+                        "$comment": "Runtime enforces the shared relative workspace path policy, protected components and cross-platform case-insensitive disjoint paths."
+                      },
+                      "content": {
+                        "type": "string",
+                        "minLength": 0,
+                        "maxLength": 262144,
+                        "x-maxUtf8Bytes": 262144
+                      },
+                      "reason": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 2048
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "path",
+                      "content"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "const": "move"
+                      },
+                      "path": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 1024,
+                        "$comment": "Runtime enforces the shared relative workspace path policy, protected components and cross-platform case-insensitive disjoint paths."
+                      },
+                      "baseRevision": {
+                        "type": "string",
+                        "minLength": 64,
+                        "maxLength": 64,
+                        "pattern": "^[a-f0-9]{64}$"
+                      },
+                      "newPath": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 1024,
+                        "$comment": "Runtime enforces the shared relative workspace path policy, protected components and cross-platform case-insensitive disjoint paths."
+                      },
+                      "reason": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 2048
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "path",
+                      "baseRevision",
+                      "newPath"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "const": "delete"
+                      },
+                      "path": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 1024,
+                        "$comment": "Runtime enforces the shared relative workspace path policy, protected components and cross-platform case-insensitive disjoint paths."
+                      },
+                      "baseRevision": {
+                        "type": "string",
+                        "minLength": 64,
+                        "maxLength": 64,
+                        "pattern": "^[a-f0-9]{64}$"
+                      },
+                      "reason": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 2048
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "path",
+                      "baseRevision"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "minItems": 1,
+              "maxItems": 32
+            }
+          },
+          "required": [
+            "formatVersion",
+            "id",
+            "title",
+            "changes"
+          ],
+          "additionalProperties": false,
+          "x-maxUtf8Bytes": 1048576,
+          "$comment": "At most 1000 edits in all files. Runtime validates paths, scalar strings and edit geometry. Revisions are full content SHA-256. Destinations must be absent, and affected paths cannot be duplicated or nested."
+        },
+        "requiredCapabilities": {
+          "enum": [
+            [
+              "write"
+            ],
+            [
+              "write",
+              "manage"
+            ]
+          ]
+        },
+        "ready": {
+          "type": "boolean"
+        },
+        "conflicts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024,
+                "$comment": "Runtime enforces the shared relative workspace path policy, protected components and cross-platform case-insensitive disjoint paths."
+              },
+              "code": {
+                "enum": [
+                  "destination_exists",
+                  "source_missing",
+                  "revision_changed",
+                  "no_change"
+                ]
+              }
+            },
+            "required": [
+              "path",
+              "code"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 0,
+          "maxItems": 64
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "index": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 31
+              },
+              "before": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 1024,
+                      "$comment": "Runtime enforces the shared relative workspace path policy, protected components and cross-platform case-insensitive disjoint paths."
+                    },
+                    "state": {
+                      "oneOf": [
+                        {
+                          "type": "null"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "content": {
+                              "type": "string",
+                              "minLength": 0,
+                              "maxLength": 262144,
+                              "x-maxUtf8Bytes": 262144
+                            },
+                            "revision": {
+                              "type": "string",
+                              "minLength": 64,
+                              "maxLength": 64,
+                              "pattern": "^[a-f0-9]{64}$"
+                            }
+                          },
+                          "required": [
+                            "content",
+                            "revision"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "path",
+                    "state"
+                  ],
+                  "additionalProperties": false
+                },
+                "minItems": 1,
+                "maxItems": 2
+              },
+              "after": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "path": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 1024,
+                          "$comment": "Runtime enforces the shared relative workspace path policy, protected components and cross-platform case-insensitive disjoint paths."
+                        },
+                        "state": {
+                          "oneOf": [
+                            {
+                              "type": "null"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "content": {
+                                  "type": "string",
+                                  "minLength": 0,
+                                  "maxLength": 262144,
+                                  "x-maxUtf8Bytes": 262144
+                                },
+                                "revision": {
+                                  "type": "string",
+                                  "minLength": 64,
+                                  "maxLength": 64,
+                                  "pattern": "^[a-f0-9]{64}$"
+                                }
+                              },
+                              "required": [
+                                "content",
+                                "revision"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "path",
+                        "state"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "minItems": 1,
+                    "maxItems": 2
+                  }
+                ]
+              },
+              "diff": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 1024,
+                      "$comment": "Runtime enforces the shared relative workspace path policy, protected components and cross-platform case-insensitive disjoint paths."
+                    },
+                    "change": {
+                      "type": "object",
+                      "properties": {
+                        "start": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 262144
+                        },
+                        "deleteCount": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 262144
+                        },
+                        "insertText": {
+                          "type": "string",
+                          "minLength": 0,
+                          "maxLength": 262144,
+                          "x-maxUtf8Bytes": 262144
+                        }
+                      },
+                      "required": [
+                        "start",
+                        "deleteCount",
+                        "insertText"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "path",
+                    "change"
+                  ],
+                  "additionalProperties": false
+                },
+                "minItems": 0,
+                "maxItems": 2
+              }
+            },
+            "required": [
+              "index",
+              "before",
+              "after",
+              "diff"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1,
+          "maxItems": 32
+        },
+        "digest": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "formatVersion",
+        "planId",
+        "workspace",
+        "edit",
+        "requiredCapabilities",
+        "ready",
+        "conflicts",
+        "steps",
+        "digest"
+      ],
+      "additionalProperties": false,
+      "x-maxUtf8Bytes": 8388608,
+      "$comment": "Runtime reproduces the entire preview from before snapshots and proposal, verifies snapshot hashes and the canonical digest, UTF-16 ranges, overlap, after content and single-hunk diffs. A ready preview is required for apply."
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "phase": {
+      "enum": [
+        "applying",
+        "completed",
+        "stopped"
+      ]
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "enum": [
+              "pending",
+              "intent",
+              "applied",
+              "not-applied",
+              "conflicted",
+              "unknown"
+            ]
+          },
+          "errorCode": {
+            "enum": [
+              "invalid_request",
+              "authentication_required",
+              "permission_denied",
+              "workspace_mismatch",
+              "generation_mismatch",
+              "not_found",
+              "conflict",
+              "unsafe_path",
+              "budget_exceeded",
+              "cancelled",
+              "disposed",
+              "plugin_mismatch",
+              "provider_failed",
+              "unsupported",
+              "unavailable",
+              "transport_failed"
+            ]
+          }
+        },
+        "required": [
+          "state"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1,
+      "maxItems": 32
+    },
+    "updatedAt": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    }
+  },
+  "required": [
+    "formatVersion",
+    "preview",
+    "revision",
+    "phase",
+    "steps",
+    "updatedAt"
+  ],
+  "additionalProperties": false,
+  "$comment": "Runtime checks ready preview, exact step count, applied prefix/pending suffix, at most one intent and completed state. Node storage adds a checksum envelope and filesystem/workspace identity checks."
+}

@@ -16,6 +16,7 @@ import {WORKSPACE_LIMITS} from './workspace-protocol.mjs';
 import { LANGUAGE_FEATURES, LANGUAGE_CAPABILITIES } from './contracts.mjs';
 import {LANGUAGE_ASSISTANCE_SCHEMAS, COMPLETION_ITEM_SCHEMA, SIGNATURE_HELP_SCHEMA, languageContextSchema} from './language-assistance-schemas.mjs';
 import {SDK_VERSION} from './version.mjs';
+import {WORKSPACE_EDIT_SCHEMA, WORKSPACE_EDIT_SCHEMAS} from './workspace-edit-schemas.mjs';
 
 const schema = 'https://json-schema.org/draft/2020-12/schema';
 const base = `https://github.com/Altifigence/dds-plugin-sdk/blob/v${SDK_VERSION}/schemas/`;
@@ -77,6 +78,8 @@ const location = object({path: {...text(1024), $comment: 'Runtime additionally e
 const languageData = {
   completion: list(COMPLETION_ITEM_SCHEMA, LIMITS.maxLanguageItems),
   'signature-help': SIGNATURE_HELP_SCHEMA,
+  'prepare-rename': {oneOf: [{type: 'null'}, object({range, placeholder: text(256)})]},
+  rename: {oneOf: [{type: 'null'}, WORKSPACE_EDIT_SCHEMA]},
   hover: {oneOf: [{type: 'null'}, object({text: text(16_384), range}, ['text'])]},
   definition: list(location, LIMITS.maxLanguageItems), references: list(location, LIMITS.maxLanguageItems),
   'document-symbols': list(object({name: text(256), kind: {enum: ['module', 'namespace', 'class', 'interface', 'function', 'method', 'variable', 'constant', 'property', 'type']}, range, selectionRange: range, detail: text(2048)}, ['name', 'kind', 'range', 'selectionRange']), LIMITS.maxLanguageItems),
@@ -105,6 +108,7 @@ const historyDisposition = {enum:['live','completed','interrupted','expired']};
 const historyCursor = {...text(40),pattern:'^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}:(?:0|[1-9][0-9]{0,2})$'};
 const historyItem = object({jobId,commandId:text(128),state:{enum:JOB_STATES},disposition:historyDisposition,startedAt:integer(Number.MAX_SAFE_INTEGER),updatedAt:integer(Number.MAX_SAFE_INTEGER),expiresAt:integer(Number.MAX_SAFE_INTEGER,1),revision:integer(Number.MAX_SAFE_INTEGER,1),attemptOf:{oneOf:[jobId,{type:'null'}]},contentPolicy:{enum:['metadata-only','host-redacted']},artifactCount:integer(JOB_LIMITS.artifacts),snapshotCount:integer(JOB_LIMITS.artifacts),resultAvailability:{enum:['none','source-references','snapshot-references','mixed-references','expired']}});
 export const SCHEMAS = Object.freeze({
+  ...Object.fromEntries(Object.entries(WORKSPACE_EDIT_SCHEMAS).map(([name, body]) => [name, define(name, body)])),
   ...Object.fromEntries(Object.entries(LANGUAGE_ASSISTANCE_SCHEMAS).map(([name, body]) => [name, define(name, body)])),
   ...Object.fromEntries(Object.entries({...PROJECT_WATCH_SCHEMAS,...PROJECT_QUERY_SCHEMAS,...WORKSPACE_PROJECT_SCHEMAS,...ARTIFACT_TRANSFER_SCHEMAS,...UPLOAD_SCHEMAS,...TRANSFER_QUEUE_SCHEMAS}).map(([name,body])=>[name,define(name,body)])),
   'stored-artifact':define('stored-artifact',{...storedArtifact,$comment:'Runtime checks identity, labels are excluded, and capturedAt/expiresAt ordering and maximum retention.'}),
@@ -159,8 +163,8 @@ export const SCHEMAS = Object.freeze({
   'language-request': define('language-request', {oneOf: LANGUAGE_FEATURES.map(kind => object({
     protocolVersion: {const: 1}, requestId: text(128), scope,
     snapshot: object({...identity, text: {type: 'string', maxLength: LIMITS.documentBytes, 'x-maxUtf8Bytes': LIMITS.documentBytes}}),
-    kind: {const: kind}, ...(kind === 'document-symbols' ? {} : {position}), ...(kind === 'references' ? {includeDeclaration: {type: 'boolean'}} : {}), ...(['completion', 'signature-help'].includes(kind) ? {context: languageContextSchema(kind)} : {}),
-  }, ['protocolVersion', 'requestId', 'scope', 'snapshot', 'kind', ...(kind === 'document-symbols' ? [] : ['position'])]))}),
+    kind: {const: kind}, ...(kind === 'document-symbols' ? {} : {position}), ...(kind === 'references' ? {includeDeclaration: {type: 'boolean'}} : {}), ...(['completion', 'signature-help'].includes(kind) ? {context: languageContextSchema(kind)} : {}), ...(kind === 'rename' ? {newName: text(256)} : {}),
+  }, ['protocolVersion', 'requestId', 'scope', 'snapshot', 'kind', ...(kind === 'document-symbols' ? [] : ['position']), ...(kind === 'rename' ? ['newName'] : [])]))}),
   'language-result': define('language-result', {oneOf: LANGUAGE_FEATURES.map(kind => object({
     protocolVersion: {const: 1}, requestId: text(128), scope, snapshot: object(identity), kind: {const: kind}, data: languageData[kind],
   }))}),

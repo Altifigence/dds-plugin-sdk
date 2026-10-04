@@ -13,6 +13,8 @@ your own workspace and tools with the Node.js host and HTTP client. The SDK has
 Development toward 0.11 adds [signature help and completion assistance](docs/LANGUAGE_ASSISTANCE.md),
 including lazy item resolution, limited snippets and pure insertion previews.
 Run `npm run example:assistance` for the nested-call and Unicode example.
+[Reviewed workspace edits](docs/WORKSPACE_EDITS.md) add rename proposals, multi-file
+previews, conditional application and readback after interrupted operations.
 
 The 0.10 line adds [browser artifact streaming](docs/BROWSER_ARTIFACTS.md)
 with bounded sinks, incremental whole-file hashes, explicit storage readback and

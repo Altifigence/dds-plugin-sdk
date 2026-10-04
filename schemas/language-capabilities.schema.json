@@ -14,7 +14,9 @@
         "definition",
         "references",
         "document-symbols",
-        "signature-help"
+        "signature-help",
+        "prepare-rename",
+        "rename"
       ]
     },
     "completionResolve": {

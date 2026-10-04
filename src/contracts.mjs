@@ -1,7 +1,8 @@
 import { ErrorCode, LIMITS, PluginSdkError, PROTOCOL_VERSION } from './limits.mjs';
 import { SEMVER_PATTERN } from './patterns.mjs';
 import {parseCompletionItem, parseLanguageContext, parseSignatureHelp, completionEdits} from './language-assistance.mjs';
-import {textIndex} from './language-values.mjs';
+import {textIndex, languageText, languageCall} from './language-values.mjs';
+import {parseWorkspaceEdit} from './workspace-edit-contracts.mjs';
 
 const encoder = new TextEncoder();
 const identifierPattern = /^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$/;
@@ -10,7 +11,7 @@ const uriPattern = /^[A-Za-z][A-Za-z0-9+.-]*:[^\s\u0000-\u001f\u007f]+$/;
 const permissions = ['document.read', 'diagnostics.publish'];
 const workspacePermissions = ['workspace.read', 'workspace.write', 'backend.invoke'];
 const allPermissions = [...permissions, ...workspacePermissions, 'language.provide'];
-export const LANGUAGE_FEATURES = Object.freeze(['completion', 'hover', 'definition', 'references', 'document-symbols', 'signature-help']);
+export const LANGUAGE_FEATURES = Object.freeze(['completion', 'hover', 'definition', 'references', 'document-symbols', 'signature-help', 'prepare-rename', 'rename']);
 export const LANGUAGE_CAPABILITIES = Object.freeze([...LANGUAGE_FEATURES, 'completion-resolve', 'completion-snippets']);
 
 function fail(path, message) {
@@ -430,7 +431,7 @@ function inDocumentRange(value, text) {
 /** Language API v1: returned text is never HTML or a command. Snippets are explicit data. */
 export function parseLanguageRequest(value) {
   value = input(value, LIMITS.requestBytes, 'request');
-  record(value, ['protocolVersion', 'requestId', 'scope', 'snapshot', 'kind'], ['position', 'includeDeclaration', 'context'], 'request');
+  record(value, ['protocolVersion', 'requestId', 'scope', 'snapshot', 'kind'], ['position', 'includeDeclaration', 'context', 'newName'], 'request');
   const kind = enumeration(value.kind, LANGUAGE_FEATURES, 'request.kind');
   const output = {
     protocolVersion: version(value.protocolVersion, 'request.protocolVersion'),
@@ -449,6 +450,10 @@ export function parseLanguageRequest(value) {
     output.includeDeclaration = value.includeDeclaration;
   }
   if (Object.hasOwn(value, 'context')) output.context = parseLanguageContext(kind, value.context);
+  if (kind === 'rename') {
+    output.newName = languageText(value.newName, 256);
+    if (/[\u0000-\u001f\u007f]/.test(output.newName)) fail('request.newName', 'control characters are unsupported');
+  } else if (Object.hasOwn(value, 'newName')) fail('request.newName', 'only rename accepts a new name');
   return boundCopy(Object.freeze(output), LIMITS.requestBytes, 'request');
 }
 
@@ -478,6 +483,14 @@ function symbol(value, path) {
   return Object.freeze(output);
 }
 
+function renamePreparation(value) {
+  if (value === null) return null;
+  record(value, ['range', 'placeholder'], [], 'result.data');
+  const selection = range(value.range, 'result.data.range');
+  if (comparePosition(selection.start, selection.end) >= 0) fail('result.data.range', 'rename range must be nonempty');
+  return Object.freeze({range: selection, placeholder: languageText(value.placeholder, 256)});
+}
+
 export function parseLanguageResult(value) {
   value = input(value, LIMITS.resultBytes, 'result');
   record(value, ['protocolVersion', 'requestId', 'scope', 'snapshot', 'kind', 'data'], [], 'result');
@@ -487,14 +500,24 @@ export function parseLanguageResult(value) {
     protocolVersion: version(value.protocolVersion, 'result.protocolVersion'),
     requestId: string(value.requestId, 128, 'result.requestId'), scope: scope(value.scope, 'result.scope'),
     snapshot: snapshot(value.snapshot, 'result.snapshot', false), kind,
-    data: kind === 'signature-help' ? parseSignatureHelp(value.data) : kind === 'hover' ? hover(value.data, 'result.data') : Object.freeze(array(value.data, LIMITS.maxLanguageItems, 'result.data', readers[kind])),
+    data: kind === 'signature-help' ? parseSignatureHelp(value.data)
+      : kind === 'prepare-rename' ? renamePreparation(value.data)
+      : kind === 'rename' ? value.data === null ? null : languageCall(() => parseWorkspaceEdit(value.data))
+      : kind === 'hover' ? hover(value.data, 'result.data') : Object.freeze(array(value.data, LIMITS.maxLanguageItems, 'result.data', readers[kind])),
   }), LIMITS.resultBytes, 'result');
 }
 
 export function assertLanguageResultMatchesRequest(result, request) {
   assertIdentityMatches(result, request);
   if (result.kind !== request.kind) fail('result.kind', 'does not match request');
-  if (result.kind === 'signature-help') return;
+  if (['signature-help', 'rename'].includes(result.kind)) return;
+  if (result.kind === 'prepare-rename') {
+    if (result.data !== null) {
+      textIndex(request.snapshot.text).range(result.data.range);
+      if (comparePosition(result.data.range.start, request.position) > 0 || comparePosition(request.position, result.data.range.end) > 0) fail('result.data.range', 'rename range must contain the request position');
+    }
+    return;
+  }
   if (result.kind === 'completion') {
     const index = textIndex(request.snapshot.text);
     for (const item of result.data) completionEdits(request, item, index);

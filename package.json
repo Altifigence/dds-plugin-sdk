@@ -80,6 +80,14 @@
       "types": "./src/devtools.d.mts",
       "import": "./src/devtools.mjs"
     },
+    "./workspace-edits": {
+      "types": "./src/workspace-edits.d.mts",
+      "import": "./src/workspace-edits.mjs"
+    },
+    "./workspace-edits-node": {
+      "types": "./src/workspace-edits-node.d.mts",
+      "import": "./src/workspace-edits-node.mjs"
+    },
     "./package.json": "./package.json",
     "./project-watch": {
       "types": "./src/project-watch.d.mts",
@@ -181,7 +189,8 @@
     "example:transfer-queue-browser": "node examples/transfer-queue/serve.mjs",
     "benchmark:transfer-queue": "node scripts/benchmark-transfer-queue.mjs",
     "example:browser-resume": "node examples/browser-resume/serve.mjs",
-    "example:assistance": "node examples/language-assistance/run.mjs"
+    "example:assistance": "node examples/language-assistance/run.mjs",
+    "example:workspace-edits": "node examples/workspace-edits/run.mjs"
   },
   "devDependencies": {
     "typescript": "5.9.3"

@@ -187,12 +187,14 @@
               "references",
               "document-symbols",
               "signature-help",
+              "prepare-rename",
+              "rename",
               "completion-resolve",
               "completion-snippets"
             ]
           },
           "minItems": 1,
-          "maxItems": 10,
+          "maxItems": 12,
           "uniqueItems": true
         },
         "permissions": {

@@ -8,6 +8,9 @@ available. Older SDKs reject unknown manifest capabilities; these extensions do 
 change the workspace HTTP protocol. New plugin archives declare `>=0.11.0 <0.12.0`;
 verification retains the exact previously published 0.3.x through 0.10.x metadata.
 See [language assistance](LANGUAGE_ASSISTANCE.md) for bounds and runtime checks.
+`prepare-rename`/`rename` add proposals; [workspace edits](WORKSPACE_EDITS.md) preview
+and apply them through existing file methods with a separate current approval and
+journal. The Node journal is optional, operator-owned storage outside the workspace.
 
 | Surface | Supported scope |
 | --- | --- |

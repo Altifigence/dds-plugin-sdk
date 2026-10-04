@@ -192,16 +192,16 @@ export interface PluginHost extends Disposable {
 /** Executes trusted plugins in-process. Ports enforce file/backend authority; this is not a sandbox. */
 export function createPluginHost(options?: PluginHostOptions): PluginHost;
 
-export type LanguageFeature = 'completion' | 'hover' | 'definition' | 'references' | 'document-symbols' | 'signature-help';
+export type LanguageFeature = 'completion' | 'hover' | 'definition' | 'references' | 'document-symbols' | 'signature-help' | 'prepare-rename' | 'rename';
 export type LanguageCapability = LanguageFeature | 'completion-resolve' | 'completion-snippets';
 export const LANGUAGE_FEATURES: readonly LanguageFeature[];
 export const LANGUAGE_CAPABILITIES: readonly LanguageCapability[];
 export type LanguageInput<K extends LanguageFeature> = K extends 'document-symbols'
-  ? {readonly position?: never; readonly includeDeclaration?: never; readonly context?: never}
+  ? {readonly position?: never; readonly includeDeclaration?: never; readonly context?: never; readonly newName?: never}
   : {readonly position: Position} & (K extends 'references' ? {readonly includeDeclaration?: boolean; readonly context?: never}
     : K extends 'completion' ? {readonly includeDeclaration?: never; readonly context?: CompletionContext}
     : K extends 'signature-help' ? {readonly includeDeclaration?: never; readonly context?: SignatureHelpContext}
-    : {readonly includeDeclaration?: never; readonly context?: never});
+    : {readonly includeDeclaration?: never; readonly context?: never}) & (K extends 'rename' ? {readonly newName: string} : {readonly newName?: never});
 export type LanguageRequest<K extends LanguageFeature = LanguageFeature> = K extends LanguageFeature
   ? DiagnosticsRequest & {readonly kind: K} & LanguageInput<K> : never;
 /** Literal by default. A declared snippet capability enables the bounded data-only subset. */
@@ -240,6 +240,7 @@ export function parseSnippet(value: unknown): ParsedSnippet;
 export function parseCompletionItem(value: unknown): CompletionItem;
 export function parseSignatureHelp(value: unknown): SignatureHelp | null;
 export interface Hover {readonly text: string; readonly range?: Range;}
+export interface RenamePreparation {readonly range: Range; readonly placeholder: string;}
 /** Relative workspace path. Hosts must authorize access before opening the target. */
 export interface LanguageLocation {readonly path: string; readonly range: Range;}
 export interface DocumentSymbol {
@@ -253,6 +254,8 @@ export interface LanguageData {
   readonly references: readonly LanguageLocation[];
   readonly 'document-symbols': readonly DocumentSymbol[];
   readonly 'signature-help': SignatureHelp | null;
+  readonly 'prepare-rename': RenamePreparation | null;
+  readonly rename: import('./workspace-edits.mjs').WorkspaceEdit | null;
 }
 export type LanguageResult<K extends LanguageFeature = LanguageFeature> = K extends LanguageFeature
   ? Omit<DiagnosticsResult, 'diagnostics'> & {readonly kind: K; readonly data: LanguageData[K]} : never;

@@ -2,6 +2,10 @@
 
 ## 0.11.0 — Unreleased
 
+- Add prepare-rename/rename providers, reviewed multi-file edit plans, reproducible
+  previews, per-file CAS, durable intent/receipt journals and observational recovery.
+  Add independently reviewed inverse proposals and killed-process HTTP examples.
+
 - Add bounded signature-help context/results, one-use completion resolve tokens,
   optional snippet grammar and pure insertion previews with UTF-16/CRLF validation.
 - Keep actual provider work within request/resolver limits when cancellation is
