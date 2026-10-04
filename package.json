@@ -96,6 +96,14 @@
     "./project-query-node": {
       "types": "./src/project-query-node.d.mts",
       "import": "./src/project-query-node.mjs"
+    },
+    "./artifact-transfer": {
+      "types": "./src/artifact-transfer.d.mts",
+      "import": "./src/artifact-transfer.mjs"
+    },
+    "./artifact-transfer-browser": {
+      "types": "./src/artifact-transfer-browser.d.mts",
+      "import": "./src/artifact-transfer-browser.mjs"
     }
   },
   "bin": {
@@ -142,7 +150,10 @@
     "example:project-query": "node examples/project-query/run.mjs",
     "benchmark:project-query": "node scripts/benchmark-project-query.mjs",
     "example:project-tools": "node examples/project-tools/run.mjs",
-    "example:project-browser": "node examples/project-tools/serve.mjs"
+    "example:project-browser": "node examples/project-tools/serve.mjs",
+    "example:stream-artifacts": "node examples/browser-artifacts/run.mjs",
+    "example:browser-artifacts": "node examples/browser-artifacts/serve.mjs",
+    "benchmark:browser-artifacts": "node scripts/benchmark-browser-artifacts.mjs"
   },
   "devDependencies": {
     "typescript": "5.9.3"

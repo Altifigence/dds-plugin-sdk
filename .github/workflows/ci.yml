@@ -43,3 +43,4 @@ jobs:
           npm run benchmark:artifacts
           npm run benchmark:project-watch
           npm run benchmark:project-query
+          npm run benchmark:browser-artifacts
