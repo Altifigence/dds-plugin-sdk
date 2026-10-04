@@ -93,7 +93,7 @@ export async function exercise(){
 const browserHtml=`<!doctype html>
 <html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>DDS plugin example</title>
-<style>:root{color-scheme:light dark;font-family:system-ui}body{max-width:48rem;margin:3rem auto;padding:0 1rem}form{display:grid;gap:1rem}label{display:grid;gap:.35rem}input,select,button{font:inherit;padding:.6rem;min-width:0}pre{white-space:pre-wrap;overflow-wrap:anywhere}button{cursor:pointer}small{opacity:.8}</style>
+<style>:root{color-scheme:light dark;font-family:system-ui}body{max-width:48rem;margin:3rem auto;padding:0 1rem}form{display:grid;gap:1rem}label{display:grid;gap:.35rem}[hidden]{display:none!important}input,select,button{font:inherit;padding:.6rem;min-width:0}pre{white-space:pre-wrap;overflow-wrap:anywhere}button{cursor:pointer}small{opacity:.8}</style>
 <h1>DDS plugin example</h1><p>This form executes the local example plugin in this browser.</p>
 <form id="form"><label>Name<input id="name" value="Ada" maxlength="64" required></label>
 <label id="locale-label">Language<select id="locale"><option value="en">English</option><option value="ko">한국어</option></select></label>
