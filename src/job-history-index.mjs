@@ -22,7 +22,8 @@ export function createJobHistoryIndex(scope, identity, artifactFor, authorizedRe
         const disposition = record.expiresAt <= now ? 'expired' : record.settled ? 'completed' : isLive(s.jobId) ? 'live' : 'interrupted';
         if (filters.state !== undefined && filters.state !== s.state || filters.disposition !== undefined && filters.disposition !== disposition || filters.commandId !== undefined && filters.commandId !== s.commandId || filters.from !== undefined && s.startedAt < filters.from || filters.to !== undefined && s.startedAt > filters.to || filters.attemptOf !== undefined && record.attemptOf !== filters.attemptOf) continue;
         const artifactCount = s.artifacts.length + record.binaryArtifacts.length;
-        items.push(parseJobHistoryItem({jobId:s.jobId,commandId:s.commandId,state:s.state,disposition,startedAt:s.startedAt,updatedAt:s.updatedAt,expiresAt:record.expiresAt,revision:record.revision,attemptOf:record.attemptOf ?? null,contentPolicy:record.contentPolicy,artifactCount,resultAvailability:disposition === 'expired' ? 'expired' : artifactCount ? 'source-references' : 'none'}));
+        const snapshotCount=record.retainedArtifacts?.length??0;
+        items.push(parseJobHistoryItem({jobId:s.jobId,commandId:s.commandId,state:s.state,disposition,startedAt:s.startedAt,updatedAt:s.updatedAt,expiresAt:record.expiresAt,revision:record.revision,attemptOf:record.attemptOf ?? null,contentPolicy:record.contentPolicy,artifactCount,snapshotCount,resultAvailability:disposition==='expired'?'expired':!artifactCount?'none':!snapshotCount?'source-references':snapshotCount===artifactCount?'snapshot-references':'mixed-references'}));
       }
       items.sort((a,b) => b.startedAt-a.startedAt || a.jobId.localeCompare(b.jobId));
       view = {pluginId, signature, asOf:now, expiresAt:now + JOB_HISTORY_LIMITS.cursorMs, items};

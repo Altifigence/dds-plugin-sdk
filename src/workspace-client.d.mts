@@ -4,6 +4,7 @@ import type {JobOptions,JobSnapshot,JobEvents,JobArtifactContent,JobCapabilities
 import type {BinaryArtifactCapabilities,BinaryArtifactReference,BinaryArtifactList,BinaryArtifactChunk} from './artifacts.mjs';
 import type {JobStorageCapabilities,JobRecovery} from './job-storage.mjs';
 import type {JobHistoryQuery,JobHistoryPage} from './job-history.mjs';
+import type {ArtifactStorageCapabilities,StoredArtifactList,StoredArtifactReference,StoredArtifactChunk} from './artifact-storage.mjs';
 import type {WorkspaceJobWatchOptions,WorkspaceObserver,WorkspaceJobUpdate} from './workspace-observation.mjs';
 export {createWorkspaceProject, applyTextEdits} from './workspace-project.mjs';
 export {WORKSPACE_OBSERVATION_LIMITS} from './workspace-observation.mjs';
@@ -27,6 +28,11 @@ export interface WorkspaceClient {
   runCommand(pluginId:string,commandId:string,input:Json,artifactSha256:string,options?:WorkspaceRequestOptions):Promise<Json>;
   getJobCapabilities(options?:WorkspaceRequestOptions):Promise<JobCapabilities>;
   getJobStorageCapabilities(options?:WorkspaceRequestOptions):Promise<JobStorageCapabilities>;
+  getArtifactStorageCapabilities(options?:WorkspaceRequestOptions):Promise<ArtifactStorageCapabilities>;
+  listStoredJobArtifacts(pluginId:string,jobId:string,artifactSha256:string,options?:WorkspaceRequestOptions):Promise<StoredArtifactList>;
+  getStoredJobArtifact(pluginId:string,jobId:string,artifactId:string,artifactSha256:string,options?:WorkspaceRequestOptions):Promise<StoredArtifactReference>;
+  readStoredJobArtifactChunk(reference:StoredArtifactReference,offset:number,options?:WorkspaceRequestOptions&{readonly length?:number}):Promise<StoredArtifactChunk>;
+  readStoredJobArtifactText(reference:StoredArtifactReference,options?:WorkspaceRequestOptions):Promise<{readonly reference:StoredArtifactReference;readonly content:string}>;
   listJobHistory(pluginId:string,artifactSha256:string,query?:JobHistoryQuery,options?:WorkspaceRequestOptions):Promise<JobHistoryPage>;
   recoverJob(pluginId:string,jobId:string,artifactSha256:string,options?:WorkspaceRequestOptions):Promise<JobRecovery>;
   retryCommandJob(pluginId:string,previousJobId:string,input:Json,artifactSha256:string,job:JobOptions,options?:WorkspaceRequestOptions):Promise<JobRecovery>;

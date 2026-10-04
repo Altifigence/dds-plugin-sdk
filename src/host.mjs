@@ -1,10 +1,12 @@
+import {storageEqual} from './job-storage-validation.mjs';
 import { parseCommandDefinition, parseCommandInput, parseDiagnosticsRequest, parseDocumentSnapshot, parseExpectedRevision, parseFileContent, parseGrants, parseJsonValue, parseManifest, parseScope, parseWorkspaceList, parseWorkspacePath, parseWorkspaceRead, parseWorkspaceWrite } from './contracts.mjs';
 import { createDiagnosticsRegistry } from './lifecycle.mjs';
 import { createLanguageRegistry } from './lifecycle.mjs';
 import { LANGUAGE_FEATURES, parseLanguageRequest } from './contracts.mjs';
 import { ErrorCode, LIMITS, PluginSdkError } from './limits.mjs';
 import {createJobRegistry} from './job-registry.mjs';
-import {parseBinaryArtifactSource, parseBinaryChunk} from './artifacts.mjs';
+import {parseBinaryArtifactSource, parseBinaryChunk,parseBinaryArtifactRange,decodeBinaryArtifactData} from './artifacts.mjs';
+import {parseStoredArtifact,parseStoredArtifactReference,parseStoredArtifactChunk} from './artifact-storage.mjs';
 import {parseJobId, parseJobOptions} from './jobs.mjs';
 
 const hostFailures = new WeakSet();
@@ -130,7 +132,7 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
     const state = {active: true, ready: false, manifest, grants: effectiveGrants, commands: new Map(), registrations: new Set(), controller: new AbortController(), disposable: undefined};
     plugins.set(manifest.id, state);
     const context = Object.freeze({
-      host: Object.freeze({id: hostId, version: '0.7.0', protocolVersion: 1}),
+      host: Object.freeze({id: hostId, version: '0.8.0', protocolVersion: 1}),
       pluginId: manifest.id,
       scope,
       grants: effectiveGrants,
@@ -298,6 +300,17 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
     if (recovered.record && !state.commands.has(recovered.record.snapshot.commandId)) throw error(ErrorCode.CAPABILITY_UNAVAILABLE, 'Recorded command is unavailable');
     return recovered;
   }
+  function storedReference(pluginId,jobId,artifactId){
+    const recovery=recoverJob(pluginId,jobId),snapshot=recovery.record?.retainedArtifacts?.find(s=>s.artifact.id===artifactId);
+    if(!snapshot)throw error(ErrorCode.CAPABILITY_UNAVAILABLE,'Stored artifact is unavailable');
+    return parseStoredArtifactReference({protocolVersion:1,storage:'snapshot',scope,snapshot});
+  }
+  function currentStoredReference(reference){
+    if(reference.scope.projectId!==scope.projectId||reference.scope.sessionId!==scope.sessionId)throw error(ErrorCode.CONFLICT,'Stored artifact belongs to another host generation');
+    const s=reference.snapshot,current=storedReference(s.pluginId,s.jobId,s.artifact.id);
+    if(!storageEqual(current,reference))throw error(ErrorCode.CONFLICT,'Stored artifact identity changed');
+    return historyState(s.pluginId);
+  }
   return Object.freeze({
     activate,
     setDocument(value) {
@@ -351,6 +364,25 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
     jobCapabilities() {assertOpen(); return jobRegistry.capabilities();},
     binaryArtifactCapabilities() {assertOpen(); return jobRegistry.binaryCapabilities();},
     jobStorageCapabilities() {assertOpen(); return jobRegistry.storageCapabilities();},
+    artifactStorageCapabilities(){assertOpen();return jobRegistry.artifactStorageCapabilities();},
+    listStoredJobArtifacts(pluginId,jobId){return jobRegistry.listStoredArtifacts(pluginId,recoverJob(pluginId,jobId));},
+    async getStoredJobArtifact(pluginId,jobId,artifactId,options={}){
+      const reference=storedReference(pluginId,jobId,artifactId),state=currentStoredReference(reference),checked=checkedOptions(options);
+      await run(state,signal=>jobRegistry.verifyStoredArtifact(reference.snapshot,{...checked,signal}),checked,{trusted:true,validate:parseStoredArtifact});
+      currentStoredReference(reference);return reference;
+    },
+    async readStoredJobArtifactChunk(value,offset,length,options={}){
+      const reference=parseStoredArtifactReference(value),state=currentStoredReference(reference),checked=checkedOptions(options);
+      parseBinaryArtifactRange(offset,length,reference.snapshot.artifact.byteLength);
+      const chunk=await run(state,signal=>jobRegistry.readStoredArtifact(reference.snapshot,offset,length,{...checked,signal}),checked,{trusted:true,validate:value=>parseBinaryChunk(value,reference.snapshot.artifact.byteLength)});
+      currentStoredReference(reference);
+      const result=parseStoredArtifactChunk({reference,...chunk});
+      if(result.offset!==offset||result.nextOffset!==offset+Math.min(length,reference.snapshot.artifact.byteLength-offset))throw error(ErrorCode.INVALID_CONTRACT,'Stored artifact range mismatch');
+      const digest=[...new Uint8Array(await globalThis.crypto.subtle.digest('SHA-256',decodeBinaryArtifactData(result.data)))].map(byte=>byte.toString(16).padStart(2,'0')).join('');
+      currentStoredReference(reference);if(checked.signal?.aborted)throw error(ErrorCode.CANCELLED,'Stored artifact read cancelled');
+      if(digest!==result.sha256)throw error(ErrorCode.CONFLICT,'Stored artifact chunk checksum mismatch');
+      return result;
+    },
     // The owner can flush cancellation checkpoints after dispose(). The store
     // itself remains owner-managed and must be closed after this promise settles.
     flushJobStore() {return jobRegistry.flushStorage();},

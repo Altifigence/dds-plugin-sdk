@@ -1,4 +1,4 @@
-# Job history and explicit retry (0.8 development)
+# Job history and explicit retry (SDK 0.8.0)
 
 History is an opt-in extension over [job storage](JOB_STORAGE.md). It does not
 alter v1 hello, job states or existing live `getJob()` replies. New clients report
@@ -65,9 +65,11 @@ initial disposition filter. Restarts lose cursors; stale/changed-filter cursors
 return `conflict`. Restart a query to refresh state or obtain a new snapshot.
 
 Items expose identifiers, timestamps, v1 state, recovery disposition, record
-revision, parent attempt ID, content policy and artifact count. `resultAvailability`
-is `none`, `source-references` or `expired`: this stage does not retain file bytes
-and cannot prove that a referenced source still exists. Corrupt/unsupported
+revision, parent attempt ID, content policy, artifact count and `snapshotCount`.
+`resultAvailability` is `none`, `source-references`, `snapshot-references`,
+`mixed-references` or `expired`. These describe retained metadata; they do not
+prove current source or snapshot availability. Use [stored results](ARTIFACT_STORAGE.md)
+to inspect file status and obtain a fully verified current reference. Corrupt/unsupported
 entries are omitted from lists because their ownership cannot be accepted;
 explicit recovery by known ID returns the bounded error disposition.
 

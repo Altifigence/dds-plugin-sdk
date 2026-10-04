@@ -1,8 +1,8 @@
-# Optional job storage (0.8 development)
+# Optional job storage (SDK 0.8.0)
 
 `/job-storage` adds a versioned host storage contract and recovery receipt.
-`/job-storage-node` provides an optional local filesystem implementation. This
-is the first part of 0.8 development; tagged 0.7 archives do not contain it.
+`/job-storage-node` provides an optional local filesystem implementation. Both
+are available starting with SDK 0.8.0.
 Existing v1 jobs, snapshots, hello and artifact responses keep their shapes.
 Hosts without storage retain their in-memory behavior.
 
@@ -86,7 +86,8 @@ The optional trusted `redact(entry)` returns reviewed log/progress text or resul
 JSON. It must be synchronous and deterministic; `null` omits a field. Invalid
 output or callback failures stop persistence and abort the job. The SDK cannot
 detect arbitrary application secrets. Paths and plugin/command IDs remain
-metadata. Artifact entries currently reference sources, not retained bytes.
+metadata. File bytes are retained only when the separate
+[artifact store](ARTIFACT_STORAGE.md) is enabled; otherwise entries reference sources.
 
 | Limit | Default / maximum |
 | --- | --- |
@@ -137,12 +138,12 @@ keeps the original. Migration is opt-in and never restores permissions as grants
 
 ## 한국어
 
-0.8 개발 단계의 선택적 작업 저장 계약입니다. 초기 기록이 저장되기 전에는 명령을
+SDK 0.8.0의 선택적 작업 저장 계약입니다. 초기 기록이 저장되기 전에는 명령을
 실행하지 않으며, `flushJobStore()`는 호출 시점까지 요청한 기록의 저장을 확인합니다.
 작업 완료를 기다리는 API는 아닙니다. 재시작 복구는 현재 플러그인·명령·권한·패키지
 해시를 다시 확인하고 완료·중단·만료·손상·미지원 상태를 구분합니다. 중단된 작업을
 자동 실행하지 않으며 마지막 기록 이후의 불확실성은 `unrecordedTail`로 알립니다.
 
 입력·토큰·이전 동의는 저장하지 않습니다. 로그·진행률 메시지·결과도 기본 제외되며
-운영자의 결정적인 마스킹 함수가 검토한 값만 보관할 수 있습니다. 이 단계의 파일
-정보는 원본 참조입니다. 실제 프로세스 종료를 검증하지만 전원 손실은 보장하지 않습니다.
+운영자의 결정적인 마스킹 함수가 검토한 값만 보관할 수 있습니다. 파일 바이트는
+별도 [보관 저장소](ARTIFACT_STORAGE.md)를 켰을 때만 저장합니다. 실제 프로세스 종료를 검증하지만 전원 손실은 보장하지 않습니다.

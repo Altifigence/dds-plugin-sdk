@@ -143,6 +143,21 @@
     "src/workspace-identity-node.mjs",
     "docs/JOB_HISTORY.md",
     "schemas/job-history-query.schema.json",
-    "schemas/job-history-page.schema.json"
+    "schemas/job-history-page.schema.json",
+    "docs/ARTIFACT_STORAGE.md",
+    "examples/stored-artifacts/run.mjs",
+    "src/artifact-storage.mjs",
+    "src/artifact-storage.d.mts",
+    "src/artifact-storage-node.mjs",
+    "src/artifact-storage-node.d.mts",
+    "src/artifact-storage-session.mjs",
+    "src/node-store-context.mjs",
+    "src/stored-artifact-download-node.mjs",
+    "src/stored-artifact-download-node.d.mts",
+    "schemas/artifact-storage-capabilities.schema.json",
+    "schemas/stored-artifact.schema.json",
+    "schemas/stored-artifact-reference.schema.json",
+    "schemas/stored-artifact-chunk.schema.json",
+    "schemas/stored-artifact-list.schema.json"
   ]
 }

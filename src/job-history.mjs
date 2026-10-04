@@ -26,16 +26,17 @@ export function parseJobHistoryQuery(value = {}) {
 }
 export function parseJobHistoryItem(value) {
   const v = parseJsonValue(value);
-  storageObject(v, ['jobId','commandId','state','disposition','startedAt','updatedAt','expiresAt','revision','attemptOf','contentPolicy','artifactCount','resultAvailability']);
+  storageObject(v, ['jobId','commandId','state','disposition','startedAt','updatedAt','expiresAt','revision','attemptOf','contentPolicy','artifactCount','snapshotCount','resultAvailability']);
   parseJobId(v.jobId); text(v.commandId);
   if (!JOB_STATES.includes(v.state) || !dispositions.includes(v.disposition)) fail();
   storageInteger(v.startedAt); storageInteger(v.updatedAt, v.startedAt); storageInteger(v.expiresAt, v.updatedAt + 1); storageInteger(v.revision, 1);
   if (v.attemptOf !== null) {parseJobId(v.attemptOf); if (v.attemptOf === v.jobId) fail();}
   if (!['metadata-only', 'host-redacted'].includes(v.contentPolicy)) fail();
   storageInteger(v.artifactCount, 0, 16);
-  if (!['none', 'source-references', 'expired'].includes(v.resultAvailability)) fail();
+  storageInteger(v.snapshotCount,0,v.artifactCount);
+  if (!['none', 'source-references', 'snapshot-references', 'mixed-references', 'expired'].includes(v.resultAvailability)) fail();
   if (v.disposition === 'completed' && v.state === 'running') fail();
-  if (v.resultAvailability !== (v.disposition === 'expired' ? 'expired' : v.artifactCount ? 'source-references' : 'none')) fail();
+  if (v.resultAvailability !== (v.disposition === 'expired' ? 'expired' : !v.artifactCount ? 'none' : !v.snapshotCount ? 'source-references' : v.snapshotCount===v.artifactCount ? 'snapshot-references' : 'mixed-references')) fail();
   return v;
 }
 export function parseJobHistoryPage(value) {

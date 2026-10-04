@@ -169,3 +169,13 @@ Registered files are at most 1 GiB and require explicit server opt-in and
 the plugin's existing read grant. Older v1 text/job shapes are unchanged.
 See [binary results](BINARY_ARTIFACTS.md) for discovery, source mutation checks,
 resumption, full-file verification and the unchanged job-retention boundary.
+
+## Optional durable extensions (SDK 0.8.0)
+
+`history.capabilities`, `history.list`, `history.recover` and `history.retry`
+provide operator-enabled durable metadata. `snapshots.capabilities`,
+`snapshots.list`, `snapshots.get` and `snapshots.read` provide separately enabled
+retained bytes. All use the existing authenticated workspace/generation envelope.
+New references recheck current authority; prior generations never authorize
+reads or automatic execution. See [history](JOB_HISTORY.md) and
+[stored results](ARTIFACT_STORAGE.md) for parameters, limits and migration.

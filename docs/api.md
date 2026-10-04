@@ -1,7 +1,7 @@
-# API reference — 0.7.0
+# API reference — 0.8.0
 
-The main branch adds optional [job storage](JOB_STORAGE.md) for the 0.8 cycle;
-the 0.7 tagged archive retains the API described below.
+SDK 0.8 adds optional [job storage](JOB_STORAGE.md), [history and retry](JOB_HISTORY.md)
+and [stored result files](ARTIFACT_STORAGE.md). Existing v1 response shapes remain valid.
 
 Workspace client helpers include connection-bound project edit sessions,
 `project.watchFiles(paths, options)`, `client.watchJob(jobId, options)` and
@@ -80,7 +80,7 @@ license eligibility or agreement acceptance. See [LICENSING](LICENSING.md).
 
 | Activation context member | Behavior |
 | --- | --- |
-| `host` | `{id: 'test-host' \| 'workspace-host', version: '0.7.0', protocolVersion: 1}` |
+| `host` | `{id: 'test-host' \| 'workspace-host', version: '0.8.0', protocolVersion: 1}` |
 | `pluginId`, `scope` | Manifest ID and opaque host `{projectId, sessionId}` |
 | `grants` | Frozen intersection of host grants and manifest permissions |
 | `signal` | Aborted on deactivation, host disposal or activation timeout |
@@ -269,3 +269,14 @@ The Node `downloadJobBinaryArtifact()` helper verifies and publishes a complete
 file, with explicit resumption of a partial download. Contracts and decoders are
 exported through `/artifacts`. See [binary artifacts](BINARY_ARTIFACTS.md) for
 operator opt-in, identity, limits, filesystem behavior and browser responsibilities.
+
+## Durable jobs and stored results (SDK 0.8.0)
+
+Use `/job-storage` and `/job-storage-node` for committed recovery; `/job-history`
+for bounded queries and explicit retry; `/artifact-storage` and
+`/artifact-storage-node` for retained result contracts and bytes. The core host
+adds `artifactStorageCapabilities`, `listStoredJobArtifacts`,
+`getStoredJobArtifact` and `readStoredJobArtifactChunk`. The HTTP client adds the
+corresponding capability/list/get/chunk methods and `readStoredJobArtifactText`;
+`/workspace-node` exports `downloadStoredJobArtifact`. Exact parameters and
+limits are in the declarations and [stored-result guide](ARTIFACT_STORAGE.md).
