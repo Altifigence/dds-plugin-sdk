@@ -98,6 +98,8 @@ assert.equal(typeof createDiagnosticsResult, 'function');
   run(process.execPath, ['smoke.mjs'], consumer);
   await cp(join(installed, 'examples', 'hello-language'), join(consumer, 'language-example'), {recursive: true});
   run(process.execPath, ['language-example/run.mjs'], consumer);
+  await cp(join(installed, 'examples', 'language-assistance'), join(consumer, 'assistance-example'), {recursive: true});
+  assert.match(run(process.execPath, ['assistance-example/run.mjs'], consumer), /nested signature help, lazy completion resolution and Unicode snippet preview verified/);
   await cp(join(installed, 'examples', 'project-session'), join(consumer, 'project-example'), {recursive: true});
   run(process.execPath, ['project-example/run.mjs'], consumer);
   // Package and install a real independent plugin. npm sees generated metadata;
@@ -192,6 +194,7 @@ try {
   await cp(join(root, 'tests', 'types', 'public-apis.mts'), join(consumer, 'public-apis.mts'));
   await cp(join(root, 'tests', 'types', 'core-v2.mts'), join(consumer, 'core-v2.mts'));
   await cp(join(root, 'tests', 'types', 'language.mts'), join(consumer, 'language.mts'));
+  await cp(join(root, 'tests', 'types', 'language-assistance.mts'), join(consumer, 'language-assistance.mts'));
   await cp(join(root, 'tests', 'types', 'workspace-project.mts'), join(consumer, 'workspace-project.mts'));
   await cp(join(root, 'tests', 'types', 'jobs-devtools.mts'), join(consumer, 'jobs-devtools.mts'));
   await cp(join(root, 'tests', 'types', 'workspace-observation.mts'), join(consumer, 'workspace-observation.mts'));

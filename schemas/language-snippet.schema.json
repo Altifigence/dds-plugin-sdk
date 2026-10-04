@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.11.0/schemas/language-snippet.schema.json",
+  "title": "language-snippet",
+  "type": "string",
+  "minLength": 0,
+  "maxLength": 16384,
+  "$comment": "Runtime accepts $n, ${n}, ${n:literal}, one $0 and escapes for backslash/dollar/braces. Indices are 0..99; no variables, nesting, choices or transforms. Mirrored defaults must agree; expansion is <=16384 UTF-16 units and <=128 explicit stops."
+}

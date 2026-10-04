@@ -35,7 +35,7 @@ export interface PluginManifestV1 {
 export interface PluginManifestV2 extends Omit<PluginManifestV1, 'manifestVersion' | 'capabilities' | 'permissions' | 'supportedHosts'> {
   readonly manifestVersion: 2;
   readonly runtime: 'ui' | 'workspace';
-  readonly capabilities: readonly ('diagnostics' | 'commands' | LanguageFeature)[];
+  readonly capabilities: readonly ('diagnostics' | 'commands' | LanguageCapability)[];
   readonly permissions: readonly Permission[];
   readonly supportedHosts: readonly HostId[];
   readonly source: {
@@ -161,6 +161,10 @@ export interface PluginHost extends Disposable {
   setDocument(snapshot: DocumentSnapshot): DocumentSnapshot;
   requestDiagnostics(options?: RequestOptions): Promise<DiagnosticsResult>;
   requestLanguage<K extends LanguageFeature>(kind: K, input: LanguageInput<K>, options?: RequestOptions): Promise<LanguageResult<K>>;
+  languageCapabilities(): LanguageCapabilities;
+  resolveCompletion(token: string, options?: RequestOptions): Promise<LanguageResult<'completion'>>;
+  prepareCompletion(result: LanguageResult<'completion'>, itemIndex?: number): CompletionInsertion;
+  releaseCompletion(result: LanguageResult<'completion'>): void;
   listCommands(): readonly RegisteredCommand[];
   executeCommand(pluginId: string, commandId: string, input: JsonValue, options?: RequestOptions): Promise<JsonValue>;
   jobCapabilities(): JobCapabilities;
@@ -188,15 +192,53 @@ export interface PluginHost extends Disposable {
 /** Executes trusted plugins in-process. Ports enforce file/backend authority; this is not a sandbox. */
 export function createPluginHost(options?: PluginHostOptions): PluginHost;
 
-export type LanguageFeature = 'completion' | 'hover' | 'definition' | 'references' | 'document-symbols';
+export type LanguageFeature = 'completion' | 'hover' | 'definition' | 'references' | 'document-symbols' | 'signature-help';
+export type LanguageCapability = LanguageFeature | 'completion-resolve' | 'completion-snippets';
 export const LANGUAGE_FEATURES: readonly LanguageFeature[];
+export const LANGUAGE_CAPABILITIES: readonly LanguageCapability[];
 export type LanguageInput<K extends LanguageFeature> = K extends 'document-symbols'
-  ? {readonly position?: never; readonly includeDeclaration?: never}
-  : {readonly position: Position} & (K extends 'references' ? {readonly includeDeclaration?: boolean} : {readonly includeDeclaration?: never});
+  ? {readonly position?: never; readonly includeDeclaration?: never; readonly context?: never}
+  : {readonly position: Position} & (K extends 'references' ? {readonly includeDeclaration?: boolean; readonly context?: never}
+    : K extends 'completion' ? {readonly includeDeclaration?: never; readonly context?: CompletionContext}
+    : K extends 'signature-help' ? {readonly includeDeclaration?: never; readonly context?: SignatureHelpContext}
+    : {readonly includeDeclaration?: never; readonly context?: never});
 export type LanguageRequest<K extends LanguageFeature = LanguageFeature> = K extends LanguageFeature
   ? DiagnosticsRequest & {readonly kind: K} & LanguageInput<K> : never;
-/** Literal insertion and description text, never snippets, HTML or executable commands. */
-export interface CompletionItem {readonly label: string; readonly insertText: string; readonly detail?: string; readonly range?: Range;}
+/** Literal by default. A declared snippet capability enables the bounded data-only subset. */
+export interface CompletionItem {
+  readonly label: string; readonly insertText: string; readonly detail?: string; readonly range?: Range;
+  readonly documentation?: string; readonly insertTextFormat?: 'literal' | 'snippet';
+  readonly additionalTextEdits?: readonly {readonly range: Range; readonly text: string}[];
+  /** Provider-owned bounded JSON; retained privately by the registry. */
+  readonly resolveData?: JsonValue;
+  /** Host-issued, one-use token. A provider cannot supply this field. */
+  readonly resolveToken?: string;
+}
+export type CompletionContext = {readonly triggerKind: 'invoked' | 'incomplete'; readonly triggerCharacter?: never} | {readonly triggerKind: 'character'; readonly triggerCharacter: string};
+export type SignatureHelpContext = ({readonly triggerKind: 'invoked' | 'content-change'; readonly triggerCharacter?: never} | {readonly triggerKind: 'character'; readonly triggerCharacter: string}) & {readonly isRetrigger: boolean; readonly activeSignature?: number; readonly activeParameter?: number};
+export interface SignatureInformation {
+  readonly label: string; readonly documentation?: string;
+  readonly parameters: readonly {readonly label: readonly [number, number]; readonly documentation?: string}[];
+}
+export interface SignatureHelp {readonly signatures: readonly SignatureInformation[]; readonly activeSignature: number; readonly activeParameter: number | null;}
+export interface ParsedSnippet {readonly text: string; readonly tabstops: readonly {readonly index: number; readonly ranges: readonly {readonly start: number; readonly end: number}[]}[];}
+export interface CompletionInsertion {
+  readonly snapshot: SnapshotIdentity; readonly content: string;
+  readonly edits: readonly {readonly range: Range; readonly text: string}[];
+  readonly tabstops: readonly {readonly index: number; readonly ranges: readonly Range[]}[];
+}
+export const LANGUAGE_LIMITS: Readonly<{
+  signatures: number; parameters: number; signatureLabel: number; documentation: number;
+  snippetChars: number; snippetStops: number; additionalEdits: number;
+  resolveDataBytes: number; resolveTokens: number; resolveBytes: number; resolveTtlMs: number; resolvePending: number;
+}>;
+export interface LanguageCapabilities {
+  readonly protocolVersion: 1; readonly features: readonly LanguageFeature[];
+  readonly completionResolve: true; readonly snippets: true; readonly positions: 'utf16-zero-based'; readonly limits: typeof LANGUAGE_LIMITS;
+}
+export function parseSnippet(value: unknown): ParsedSnippet;
+export function parseCompletionItem(value: unknown): CompletionItem;
+export function parseSignatureHelp(value: unknown): SignatureHelp | null;
 export interface Hover {readonly text: string; readonly range?: Range;}
 /** Relative workspace path. Hosts must authorize access before opening the target. */
 export interface LanguageLocation {readonly path: string; readonly range: Range;}
@@ -210,15 +252,20 @@ export interface LanguageData {
   readonly definition: readonly LanguageLocation[];
   readonly references: readonly LanguageLocation[];
   readonly 'document-symbols': readonly DocumentSymbol[];
+  readonly 'signature-help': SignatureHelp | null;
 }
 export type LanguageResult<K extends LanguageFeature = LanguageFeature> = K extends LanguageFeature
   ? Omit<DiagnosticsResult, 'diagnostics'> & {readonly kind: K; readonly data: LanguageData[K]} : never;
 export interface LanguageProvider<K extends LanguageFeature> {
   provide(request: LanguageRequest<K>, options: {readonly signal: AbortSignal}): LanguageResult<K> | Promise<LanguageResult<K>>;
+  readonly resolve?: K extends 'completion' ? (request: LanguageRequest<'completion'>, item: CompletionItem, options: {readonly signal: AbortSignal}) => CompletionItem | Promise<CompletionItem> : never;
 }
 export interface LanguageRegistry<K extends LanguageFeature> extends Disposable {
-  register(pluginId: string, selector: ProviderSelector, provider: LanguageProvider<K>): Disposable;
+  register(pluginId: string, selector: ProviderSelector, provider: LanguageProvider<K>, options?: K extends 'completion' ? {readonly resolve?: boolean; readonly snippets?: boolean} : never): Disposable;
   request(request: LanguageRequest<K>, options?: RequestOptions): Promise<LanguageResult<K>>;
+  resolve(token: string, options?: RequestOptions): Promise<LanguageResult<'completion'>>;
+  prepareCompletion(result: LanguageResult<'completion'>, itemIndex?: number): CompletionInsertion;
+  releaseCompletion(result: LanguageResult<'completion'>): void;
   invalidate(): void;
 }
 export function parseLanguageRequest(value: unknown): LanguageRequest;

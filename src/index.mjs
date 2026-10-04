@@ -6,7 +6,8 @@ export { parseManifest, parseDocumentSnapshot, parseDiagnosticsRequest, parseDia
 export { parseCommandDefinition, parseJsonValue, parseLicenseExpression, parseWorkspacePath } from './contracts.mjs';
 export { createDiagnosticsRegistry } from './lifecycle.mjs';
 export { createLanguageRegistry } from './lifecycle.mjs';
-export { LANGUAGE_FEATURES, parseLanguageRequest, parseLanguageResult, createLanguageResult } from './contracts.mjs';
+export { LANGUAGE_FEATURES, LANGUAGE_CAPABILITIES, parseLanguageRequest, parseLanguageResult, createLanguageResult } from './contracts.mjs';
+export {LANGUAGE_LIMITS, parseSnippet, parseCompletionItem, parseSignatureHelp} from './language-assistance.mjs';
 export { createPluginHost } from './host.mjs';
 
 /** Declare an ESM plugin. Activation is performed by a host with explicit grants. */

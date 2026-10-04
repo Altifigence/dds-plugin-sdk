@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.11.0 — Unreleased
+
+- Add bounded signature-help context/results, one-use completion resolve tokens,
+  optional snippet grammar and pure insertion previews with UTF-16/CRLF validation.
+- Keep actual provider work within request/resolver limits when cancellation is
+  ignored; invalidate retained selections on document and provider lifecycle changes.
+- Add public types, schemas, a standalone teaching-language example and packed
+  consumer checks. Preserve existing literal completions and protocol v1.
+- Centralize SDK host/schema/package-peer version metadata and retain verification
+  compatibility for exact previously published 0.10 plugin package metadata.
+
 ## 0.10.0 — 2026-10-04
 
 - Browser artifact streaming with caller-owned file/OPFS sinks and distinct

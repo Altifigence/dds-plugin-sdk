@@ -3,6 +3,8 @@ import { parseCommandDefinition, parseCommandInput, parseDiagnosticsRequest, par
 import { createDiagnosticsRegistry } from './lifecycle.mjs';
 import { createLanguageRegistry } from './lifecycle.mjs';
 import { LANGUAGE_FEATURES, parseLanguageRequest } from './contracts.mjs';
+import {LANGUAGE_LIMITS} from './language-assistance.mjs';
+import {SDK_VERSION} from './version.mjs';
 import { ErrorCode, LIMITS, PluginSdkError } from './limits.mjs';
 import {createJobRegistry} from './job-registry.mjs';
 import {parseBinaryArtifactSource, parseBinaryChunk,parseBinaryArtifactRange,decodeBinaryArtifactData} from './artifacts.mjs';
@@ -132,7 +134,7 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
     const state = {active: true, ready: false, manifest, grants: effectiveGrants, commands: new Map(), registrations: new Set(), controller: new AbortController(), disposable: undefined};
     plugins.set(manifest.id, state);
     const context = Object.freeze({
-      host: Object.freeze({id: hostId, version: '0.9.0', protocolVersion: 1}),
+      host: Object.freeze({id: hostId, version: SDK_VERSION, protocolVersion: 1}),
       pluginId: manifest.id,
       scope,
       grants: effectiveGrants,
@@ -160,7 +162,10 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
         if (!languages.has(kind)) throw error(ErrorCode.INVALID_CONTRACT, 'Unknown language feature');
         if (!manifest.capabilities.includes(kind)) throw error(ErrorCode.PERMISSION_DENIED, 'Language capability was not declared');
         let registration;
-        try { registration = languages.get(kind).register(manifest.id, selector, provider); }
+        try { registration = languages.get(kind).register(manifest.id, selector, provider, {
+          resolve: kind === 'completion' && manifest.capabilities.includes('completion-resolve'),
+          snippets: kind === 'completion' && manifest.capabilities.includes('completion-snippets'),
+        }); }
         catch (failure) { throw error(failure instanceof PluginSdkError ? failure.code : ErrorCode.PROVIDER_FAILED, 'Language provider registration failed'); }
         state.registrations.add(registration);
         return Object.freeze({dispose() {
@@ -340,13 +345,22 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
       if (!document) throw error(ErrorCode.INVALID_CONTRACT, 'Set a document before requesting language features');
       if (!languages.has(kind)) throw error(ErrorCode.INVALID_CONTRACT, 'Unknown language feature');
       const value = parseJsonValue(input);
-      if (!value || Array.isArray(value) || typeof value !== 'object' || Object.keys(value).some(key => !['position', 'includeDeclaration'].includes(key))) throw error(ErrorCode.INVALID_CONTRACT, 'Expected language request input');
+      if (!value || Array.isArray(value) || typeof value !== 'object' || Object.keys(value).some(key => !['position', 'includeDeclaration', 'context'].includes(key))) throw error(ErrorCode.INVALID_CONTRACT, 'Expected language request input');
       const request = parseLanguageRequest({protocolVersion: 1, requestId: `request-${++nextRequest}`, scope, snapshot: document, kind, ...value});
       const currentRevision = revision;
       const result = await languages.get(kind).request(request, options);
       if (revision !== currentRevision) throw error(ErrorCode.STALE_SNAPSHOT, 'Document changed while language features were pending');
       return result;
     },
+    languageCapabilities() {assertOpen(); return Object.freeze({protocolVersion: 1, features: LANGUAGE_FEATURES, completionResolve: true, snippets: true, positions: 'utf16-zero-based', limits: LANGUAGE_LIMITS});},
+    async resolveCompletion(token, options = {}) {
+      assertOpen(); const currentRevision = revision;
+      const result = await languages.get('completion').resolve(token, options);
+      if (revision !== currentRevision) throw error(ErrorCode.STALE_SNAPSHOT, 'Document changed while completion resolution was pending');
+      return result;
+    },
+    prepareCompletion(result, itemIndex = 0) {assertOpen(); return languages.get('completion').prepareCompletion(result, itemIndex);},
+    releaseCompletion(result) {assertOpen(); languages.get('completion').releaseCompletion(result);},
     listPlugins() {assertOpen(); return Object.freeze([...plugins.values()].filter(state => state.ready && state.active).map(state => state.manifest));},
     listCommands() {
       assertOpen();

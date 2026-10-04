@@ -1,5 +1,14 @@
 # Compatibility and availability
 
+## 0.11 development
+
+Optional `signature-help`, `completion-resolve` and `completion-snippets` extend the
+in-process host. Existing five language features and literal completion remain
+available. Older SDKs reject unknown manifest capabilities; these extensions do not
+change the workspace HTTP protocol. New plugin archives declare `>=0.11.0 <0.12.0`;
+verification retains the exact previously published 0.3.x through 0.10.x metadata.
+See [language assistance](LANGUAGE_ASSISTANCE.md) for bounds and runtime checks.
+
 | Surface | Supported scope |
 | --- | --- |
 | SDK runtime | Node.js 22 or 24; ESM with TypeScript declarations; no runtime dependencies |

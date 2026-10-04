@@ -1,0 +1,170 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.11.0/schemas/completion-item.schema.json",
+  "title": "completion-item",
+  "type": "object",
+  "properties": {
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "insertText": {
+      "type": "string",
+      "minLength": 0,
+      "maxLength": 16384
+    },
+    "detail": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+    },
+    "range": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "type": "object",
+          "properties": {
+            "line": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 262144
+            },
+            "character": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 262144
+            }
+          },
+          "required": [
+            "line",
+            "character"
+          ],
+          "additionalProperties": false
+        },
+        "end": {
+          "type": "object",
+          "properties": {
+            "line": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 262144
+            },
+            "character": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 262144
+            }
+          },
+          "required": [
+            "line",
+            "character"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "additionalProperties": false
+    },
+    "documentation": {
+      "type": "string",
+      "minLength": 0,
+      "maxLength": 16384
+    },
+    "insertTextFormat": {
+      "enum": [
+        "literal",
+        "snippet"
+      ]
+    },
+    "additionalTextEdits": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "range": {
+            "type": "object",
+            "properties": {
+              "start": {
+                "type": "object",
+                "properties": {
+                  "line": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 262144
+                  },
+                  "character": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 262144
+                  }
+                },
+                "required": [
+                  "line",
+                  "character"
+                ],
+                "additionalProperties": false
+              },
+              "end": {
+                "type": "object",
+                "properties": {
+                  "line": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 262144
+                  },
+                  "character": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 262144
+                  }
+                },
+                "required": [
+                  "line",
+                  "character"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "start",
+              "end"
+            ],
+            "additionalProperties": false
+          },
+          "text": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 16384
+          }
+        },
+        "required": [
+          "range",
+          "text"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "maxItems": 32
+    },
+    "resolveData": {
+      "x-maxUtf8Bytes": 4096,
+      "$comment": "Bounded plain JSON. The host retains this provider data privately and issues a one-use opaque token."
+    },
+    "resolveToken": {
+      "type": "string",
+      "minLength": 36,
+      "maxLength": 36,
+      "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$"
+    }
+  },
+  "required": [
+    "label",
+    "insertText"
+  ],
+  "additionalProperties": false,
+  "$comment": "Runtime checks well-formed UTF-16, exact snippet grammar, expanded text, document ranges, non-overlap and final file size. Provider-supplied resolveToken is rejected by the registry. Resolution cannot change label/insertion/format/range."
+}

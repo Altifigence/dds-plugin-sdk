@@ -1,4 +1,5 @@
-import { assertResultMatchesRequest, parseDiagnosticsRequest, parseDiagnosticsResult, parseProviderSelector, parseLanguageRequest, parseLanguageResult, assertLanguageResultMatchesRequest, LANGUAGE_FEATURES } from './contracts.mjs';
+import { assertResultMatchesRequest, parseDiagnosticsRequest, parseDiagnosticsResult, parseProviderSelector } from './contracts.mjs';
+export {createLanguageRegistry} from './language-registry.mjs';
 import { ErrorCode, LIMITS, PluginSdkError } from './limits.mjs';
 
 const sdkError = (code, message) => new PluginSdkError(code, message);
@@ -6,15 +7,6 @@ const sdkError = (code, message) => new PluginSdkError(code, message);
 /** A trusted-host lifecycle primitive. It does not load or isolate plugin code. */
 export function createDiagnosticsRegistry({isCurrent = () => true} = {}) {
   return createProviderRegistry({isCurrent, parseRequest: parseDiagnosticsRequest, parseResult: parseDiagnosticsResult, assertMatches: assertResultMatchesRequest, method: 'provideDiagnostics'});
-}
-
-export function createLanguageRegistry(kind, {isCurrent = () => true} = {}) {
-  if (!LANGUAGE_FEATURES.includes(kind)) throw sdkError(ErrorCode.INVALID_CONTRACT, 'Unknown language feature');
-  return createProviderRegistry({isCurrent, parseRequest(value) {
-    const request = parseLanguageRequest(value);
-    if (request.kind !== kind) throw sdkError(ErrorCode.INVALID_CONTRACT, 'Language feature does not match registry');
-    return request;
-  }, parseResult: parseLanguageResult, assertMatches: assertLanguageResultMatchesRequest, method: 'provide'});
 }
 
 function createProviderRegistry({isCurrent, parseRequest, parseResult, assertMatches, method}) {

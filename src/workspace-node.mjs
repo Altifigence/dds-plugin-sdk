@@ -5,6 +5,7 @@ import {createHash, randomUUID, timingSafeEqual} from 'node:crypto';
 import {createServer} from 'node:http';
 import {spawn} from 'node:child_process';
 import {createPluginHost} from './index.mjs';
+import {SDK_VERSION} from './version.mjs';
 import {JOB_LIMITS} from './jobs.mjs';
 import {BINARY_ARTIFACT_LIMITS, parseBinaryArtifactRange} from './artifacts.mjs';
 import {JOB_STORE_LIMITS} from './job-storage.mjs';
@@ -325,7 +326,7 @@ export async function createWorkspaceServer({workspace,root,workspaceId,name='Us
     const commands=pluginHost.listCommands();
     return pluginHost.listPlugins().map(manifest=>({manifest,...pins.get(manifest.id),commands:commands.filter(command=>command.pluginId===manifest.id)}));
   };
-  const description=()=>parseWorkspaceHello({hostId:'workspace-host',hostVersion:'0.10.0',protocolVersion:1,workspace:{id:workspaceId,name,generation},capabilities:{read:true,write:workspace.capabilities?.write===true,manage:workspace.capabilities?.manage===true,commands:pins.size>0},plugins:metadata(),notice:noticePayload});
+  const description=()=>parseWorkspaceHello({hostId:'workspace-host',hostVersion:SDK_VERSION,protocolVersion:1,workspace:{id:workspaceId,name,generation},capabilities:{read:true,write:workspace.capabilities?.write===true,manage:workspace.capabilities?.manage===true,commands:pins.size>0},plugins:metadata(),notice:noticePayload});
   let originalDescription;
   try{originalDescription=description();}catch(failure){await projectTransport.close();pluginHost.dispose();workspace.dispose?.();throw safeOperationFailure(failure);}
   const originalMetadata=JSON.stringify({plugins:originalDescription.plugins,capabilities:originalDescription.capabilities});

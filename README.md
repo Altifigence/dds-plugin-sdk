@@ -10,6 +10,10 @@ a small ESM package, TypeScript declarations and versioned contracts. Connect
 your own workspace and tools with the Node.js host and HTTP client. The SDK has
 **zero runtime dependencies**.
 
+Development toward 0.11 adds [signature help and completion assistance](docs/LANGUAGE_ASSISTANCE.md),
+including lazy item resolution, limited snippets and pure insertion previews.
+Run `npm run example:assistance` for the nested-call and Unicode example.
+
 The 0.10 line adds [browser artifact streaming](docs/BROWSER_ARTIFACTS.md)
 with bounded sinks, incremental whole-file hashes, explicit storage readback and
 main-thread/Worker examples, and [selected-file uploads](docs/UPLOADS.md) with private
@@ -102,7 +106,7 @@ and the install command includes the release URL rather than an npm registry loo
 
 | Import | Use |
 | --- | --- |
-| `@altifigence/dds-plugin-sdk` | Plugin host, diagnostics and five language providers, bounded parsers, types and lifecycle helpers |
+| `@altifigence/dds-plugin-sdk` | Plugin host, diagnostics, language providers and completion assistance, bounded parsers, types and lifecycle helpers |
 | `@altifigence/dds-plugin-sdk/testing` | `createTestHost` for trusted local plugins |
 | `@altifigence/dds-plugin-sdk/schemas` | JSON Schema objects, loaded separately from the core API |
 | `@altifigence/dds-plugin-sdk/themes` | Validate a theme and export DDS XML without executing theme code |

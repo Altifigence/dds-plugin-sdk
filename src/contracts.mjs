@@ -1,5 +1,7 @@
 import { ErrorCode, LIMITS, PluginSdkError, PROTOCOL_VERSION } from './limits.mjs';
 import { SEMVER_PATTERN } from './patterns.mjs';
+import {parseCompletionItem, parseLanguageContext, parseSignatureHelp, completionEdits} from './language-assistance.mjs';
+import {textIndex} from './language-values.mjs';
 
 const encoder = new TextEncoder();
 const identifierPattern = /^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$/;
@@ -8,7 +10,8 @@ const uriPattern = /^[A-Za-z][A-Za-z0-9+.-]*:[^\s\u0000-\u001f\u007f]+$/;
 const permissions = ['document.read', 'diagnostics.publish'];
 const workspacePermissions = ['workspace.read', 'workspace.write', 'backend.invoke'];
 const allPermissions = [...permissions, ...workspacePermissions, 'language.provide'];
-export const LANGUAGE_FEATURES = Object.freeze(['completion', 'hover', 'definition', 'references', 'document-symbols']);
+export const LANGUAGE_FEATURES = Object.freeze(['completion', 'hover', 'definition', 'references', 'document-symbols', 'signature-help']);
+export const LANGUAGE_CAPABILITIES = Object.freeze([...LANGUAGE_FEATURES, 'completion-resolve', 'completion-snippets']);
 
 function fail(path, message) {
   throw new PluginSdkError(ErrorCode.INVALID_CONTRACT, `${path}: ${message}`);
@@ -162,12 +165,13 @@ export function parseManifest(value) {
     version: string(value.version, 64, 'manifest.version', semverPattern),
     protocolVersion: version(value.protocolVersion, 'manifest.protocolVersion'),
     entry,
-    capabilities: Object.freeze(unique(array(value.capabilities, manifestVersion === 1 ? 1 : 7, 'manifest.capabilities', (v, p) => enumeration(v, manifestVersion === 1 ? ['diagnostics'] : ['diagnostics', 'commands', ...LANGUAGE_FEATURES], p), 1), 'manifest.capabilities')),
+    capabilities: Object.freeze(unique(array(value.capabilities, manifestVersion === 1 ? 1 : LANGUAGE_CAPABILITIES.length + 2, 'manifest.capabilities', (v, p) => enumeration(v, manifestVersion === 1 ? ['diagnostics'] : ['diagnostics', 'commands', ...LANGUAGE_CAPABILITIES], p), 1), 'manifest.capabilities')),
     permissions: Object.freeze(unique(array(value.permissions, manifestVersion === 1 ? 2 : 6, 'manifest.permissions', (v, p) => enumeration(v, manifestVersion === 1 ? permissions : allPermissions, p)), 'manifest.permissions')),
     supportedHosts: Object.freeze(unique(array(value.supportedHosts, manifestVersion === 1 ? 1 : 2, 'manifest.supportedHosts', (v, p) => enumeration(v, manifestVersion === 1 ? ['test-host'] : ['test-host', 'workspace-host'], p), 1), 'manifest.supportedHosts')),
     license: manifestVersion === 1 ? string(value.license, 128, 'manifest.license', /^[A-Za-z0-9.+-]+$/) : parseLicenseExpression(value.license),
   };
   if (manifestVersion === 2) {
+    if (output.capabilities.some(capability => ['completion-resolve', 'completion-snippets'].includes(capability)) && !output.capabilities.includes('completion')) fail('manifest.capabilities', 'completion extension requires completion');
     output.runtime = enumeration(value.runtime, ['ui', 'workspace'], 'manifest.runtime');
     if (output.runtime === 'ui' && output.permissions.some(permission => workspacePermissions.includes(permission))) fail('manifest.permissions', 'UI plugins cannot request workspace or backend permissions');
     record(value.source, ['visibility', 'licenseFile'], ['repository'], 'manifest.source');
@@ -423,10 +427,10 @@ function inDocumentRange(value, text) {
   inDocument(value.start, text, 'range.start'); inDocument(value.end, text, 'range.end');
 }
 
-/** Language API v1: plain text only. Returned text is never HTML or a command. */
+/** Language API v1: returned text is never HTML or a command. Snippets are explicit data. */
 export function parseLanguageRequest(value) {
   value = input(value, LIMITS.requestBytes, 'request');
-  record(value, ['protocolVersion', 'requestId', 'scope', 'snapshot', 'kind'], ['position', 'includeDeclaration'], 'request');
+  record(value, ['protocolVersion', 'requestId', 'scope', 'snapshot', 'kind'], ['position', 'includeDeclaration', 'context'], 'request');
   const kind = enumeration(value.kind, LANGUAGE_FEATURES, 'request.kind');
   const output = {
     protocolVersion: version(value.protocolVersion, 'request.protocolVersion'),
@@ -438,21 +442,18 @@ export function parseLanguageRequest(value) {
   } else {
     output.position = position(value.position, 'request.position');
     inDocument(output.position, output.snapshot.text, 'request.position');
+    textIndex(output.snapshot.text).offset(output.position);
   }
   if (Object.hasOwn(value, 'includeDeclaration')) {
     if (kind !== 'references' || typeof value.includeDeclaration !== 'boolean') fail('request.includeDeclaration', 'only references accept a boolean');
     output.includeDeclaration = value.includeDeclaration;
   }
+  if (Object.hasOwn(value, 'context')) output.context = parseLanguageContext(kind, value.context);
   return boundCopy(Object.freeze(output), LIMITS.requestBytes, 'request');
 }
 
 function completion(value, path) {
-  record(value, ['label', 'insertText'], ['detail', 'range'], path);
-  const output = {label: string(value.label, 256, `${path}.label`), insertText: parseFileContent(value.insertText)};
-  if (value.insertText !== '') string(value.insertText, 16_384, `${path}.insertText`);
-  if (Object.hasOwn(value, 'detail')) output.detail = string(value.detail, 2048, `${path}.detail`);
-  if (Object.hasOwn(value, 'range')) output.range = range(value.range, `${path}.range`);
-  return Object.freeze(output);
+  return parseCompletionItem(value);
 }
 function hover(value, path) {
   if (value === null) return null;
@@ -486,13 +487,19 @@ export function parseLanguageResult(value) {
     protocolVersion: version(value.protocolVersion, 'result.protocolVersion'),
     requestId: string(value.requestId, 128, 'result.requestId'), scope: scope(value.scope, 'result.scope'),
     snapshot: snapshot(value.snapshot, 'result.snapshot', false), kind,
-    data: kind === 'hover' ? hover(value.data, 'result.data') : Object.freeze(array(value.data, LIMITS.maxLanguageItems, 'result.data', readers[kind])),
+    data: kind === 'signature-help' ? parseSignatureHelp(value.data) : kind === 'hover' ? hover(value.data, 'result.data') : Object.freeze(array(value.data, LIMITS.maxLanguageItems, 'result.data', readers[kind])),
   }), LIMITS.resultBytes, 'result');
 }
 
 export function assertLanguageResultMatchesRequest(result, request) {
   assertIdentityMatches(result, request);
   if (result.kind !== request.kind) fail('result.kind', 'does not match request');
+  if (result.kind === 'signature-help') return;
+  if (result.kind === 'completion') {
+    const index = textIndex(request.snapshot.text);
+    for (const item of result.data) completionEdits(request, item, index);
+    return;
+  }
   if (['definition', 'references'].includes(result.kind)) return; // Target contents require a separately authorized workspace read.
   const entries = result.kind === 'hover' ? (result.data ? [result.data] : []) : result.data;
   const lines = request.snapshot.text.split(/\r\n|\n|\r/);
