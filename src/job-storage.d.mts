@@ -1,6 +1,7 @@
 import type {JsonValue, Permission, Scope} from './index.mjs';
 import type {JobSnapshot, JobEvent} from './jobs.mjs';
 import type {BinaryArtifact} from './artifacts.mjs';
+import type {StoredArtifact,ArtifactStore} from './artifact-storage.mjs';
 
 export const JOB_STORAGE_VERSION: 1;
 export const DEFAULT_JOB_RETENTION_MS: 86400000;
@@ -13,6 +14,7 @@ export interface StoredJob extends JobStoreIdentity {
   readonly contentPolicy:'metadata-only'|'host-redacted';readonly grants:readonly Permission[];
   readonly snapshot:JobSnapshot;readonly events:readonly JobEvent[];readonly binaryArtifacts:readonly BinaryArtifact[];
   readonly attemptOf?:string;
+  readonly retainedArtifacts?:readonly StoredArtifact[];
 }
 /** Trusted host port. Open/load before use; get/has expose its bounded committed index. */
 export interface JobStore {
@@ -29,6 +31,7 @@ export interface JobStorageOptions {
   /** Current operator-owned workspace identity, never taken from a remote request. */
   readonly workspaceIdentity:string;
   readonly pluginArtifacts:Readonly<Record<string,string>>;
+  readonly artifacts?:ArtifactStore;
   /** Default drops free-form messages/results. This trusted callback returns only reviewed safe data. */
   readonly redact?:(entry:{readonly kind:'log'|'progress'|'result';readonly value:JsonValue;readonly jobId:string;readonly pluginId:string;readonly commandId:string})=>JsonValue;
 }

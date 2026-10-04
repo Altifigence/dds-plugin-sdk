@@ -6,7 +6,7 @@ export interface JobHistoryQuery {readonly limit?:number;readonly state?:JobStat
 export interface JobHistoryItem {
   readonly jobId:string;readonly commandId:string;readonly state:JobState;readonly disposition:JobHistoryDisposition;
   readonly startedAt:number;readonly updatedAt:number;readonly expiresAt:number;readonly revision:number;readonly attemptOf:string|null;
-  readonly contentPolicy:'metadata-only'|'host-redacted';readonly artifactCount:number;readonly resultAvailability:'none'|'source-references'|'expired';
+  readonly contentPolicy:'metadata-only'|'host-redacted';readonly artifactCount:number;readonly snapshotCount:number;readonly resultAvailability:'none'|'source-references'|'snapshot-references'|'mixed-references'|'expired';
 }
 export interface JobHistoryPage {
   readonly protocolVersion:1;readonly scope:Scope;readonly storeId:string;readonly pluginId:string;readonly pluginArtifactSha256:string;

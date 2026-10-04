@@ -1,6 +1,6 @@
 # Long-running command jobs
 
-For opt-in durable checkpoints and restart receipts in 0.8 development, see
+For opt-in durable checkpoints and restart receipts in SDK 0.8.0, see
 [job storage](JOB_STORAGE.md). The v1 live job contract below is unchanged.
 
 SDK 0.5.0 also supplies [`watchJob()` and `waitForJob()`](OBSERVATION.md) over these
@@ -9,7 +9,8 @@ explicit cursor resumption, and never start or cancel the underlying command.
 
 SDK 0.4.0 provides bounded, in-memory jobs for trusted workspace commands. A job
 reports progress, plain-text logs and revision-pinned UTF-8 workspace files. It
-does not add shell execution, a task scheduler, persistent storage or a DDS UI.
+does not add shell execution, a task scheduler or a DDS UI. Durable storage is
+a separate opt-in extension.
 
 ## Enable and start a job
 
@@ -131,7 +132,8 @@ access; private files, traversal, symlinks and hardlinks are rejected by the Nod
 workspace. It does not copy or expose arbitrary host files. `readJobArtifact`
 requires the plugin to remain active and the same read grant, checks that the
 current content still matches the captured hash, and returns `conflict` if it has
-changed. The server does not retain file bytes. Only UTF-8 files up to 256 KiB are
+changed. This source-reference API does not retain file bytes. The optional
+[artifact store](ARTIFACT_STORAGE.md) adds a separate retained-file API. Only UTF-8 files up to 256 KiB are
 supported through this existing API. SDK 0.7.0 adds separately enabled
 [binary artifacts](BINARY_ARTIFACTS.md), chunk reads and a resumable Node downloader. Already registered files remain readable after cancellation while the
 job is retained; they can be partial output and are not proof of success.

@@ -4,6 +4,7 @@ import {ErrorCode, PluginSdkError} from './limits.mjs';
 import {JOB_STORE_LIMITS, parseJobStoreIdentity, parseJobStoreLimits, parseStoredJob, parseJobRecovery, parseJobStorageCapabilities} from './job-storage.mjs';
 import {storageObject, storageSha} from './job-storage-validation.mjs';
 import {createJobHistoryIndex} from './job-history-index.mjs';
+import {createArtifactStorageSession} from './artifact-storage-session.mjs';
 
 const failure = code => new PluginSdkError(code, 'Job persistence operation failed');
 const hash = async text => [...new Uint8Array(await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)))].map(value => value.toString(16).padStart(2, '0')).join('');
@@ -17,13 +18,16 @@ export function createJobStorageSession(scope, options, snapshot) {
     has: () => false, register() {}, mark() {}, settle() {}, forget() {}, beforeExecute: async () => {}, flush: async () => {},
     recover() {throw failure(ErrorCode.CAPABILITY_UNAVAILABLE);},
     history() {throw failure(ErrorCode.CAPABILITY_UNAVAILABLE);},
+    artifactStorage:createArtifactStorageSession(),
+    captureArtifact:async()=>{},
   });
-  storageObject(options, ['store', 'workspaceIdentity', 'pluginArtifacts'], ['redact']);
+  storageObject(options, ['store', 'workspaceIdentity', 'pluginArtifacts'], ['redact','artifacts']);
   const {store, redact} = options;
   if (!store || typeof store !== 'object' || ['has', 'get', 'entries', 'pin', 'write', 'flush'].some(key => typeof store[key] !== 'function')) throw failure(ErrorCode.INVALID_CONTRACT);
   const identity = parseJobStoreIdentity(store.identity), limits = parseJobStoreLimits(store.limits);
   storageSha(options.workspaceIdentity);
   if (identity.workspaceId !== scope.projectId || identity.workspaceIdentity !== options.workspaceIdentity) throw failure(ErrorCode.CONFLICT);
+  const artifactStorage=createArtifactStorageSession(identity,options.artifacts);
   if (redact !== undefined && typeof redact !== 'function') throw failure(ErrorCode.INVALID_CONTRACT);
   const artifacts = parseJsonValue(options.pluginArtifacts);
   if (!artifacts || typeof artifacts !== 'object' || Array.isArray(artifacts)) throw failure(ErrorCode.INVALID_CONTRACT);
@@ -61,10 +65,11 @@ export function createJobStorageSession(scope, options, snapshot) {
     // therefore never claim a later event/settlement was included in its digest.
     const savedAt = Math.max(Date.now(), current.updatedAt, entry.savedAt), settled = entry.r.settled;
     const binaryArtifacts = [...entry.r.binaryArtifacts.values()].map(value => noLabel(value.artifact));
+    const retainedArtifacts=[...entry.r.storedArtifacts.values()];
     const signature = entry.r.signature;
     const requestSha256 = entry.requestSha256 ?? await hash(signature);
     entry.requestSha256 = requestSha256;
-    return parseStoredJob({...identity, pluginArtifactSha256: entry.artifactSha256, requestSha256, revision: entry.revision + 1, savedAt, expiresAt: savedAt + limits.retentionMs, settled, contentPolicy: redact ? 'host-redacted' : 'metadata-only', grants: entry.grants, snapshot: safeSnapshot, events, binaryArtifacts, ...(entry.r.attemptOf === undefined ? {} : {attemptOf: entry.r.attemptOf})});
+    return parseStoredJob({...identity, pluginArtifactSha256: entry.artifactSha256, requestSha256, revision: entry.revision + 1, savedAt, expiresAt: savedAt + limits.retentionMs, settled, contentPolicy: redact ? 'host-redacted' : 'metadata-only', grants: entry.grants, snapshot: safeSnapshot, events, binaryArtifacts, ...(entry.r.attemptOf === undefined ? {} : {attemptOf: entry.r.attemptOf}), ...(retainedArtifacts.length?{retainedArtifacts}:{})});
   }
   function completeWaiters(entry) {
     if (entry.r.settled && (entry.failed || entry.committedVersion >= entry.version)) entry.release();
@@ -107,6 +112,13 @@ export function createJobStorageSession(scope, options, snapshot) {
     enabled: true,
     capabilities: () => parseJobStorageCapabilities({protocolVersion: 1, enabled: true, identity, limits}),
     history,
+    artifactStorage,
+    async captureArtifact(r,kind,artifact,source,signal){
+      if(!artifactStorage.enabled)return;
+      const entry=entries.get(r.jobId),stored=await artifactStorage.capture(r,kind,artifact,source,entry.artifactSha256,signal);
+      return stored;
+    },
+    listStoredArtifacts(pluginId,recovery){return artifactStorage.list(pluginId,artifacts[pluginId],recovery);},
     has(jobId) {return store.has(parseJobId(jobId));},
     register(r, grants) {
       const artifactSha256 = artifacts[r.pluginId]; storageSha(artifactSha256);

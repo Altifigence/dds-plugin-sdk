@@ -15,7 +15,7 @@ application, private engines/services and production signing systems are outside
 this repository. Read the [public scope](docs/PUBLIC_SCOPE.md) and
 [compatibility table](docs/COMPATIBILITY.md) for exact boundaries.
 
-Version **0.7.0** supports Node 22 and 24. Manifest v1 diagnostic plugins remain
+Version **0.8.0** supports Node 22 and 24. Manifest v1 diagnostic plugins remain
 compatible. Manifest v2 adds commands, permission-scoped workspace and backend
 APIs, and open-source or proprietary distribution metadata. Themes export to
 the XML format already supported by DDS. The workspace host runs trusted plugins
@@ -26,8 +26,9 @@ without executing code with `doctor`, and run trusted code with `dev --watch`.
 [Command jobs](docs/JOBS.md) add progress, logs, cancellation and pinned result
 files to explicitly enabled hosts while keeping existing API contracts.
 
-The main branch includes optional [durable job storage](docs/JOB_STORAGE.md)
-for the upcoming 0.8 release. Tagged 0.7 archives do not contain this extension.
+Optional [durable job storage](docs/JOB_STORAGE.md), [history and explicit retry](docs/JOB_HISTORY.md)
+and [stored result files](docs/ARTIFACT_STORAGE.md) retain verified results across
+process restarts. Enable retention deliberately on the operator-owned host.
 [Workspace observation](docs/OBSERVATION.md) follows explicit file revisions and
 job progress with cancellable async iterators, preserving edit drafts and job IDs.
 [File revisions and conditional reads](docs/FILE_REVISIONS.md) reduce response
@@ -66,7 +67,7 @@ mkdir my-dds-plugin
 cd my-dds-plugin
 npm init -y
 npm pkg set type=module
-npm install --ignore-scripts --save-exact https://github.com/Altifigence/dds-plugin-sdk/releases/download/v0.7.0/altifigence-dds-plugin-sdk-0.7.0.tgz
+npm install --ignore-scripts --save-exact https://github.com/Altifigence/dds-plugin-sdk/releases/download/v0.8.0/altifigence-dds-plugin-sdk-0.8.0.tgz
 ```
 
 Copy the example's `plugin.mjs` and `run.mjs` into this directory, then run:
@@ -94,6 +95,9 @@ and the install command includes the release URL rather than an npm registry loo
 | `@altifigence/dds-plugin-sdk/consent` | Versioned notices, explicit local receipts and permission identity checks |
 | `@altifigence/dds-plugin-sdk/devtools` | Create projects, diagnose metadata and run/watch trusted local plugin code |
 | `@altifigence/dds-plugin-sdk/artifacts` | Binary result metadata, ranges, base64 decoding and transfer contracts |
+| `@altifigence/dds-plugin-sdk/job-storage` / `job-storage-node` | Durable job contracts and the single-writer Node store |
+| `@altifigence/dds-plugin-sdk/job-history` | Bounded history queries, pagination and retry relationships |
+| `@altifigence/dds-plugin-sdk/artifact-storage` / `artifact-storage-node` | Retained result contracts, verified bytes and explicit retention |
 | `@altifigence/dds-plugin-sdk/jobs` | Job contracts, lifecycle states, bounded event pages and file references |
 
 [API reference](docs/api.md) explains the manifest, permissions, requests,

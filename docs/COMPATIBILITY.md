@@ -11,11 +11,12 @@
 | Browser-only DDS host | Native workspace transport is unavailable |
 | Language providers | Diagnostics plus completion, hover, definition, references and document symbols in SDK hosts since 0.3.0; no released DDS editor bridge is implied |
 | Project edit sessions | Client helpers in 0.3.0 over unchanged workspace protocol v1, including 0.2.x servers |
-| Download verification | Node API/CLI since 0.3.1; 0.7.0 accepts exact 0.3.x, 0.4.x, 0.5.x, 0.6.x and 0.7.x package metadata; no extraction, code execution or publisher authentication |
+| Download verification | Node API/CLI since 0.3.1; 0.8.0 accepts exact 0.3.x, 0.4.x, 0.5.x, 0.6.x, 0.7.x and 0.8.x package metadata; no extraction, code execution or publisher authentication |
 | Development tools | `init`, `doctor`, `dev` since 0.4.0; local Node tools, explicit trusted-code execution |
 | Command jobs | Opt-in SDK host/client extension since 0.4.0; progress/logs/UTF-8 artifacts; v1 hello unchanged |
 | File and job observation | Client helpers since 0.5.0; 0.6 uses revision reads when supported; job reads need enabled 0.4+ hosts |
 | Binary job results | Optional 0.7.0 extension; explicit host opt-in; 1 GiB files and 64 KiB chunks; Node resume/full-file verification |
+| Durable jobs, history and results | Optional 0.8.0 host stores; current authorization after restart; explicit retry and verified snapshot downloads |
 | File revision / conditional read | Optional methods since 0.6.0; bounded full-read fallback on old hosts; v1 hello unchanged |
 
 This is a developer preview. Pin the exact package release and read the changelog
@@ -85,3 +86,15 @@ See [binary artifacts](BINARY_ARTIFACTS.md).
 
 New 0.7 archives declare `>=0.7.0 <0.8.0`. Verification retains exact older
 0.3/0.4/0.5/0.6 peer metadata. Validate and repack a new plugin version for 0.7.
+
+0.8.0 adds optional job history, durable metadata and retained result files through
+separate `history.*` and `snapshots.*` methods. Memory-only defaults and v1
+responses remain compatible. New clients report storage disabled on known 0.7
+and earlier hosts without probing; old clients keep the original live/source
+methods. No durable format existed in earlier tagged SDKs. A restart requires
+a fresh connection and current grants; old generations and cursors cannot be reused.
+
+New 0.8 archives declare `>=0.8.0 <0.9.0`. Verification preserves exact
+0.3/0.4/0.5/0.6/0.7 metadata. Validate and repack a new plugin version for 0.8;
+verification alone does not widen installation ranges. See [storage](JOB_STORAGE.md),
+[history](JOB_HISTORY.md) and [retained results](ARTIFACT_STORAGE.md).

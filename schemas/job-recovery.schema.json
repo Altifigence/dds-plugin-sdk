@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.7.0/schemas/job-recovery.schema.json",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.8.0/schemas/job-recovery.schema.json",
   "title": "job-recovery",
   "oneOf": [
     {
@@ -123,7 +123,7 @@
               "uniqueItems": true
             },
             "snapshot": {
-              "$ref": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.7.0/schemas/job-snapshot.schema.json"
+              "$ref": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.8.0/schemas/job-snapshot.schema.json"
             },
             "events": {
               "type": "array",
@@ -390,6 +390,148 @@
               "minLength": 1,
               "maxLength": 36,
               "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+            },
+            "retainedArtifacts": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "schemaVersion": {
+                    "const": 1
+                  },
+                  "storeId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 36,
+                    "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+                  },
+                  "workspaceId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "workspaceIdentity": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "snapshotId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 36,
+                    "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+                  },
+                  "jobId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 36,
+                    "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+                  },
+                  "pluginId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "pluginArtifactSha256": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "kind": {
+                    "enum": [
+                      "text",
+                      "binary"
+                    ]
+                  },
+                  "artifact": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 128
+                      },
+                      "path": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 1024,
+                        "$comment": "Runtime enforces the protected workspace file policy."
+                      },
+                      "revision": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64,
+                        "pattern": "^[a-f0-9]{64}$"
+                      },
+                      "byteLength": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 1073741824
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "path",
+                      "revision",
+                      "byteLength"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "capturedAt": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "expiresAt": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "schemaVersion",
+                  "storeId",
+                  "workspaceId",
+                  "workspaceIdentity",
+                  "snapshotId",
+                  "jobId",
+                  "pluginId",
+                  "pluginArtifactSha256",
+                  "kind",
+                  "artifact",
+                  "capturedAt",
+                  "expiresAt"
+                ],
+                "additionalProperties": false,
+                "allOf": [
+                  {
+                    "if": {
+                      "properties": {
+                        "kind": {
+                          "const": "text"
+                        }
+                      }
+                    },
+                    "then": {
+                      "properties": {
+                        "artifact": {
+                          "properties": {
+                            "byteLength": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 262144
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              "minItems": 0,
+              "maxItems": 16
             }
           },
           "required": [
@@ -411,7 +553,7 @@
           ],
           "additionalProperties": false,
           "x-maxUtf8Bytes": 524288,
-          "$comment": "Runtime additionally enforces scope and identity, chronological contiguous events, shared artifact IDs, retention bounds, immutable metadata-only redaction and matching terminal state."
+          "$comment": "Runtime additionally enforces scope and identity, chronological contiguous events, shared artifact IDs, retention bounds, immutable metadata-only redaction and matching terminal state. Retained snapshot references bind exact registered artifacts and this job/workspace/plugin."
         }
       },
       "required": [
@@ -545,7 +687,7 @@
               "uniqueItems": true
             },
             "snapshot": {
-              "$ref": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.7.0/schemas/job-snapshot.schema.json"
+              "$ref": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.8.0/schemas/job-snapshot.schema.json"
             },
             "events": {
               "type": "array",
@@ -812,6 +954,148 @@
               "minLength": 1,
               "maxLength": 36,
               "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+            },
+            "retainedArtifacts": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "schemaVersion": {
+                    "const": 1
+                  },
+                  "storeId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 36,
+                    "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+                  },
+                  "workspaceId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "workspaceIdentity": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "snapshotId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 36,
+                    "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+                  },
+                  "jobId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 36,
+                    "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+                  },
+                  "pluginId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "pluginArtifactSha256": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "kind": {
+                    "enum": [
+                      "text",
+                      "binary"
+                    ]
+                  },
+                  "artifact": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 128
+                      },
+                      "path": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 1024,
+                        "$comment": "Runtime enforces the protected workspace file policy."
+                      },
+                      "revision": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64,
+                        "pattern": "^[a-f0-9]{64}$"
+                      },
+                      "byteLength": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 1073741824
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "path",
+                      "revision",
+                      "byteLength"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "capturedAt": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "expiresAt": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "schemaVersion",
+                  "storeId",
+                  "workspaceId",
+                  "workspaceIdentity",
+                  "snapshotId",
+                  "jobId",
+                  "pluginId",
+                  "pluginArtifactSha256",
+                  "kind",
+                  "artifact",
+                  "capturedAt",
+                  "expiresAt"
+                ],
+                "additionalProperties": false,
+                "allOf": [
+                  {
+                    "if": {
+                      "properties": {
+                        "kind": {
+                          "const": "text"
+                        }
+                      }
+                    },
+                    "then": {
+                      "properties": {
+                        "artifact": {
+                          "properties": {
+                            "byteLength": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 262144
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              "minItems": 0,
+              "maxItems": 16
             }
           },
           "required": [
@@ -833,7 +1117,7 @@
           ],
           "additionalProperties": false,
           "x-maxUtf8Bytes": 524288,
-          "$comment": "Runtime additionally enforces scope and identity, chronological contiguous events, shared artifact IDs, retention bounds, immutable metadata-only redaction and matching terminal state."
+          "$comment": "Runtime additionally enforces scope and identity, chronological contiguous events, shared artifact IDs, retention bounds, immutable metadata-only redaction and matching terminal state. Retained snapshot references bind exact registered artifacts and this job/workspace/plugin."
         }
       },
       "required": [
@@ -967,7 +1251,7 @@
               "uniqueItems": true
             },
             "snapshot": {
-              "$ref": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.7.0/schemas/job-snapshot.schema.json"
+              "$ref": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.8.0/schemas/job-snapshot.schema.json"
             },
             "events": {
               "type": "array",
@@ -1234,6 +1518,148 @@
               "minLength": 1,
               "maxLength": 36,
               "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+            },
+            "retainedArtifacts": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "schemaVersion": {
+                    "const": 1
+                  },
+                  "storeId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 36,
+                    "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+                  },
+                  "workspaceId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "workspaceIdentity": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "snapshotId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 36,
+                    "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+                  },
+                  "jobId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 36,
+                    "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+                  },
+                  "pluginId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "pluginArtifactSha256": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "kind": {
+                    "enum": [
+                      "text",
+                      "binary"
+                    ]
+                  },
+                  "artifact": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 128
+                      },
+                      "path": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 1024,
+                        "$comment": "Runtime enforces the protected workspace file policy."
+                      },
+                      "revision": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64,
+                        "pattern": "^[a-f0-9]{64}$"
+                      },
+                      "byteLength": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 1073741824
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "path",
+                      "revision",
+                      "byteLength"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "capturedAt": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "expiresAt": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "schemaVersion",
+                  "storeId",
+                  "workspaceId",
+                  "workspaceIdentity",
+                  "snapshotId",
+                  "jobId",
+                  "pluginId",
+                  "pluginArtifactSha256",
+                  "kind",
+                  "artifact",
+                  "capturedAt",
+                  "expiresAt"
+                ],
+                "additionalProperties": false,
+                "allOf": [
+                  {
+                    "if": {
+                      "properties": {
+                        "kind": {
+                          "const": "text"
+                        }
+                      }
+                    },
+                    "then": {
+                      "properties": {
+                        "artifact": {
+                          "properties": {
+                            "byteLength": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 262144
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              "minItems": 0,
+              "maxItems": 16
             }
           },
           "required": [
@@ -1255,7 +1681,7 @@
           ],
           "additionalProperties": false,
           "x-maxUtf8Bytes": 524288,
-          "$comment": "Runtime additionally enforces scope and identity, chronological contiguous events, shared artifact IDs, retention bounds, immutable metadata-only redaction and matching terminal state."
+          "$comment": "Runtime additionally enforces scope and identity, chronological contiguous events, shared artifact IDs, retention bounds, immutable metadata-only redaction and matching terminal state. Retained snapshot references bind exact registered artifacts and this job/workspace/plugin."
         }
       },
       "required": [

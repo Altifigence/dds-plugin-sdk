@@ -1,0 +1,166 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.8.0/schemas/artifact-storage-capabilities.schema.json",
+  "title": "artifact-storage-capabilities",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "protocolVersion": {
+          "const": 1
+        },
+        "enabled": {
+          "const": true
+        },
+        "identity": {
+          "type": "object",
+          "properties": {
+            "schemaVersion": {
+              "const": 1
+            },
+            "storeId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 36,
+              "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+            },
+            "workspaceId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "workspaceIdentity": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          },
+          "required": [
+            "schemaVersion",
+            "storeId",
+            "workspaceId",
+            "workspaceIdentity"
+          ],
+          "additionalProperties": false
+        },
+        "limits": {
+          "type": "object",
+          "properties": {
+            "files": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 256
+            },
+            "fileBytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1073741824
+            },
+            "storeBytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4294967296
+            },
+            "chunkBytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65536
+            },
+            "concurrent": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4
+            },
+            "retentionMs": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 604800000
+            }
+          },
+          "required": [
+            "files",
+            "fileBytes",
+            "storeBytes",
+            "chunkBytes",
+            "concurrent",
+            "retentionMs"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "protocolVersion",
+        "enabled",
+        "identity",
+        "limits"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "protocolVersion": {
+          "const": 1
+        },
+        "enabled": {
+          "const": false
+        },
+        "identity": {
+          "type": "null"
+        },
+        "limits": {
+          "type": "object",
+          "properties": {
+            "files": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 256
+            },
+            "fileBytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1073741824
+            },
+            "storeBytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4294967296
+            },
+            "chunkBytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65536
+            },
+            "concurrent": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4
+            },
+            "retentionMs": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 604800000
+            }
+          },
+          "required": [
+            "files",
+            "fileBytes",
+            "storeBytes",
+            "chunkBytes",
+            "concurrent",
+            "retentionMs"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "protocolVersion",
+        "enabled",
+        "identity",
+        "limits"
+      ],
+      "additionalProperties": false
+    }
+  ]
+}

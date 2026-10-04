@@ -4,10 +4,11 @@ import {parseJobId, parseJobOptions, parseJobSnapshot, parseJobEvents, parseJobC
 import {parseBinaryArtifactRange, parseBinaryArtifactList, parseBinaryArtifactCapabilities, parseBinaryArtifactChunk} from './artifacts.mjs';
 import {parseJobStorageCapabilities, parseJobRecovery} from './job-storage.mjs';
 import {parseJobHistoryQuery, parseJobHistoryPage} from './job-history.mjs';
+import {parseStoredArtifactReference,parseStoredArtifactChunk,parseStoredArtifactList,parseArtifactStorageCapabilities} from './artifact-storage.mjs';
 export const WORKSPACE_PROTOCOL_VERSION = 1;
 export const WORKSPACE_PATH = '/dds/workspace/v1';
 export const WORKSPACE_LIMITS = Object.freeze({wireBytes: 1_600_000, fileBytes: 262_144, jsonBytes: 262_144, depth: 16, nodes: 10_000, entries: 1_000, plugins: 32, pending: 64, receiving: 16, connections: 128, defaultTimeoutMs: 5_000, maxTimeoutMs: 30_000});
-export const WORKSPACE_METHODS = Object.freeze(['hello', 'fs.list', 'fs.read', 'fs.capabilities', 'fs.revision', 'fs.readIfChanged', 'fs.write', 'fs.mkdir', 'fs.rename', 'fs.remove', 'plugins.list', 'commands.run', 'request.cancel', 'jobs.capabilities', 'jobs.start', 'jobs.get', 'jobs.events', 'jobs.cancel', 'jobs.artifact', 'artifacts.capabilities', 'artifacts.list', 'artifacts.read', 'history.capabilities', 'history.list', 'history.recover', 'history.retry']);
+export const WORKSPACE_METHODS = Object.freeze(['hello', 'fs.list', 'fs.read', 'fs.capabilities', 'fs.revision', 'fs.readIfChanged', 'fs.write', 'fs.mkdir', 'fs.rename', 'fs.remove', 'plugins.list', 'commands.run', 'request.cancel', 'jobs.capabilities', 'jobs.start', 'jobs.get', 'jobs.events', 'jobs.cancel', 'jobs.artifact', 'artifacts.capabilities', 'artifacts.list', 'artifacts.read', 'history.capabilities', 'history.list', 'history.recover', 'history.retry', 'snapshots.capabilities', 'snapshots.list', 'snapshots.get', 'snapshots.read']);
 export const WORKSPACE_ERROR_CODES = Object.freeze(['invalid_request', 'authentication_required', 'permission_denied', 'workspace_mismatch', 'generation_mismatch', 'not_found', 'conflict', 'unsafe_path', 'budget_exceeded', 'cancelled', 'disposed', 'plugin_mismatch', 'provider_failed', 'unsupported', 'unavailable', 'transport_failed']);
 const encoder = new TextEncoder();
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -118,7 +119,12 @@ export function parseWorkspaceRequest(value) {
   else { if (value.workspaceId !== undefined) requireUuid(value.workspaceId); if (value.generation !== undefined) requireUuid(value.generation); }
   const p = value.params;
   switch (value.method) {
-    case 'hello': case 'plugins.list': case 'jobs.capabilities': case 'fs.capabilities': case 'artifacts.capabilities': case 'history.capabilities': exactObject(p, []); break;
+    case 'hello': case 'plugins.list': case 'jobs.capabilities': case 'fs.capabilities': case 'artifacts.capabilities': case 'history.capabilities': case 'snapshots.capabilities': exactObject(p, []); break;
+    case 'snapshots.list':case 'snapshots.get':
+      exactObject(p,['pluginId','artifactSha256','jobId',...(value.method==='snapshots.get'?['artifactId']:[])]);requireText(p.pluginId);requireSha256(p.artifactSha256);
+      if(value.method==='snapshots.get')requireText(p.artifactId);try{parseJobId(p.jobId);}catch{invalid();}break;
+    case 'snapshots.read':
+      exactObject(p,['reference','offset','length']);try{const r=parseStoredArtifactReference(p.reference);parseBinaryArtifactRange(p.offset,p.length,r.snapshot.artifact.byteLength);}catch{invalid();}break;
     case 'history.list':
       exactObject(p,['pluginId','artifactSha256','query']);requireText(p.pluginId);requireSha256(p.artifactSha256);
       try {parseJobHistoryQuery(p.query);} catch {invalid();} break;
@@ -198,6 +204,14 @@ export function parseWorkspaceHello(value) {
 export function parseWorkspaceMethodResult(method, value) {
   value = wireInput(value);
   if (method === 'hello') return parseWorkspaceHello(value);
+  if(method.startsWith('snapshots.')){
+    try{
+      if(method==='snapshots.capabilities')return parseArtifactStorageCapabilities(value);
+      if(method==='snapshots.list')return parseStoredArtifactList(value);
+      if(method==='snapshots.get')return parseStoredArtifactReference(value);
+      if(method==='snapshots.read')return parseStoredArtifactChunk(value);
+    }catch{invalid();}invalid();
+  }
   if (method.startsWith('history.')) {
     try {
       if (method === 'history.capabilities') return parseJobStorageCapabilities(value);

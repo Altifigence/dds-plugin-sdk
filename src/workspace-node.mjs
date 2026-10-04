@@ -10,7 +10,9 @@ import {BINARY_ARTIFACT_LIMITS, parseBinaryArtifactRange} from './artifacts.mjs'
 import {JOB_STORE_LIMITS} from './job-storage.mjs';
 import {storageObject} from './job-storage-validation.mjs';
 import {nodeWorkspaceIdentity} from './workspace-identity-node.mjs';
+import {ARTIFACT_STORE_LIMITS} from './artifact-storage.mjs';
 export {downloadJobBinaryArtifact} from './artifact-download-node.mjs';
+export {downloadStoredJobArtifact} from './stored-artifact-download-node.mjs';
 import {WORKSPACE_PATH, WORKSPACE_LIMITS, WORKSPACE_ERROR_CODES, WorkspaceError, workspaceFailure, requireText, requireUuid, requireSha256, requireToken, requireWorkspacePath, requireFileContent, copyWorkspaceJson, parseWorkspaceRequest, parseWorkspaceHello, parseWorkspaceMethodResult} from './workspace-protocol.mjs';
 
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -289,7 +291,7 @@ export async function createWorkspaceServer({workspace,root,workspaceId,name='Us
   let storageOptions;
   if (jobStorage !== undefined) {
     if (!ownsPluginHost || workspace !== undefined || !jobs || typeof root !== 'string' || !path.isAbsolute(root)) throw workspaceFailure('invalid_request','Storage requires a server-owned Node workspace and job host');
-    storageObject(jobStorage,['store'],['redact']);
+    storageObject(jobStorage,['store'],['redact','artifacts']);
     const stat = await fs.lstat(root,{bigint:true});
     if (!stat.isDirectory() || stat.isSymbolicLink()) throw workspaceFailure('unsafe_path','Storage workspace must be a real directory');
     const canonical = await fs.realpath(root), current = await fs.lstat(canonical,{bigint:true});
@@ -314,7 +316,7 @@ export async function createWorkspaceServer({workspace,root,workspaceId,name='Us
     const commands=pluginHost.listCommands();
     return pluginHost.listPlugins().map(manifest=>({manifest,...pins.get(manifest.id),commands:commands.filter(command=>command.pluginId===manifest.id)}));
   };
-  const description=()=>parseWorkspaceHello({hostId:'workspace-host',hostVersion:'0.8.0-dev',protocolVersion:1,workspace:{id:workspaceId,name,generation},capabilities:{read:true,write:workspace.capabilities?.write===true,manage:workspace.capabilities?.manage===true,commands:pins.size>0},plugins:metadata(),notice:noticePayload});
+  const description=()=>parseWorkspaceHello({hostId:'workspace-host',hostVersion:'0.8.0',protocolVersion:1,workspace:{id:workspaceId,name,generation},capabilities:{read:true,write:workspace.capabilities?.write===true,manage:workspace.capabilities?.manage===true,commands:pins.size>0},plugins:metadata(),notice:noticePayload});
   let originalDescription;
   try{originalDescription=description();}catch(failure){pluginHost.dispose();workspace.dispose?.();throw safeOperationFailure(failure);}
   const originalMetadata=JSON.stringify({plugins:originalDescription.plugins,capabilities:originalDescription.capabilities});
@@ -332,6 +334,7 @@ export async function createWorkspaceServer({workspace,root,workspaceId,name='Us
     const p=request.params;
     if(request.method.startsWith('jobs.')&&request.method!=='jobs.capabilities'&&(!jobs||!ownsPluginHost))throw workspaceFailure('unsupported','Enable jobs on the server-owned plugin host');
     if(request.method.startsWith('history.')&&request.method!=='history.capabilities'&&(!jobs||!ownsPluginHost||!storageOptions))throw workspaceFailure('unsupported','Enable storage on the server-owned job host');
+    if(request.method.startsWith('snapshots.')&&request.method!=='snapshots.capabilities'&&(!jobs||!ownsPluginHost||!storageOptions?.artifacts))throw workspaceFailure('unsupported','Enable artifact storage on the server-owned job host');
     if(request.method.startsWith('artifacts.')&&request.method!=='artifacts.capabilities'&&(!jobs||!binaryArtifacts||!ownsPluginHost))throw workspaceFailure('unsupported','Enable binary artifacts on the server-owned job host');
     switch(request.method){
       case 'hello':return checkedDescription();
@@ -353,6 +356,18 @@ export async function createWorkspaceServer({workspace,root,workspaceId,name='Us
       case 'commands.run':checkedDescription();if(pins.get(p.pluginId)?.artifactSha256!==p.artifactSha256)throw workspaceFailure('plugin_mismatch','Plugin artifact identity changed');return pluginHost.executeCommand(p.pluginId,p.commandId,p.input,{signal,timeoutMs});
       case 'jobs.capabilities':checkedDescription();return ownsPluginHost?pluginHost.jobCapabilities():{protocolVersion:1,enabled:false,limits:JOB_LIMITS};
       case 'history.capabilities':checkedDescription();return ownsPluginHost?pluginHost.jobStorageCapabilities():{protocolVersion:1,enabled:false,identity:null,limits:JOB_STORE_LIMITS};
+      case 'snapshots.capabilities':checkedDescription();return ownsPluginHost?pluginHost.artifactStorageCapabilities():{protocolVersion:1,enabled:false,identity:null,limits:ARTIFACT_STORE_LIMITS};
+      case 'snapshots.list':case 'snapshots.get':{
+        checkedDescription();if(pins.get(p.pluginId)?.artifactSha256!==p.artifactSha256)throw workspaceFailure('plugin_mismatch','Plugin artifact identity changed');
+        if(request.method==='snapshots.list')return pluginHost.listStoredJobArtifacts(p.pluginId,p.jobId);
+        return pluginHost.getStoredJobArtifact(p.pluginId,p.jobId,p.artifactId,{signal,timeoutMs});
+      }
+      case 'snapshots.read':{
+        checkedDescription();const s=p.reference.snapshot;
+        if(p.reference.scope.projectId!==workspaceId||p.reference.scope.sessionId!==generation)throw workspaceFailure('generation_mismatch','Stored artifact belongs to another generation');
+        if(pins.get(s.pluginId)?.artifactSha256!==s.pluginArtifactSha256)throw workspaceFailure('plugin_mismatch','Plugin artifact identity changed');
+        return pluginHost.readStoredJobArtifactChunk(p.reference,p.offset,p.length,{signal,timeoutMs});
+      }
       case 'history.list':case 'history.recover':case 'history.retry':{
         checkedDescription();if(pins.get(p.pluginId)?.artifactSha256!==p.artifactSha256)throw workspaceFailure('plugin_mismatch','Plugin artifact identity changed');
         if(request.method==='history.list')return pluginHost.listJobHistory(p.pluginId,p.query);

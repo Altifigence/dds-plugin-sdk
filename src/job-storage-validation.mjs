@@ -14,3 +14,11 @@ export function storageInteger(value, minimum = 0, maximum = Number.MAX_SAFE_INT
   return value;
 }
 export function storageSha(value) {if (typeof value !== 'string' || !/^[a-f0-9]{64}$/.test(value)) fail(); return value;}
+
+// Only compare already validated, bounded plain data; JSON object order is not identity.
+export function storageEqual(a,b) {
+  if(a===b)return true;
+  if(!a||!b||typeof a!=='object'||typeof b!=='object'||Array.isArray(a)!==Array.isArray(b))return false;
+  const keys=Object.keys(a);
+  return keys.length===Object.keys(b).length&&keys.every(key=>Object.hasOwn(b,key)&&storageEqual(a[key],b[key]));
+}

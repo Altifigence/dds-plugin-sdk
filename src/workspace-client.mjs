@@ -1,8 +1,10 @@
+import {storageEqual} from './job-storage-validation.mjs';
 import {WORKSPACE_PATH, WORKSPACE_LIMITS, WorkspaceError, workspaceFailure, exactObject, requireText, requireToken, requireWorkspacePath, requireSha256, copyWorkspaceJson, parseWorkspaceRequest, parseWorkspaceReply, parseWorkspaceHello, parseWorkspaceMethodResult} from './workspace-protocol.mjs';
 import {parseJobId, parseJobOptions} from './jobs.mjs';
 import {BINARY_ARTIFACT_LIMITS, parseBinaryArtifactReference, parseBinaryArtifactRange, decodeBinaryArtifactData} from './artifacts.mjs';
 import {JOB_STORE_LIMITS} from './job-storage.mjs';
 import {parseJobHistoryQuery} from './job-history.mjs';
+import {ARTIFACT_STORE_LIMITS,parseStoredArtifactReference} from './artifact-storage.mjs';
 import {registerObservationClient, watchWorkspaceJob, waitForWorkspaceJob} from './workspace-observation.mjs';
 export {createWorkspaceProject, applyTextEdits} from './workspace-project.mjs';
 export {WORKSPACE_OBSERVATION_LIMITS} from './workspace-observation.mjs';
@@ -52,7 +54,7 @@ export function createWorkspaceClient({url, token, fetch: transport = globalThis
   const endpoint = normalizeWorkspaceUrl(url);
   token = requireToken(token);
   if (typeof transport !== 'function') throw workspaceFailure('invalid_request', 'A fetch transport is required');
-  let binding, fileCapabilities, binaryCapabilities, storageCapabilities, closed = false, sequence = 0, bindingSequence = 0;
+  let binding, fileCapabilities, binaryCapabilities, storageCapabilities, artifactStorageCapabilities, closed = false, sequence = 0, bindingSequence = 0;
   let connectionController = new AbortController();
   const pending = new Set();
   const instance = globalThis.crypto.randomUUID();
@@ -62,7 +64,7 @@ export function createWorkspaceClient({url, token, fetch: transport = globalThis
   };
   budget(timeoutMs);
   const revoke = (reason = workspaceFailure('disposed', 'Workspace connection changed')) => {
-    binding = undefined; fileCapabilities = undefined; binaryCapabilities = undefined; storageCapabilities = undefined; bindingSequence++;
+    binding = undefined; fileCapabilities = undefined; binaryCapabilities = undefined; storageCapabilities = undefined; artifactStorageCapabilities = undefined; bindingSequence++;
     connectionController.abort(reason);
     connectionController = new AbortController();
     for (const controller of pending) controller.abort(workspaceFailure('disposed', 'Workspace connection changed'));
@@ -144,6 +146,24 @@ export function createWorkspaceClient({url, token, fetch: transport = globalThis
         }
       }
       if (method === 'history.capabilities' && result.enabled && result.identity.workspaceId !== captured.workspace.id) throw workspaceFailure('invalid_request','Storage workspace identity mismatch');
+      if(method==='snapshots.capabilities'&&result.enabled&&result.identity.workspaceId!==captured.workspace.id)throw workspaceFailure('invalid_request','Artifact storage workspace mismatch');
+      if(method.startsWith('snapshots.')&&method!=='snapshots.capabilities'){
+        const scope=method==='snapshots.read'?result.reference.scope:result.scope;
+        if(scope.projectId!==captured.workspace.id||scope.sessionId!==captured.workspace.generation)throw workspaceFailure('invalid_request','Stored artifact scope mismatch');
+        if(method==='snapshots.list'){
+          if(result.jobId!==params.jobId||result.pluginId!==params.pluginId||result.pluginArtifactSha256!==params.artifactSha256||artifactStorageCapabilities?.enabled&&result.storeId!==artifactStorageCapabilities.identity.storeId)throw workspaceFailure('invalid_request','Stored artifact list identity mismatch');
+        }else{
+          const reference=method==='snapshots.read'?result.reference:result,s=reference.snapshot;
+          if(artifactStorageCapabilities?.enabled&&(s.storeId!==artifactStorageCapabilities.identity.storeId||s.workspaceIdentity!==artifactStorageCapabilities.identity.workspaceIdentity))throw workspaceFailure('invalid_request','Stored artifact storage identity mismatch');
+          if(method==='snapshots.get'&&(s.jobId!==params.jobId||s.pluginId!==params.pluginId||s.pluginArtifactSha256!==params.artifactSha256||s.artifact.id!==params.artifactId))throw workspaceFailure('invalid_request','Stored artifact identity mismatch');
+          if(method==='snapshots.read'){
+            if(!storageEqual(reference,params.reference)||result.offset!==params.offset||result.nextOffset!==params.offset+Math.min(params.length,s.artifact.byteLength-params.offset))throw workspaceFailure('invalid_request','Stored artifact range mismatch');
+            const digest=[...new Uint8Array(await globalThis.crypto.subtle.digest('SHA-256',decodeBinaryArtifactData(result.data)))].map(byte=>byte.toString(16).padStart(2,'0')).join('');
+            if(controller.signal.aborted)throw controller.signal.reason;if(closed||revision!==bindingSequence)throw workspaceFailure('disposed','Workspace connection changed');
+            if(digest!==result.sha256)throw workspaceFailure('invalid_request','Stored artifact checksum mismatch');
+          }
+        }
+      }
       if (method.startsWith('history.') && method !== 'history.capabilities') {
         if (result.scope.projectId !== captured.workspace.id || result.scope.sessionId !== captured.workspace.generation || storageCapabilities?.enabled && result.storeId !== storageCapabilities.identity.storeId) throw workspaceFailure('invalid_request','History reply identity mismatch');
         if (method === 'history.list') {
@@ -238,6 +258,46 @@ export function createWorkspaceClient({url, token, fetch: transport = globalThis
     if(captured.plugins.find(p=>p.manifest.id===pluginId)?.artifactSha256!==artifactSha256)throw workspaceFailure('plugin_mismatch','Plugin artifact identity changed');
     return request(method,{pluginId,artifactSha256,...params},options);
   }
+  async function getArtifactStorageCapabilities(options){
+    const captured=binding;checkFileConnection(captured,options);if(artifactStorageCapabilities)return artifactStorageCapabilities;
+    const unavailable=Object.freeze({protocolVersion:1,enabled:false,identity:null,limits:ARTIFACT_STORE_LIMITS});
+    if(captured.hostId==='workspace-host'&&/^0\.[0-7]\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(captured.hostVersion))return artifactStorageCapabilities=unavailable;
+    let result;try{result=await request('snapshots.capabilities',{},options);}catch(error){if(!(error instanceof WorkspaceError)||error.code!=='unsupported')throw error;result=unavailable;}
+    checkFileConnection(captured,options);return artifactStorageCapabilities=result;
+  }
+  async function requireSnapshotConnection(captured,pluginId,artifactSha256,options){
+    requireText(pluginId);requireSha256(artifactSha256);const capabilities=await getArtifactStorageCapabilities(options);checkFileConnection(captured,options);
+    if(!capabilities.enabled)throw workspaceFailure('unsupported','This host has not enabled stored artifacts');
+    if(captured.plugins.find(p=>p.manifest.id===pluginId)?.artifactSha256!==artifactSha256)throw workspaceFailure('plugin_mismatch','Plugin artifact identity changed');return capabilities;
+  }
+  async function listStoredJobArtifacts(pluginId,jobId,artifactSha256,options){
+    parseJobId(jobId);const captured=binding;await requireSnapshotConnection(captured,pluginId,artifactSha256,options);
+    return request('snapshots.list',{pluginId,jobId,artifactSha256},options);
+  }
+  async function getStoredJobArtifact(pluginId,jobId,artifactId,artifactSha256,options){
+    parseJobId(jobId);requireText(artifactId);const captured=binding;await requireSnapshotConnection(captured,pluginId,artifactSha256,options);
+    return request('snapshots.get',{pluginId,jobId,artifactId,artifactSha256},options);
+  }
+  async function readStoredJobArtifactChunk(value,offset,options={}){
+    const reference=parseStoredArtifactReference(value),s=reference.snapshot;exactObject(options,[],['length','signal','timeoutMs']);const{length:requestedLength,...requestOptions}=options;
+    parseBinaryArtifactRange(offset,requestedLength??ARTIFACT_STORE_LIMITS.chunkBytes,s.artifact.byteLength);
+    const captured=binding;checkFileConnection(captured,requestOptions);
+    if(reference.scope.projectId!==captured.workspace.id||reference.scope.sessionId!==captured.workspace.generation)throw workspaceFailure('generation_mismatch','Stored artifact belongs to another generation');
+    const capabilities=await requireSnapshotConnection(captured,s.pluginId,s.pluginArtifactSha256,requestOptions),length=requestedLength??capabilities.limits.chunkBytes;
+    if(s.storeId!==capabilities.identity.storeId||s.workspaceIdentity!==capabilities.identity.workspaceIdentity)throw workspaceFailure('conflict','Stored artifact belongs to another storage identity');
+    if(length>capabilities.limits.chunkBytes||s.artifact.byteLength>capabilities.limits.fileBytes)throw workspaceFailure('budget_exceeded','Stored artifact exceeds host limits');
+    return request('snapshots.read',{reference,offset,length},requestOptions);
+  }
+  async function readStoredJobArtifactText(value,options={}){
+    const reference=parseStoredArtifactReference(value),s=reference.snapshot;
+    if(s.kind!=='text')throw workspaceFailure('invalid_request','Expected a stored text artifact');
+    const bytes=new Uint8Array(s.artifact.byteLength),captured=binding;let offset=0;
+    for(;;){const chunk=await readStoredJobArtifactChunk(reference,offset,options);checkFileConnection(captured,options);bytes.set(decodeBinaryArtifactData(chunk.data),offset);offset=chunk.nextOffset;if(chunk.eof)break;}
+    const digest=[...new Uint8Array(await globalThis.crypto.subtle.digest('SHA-256',bytes))].map(byte=>byte.toString(16).padStart(2,'0')).join('');checkFileConnection(captured,options);
+    if(digest!==s.artifact.revision)throw workspaceFailure('invalid_request','Stored text checksum mismatch');
+    let content;try{content=new TextDecoder('utf-8',{fatal:true}).decode(bytes);}catch{throw workspaceFailure('invalid_request','Stored text is not UTF-8');}
+    return Object.freeze({reference,content});
+  }
   async function listJobBinaryArtifacts(jobId, options) {
     parseJobId(jobId); const captured = binding; await requireBinaryConnection(captured, options);
     return request('artifacts.list', {jobId}, options);
@@ -289,6 +349,11 @@ export function createWorkspaceClient({url, token, fetch: transport = globalThis
     runCommand: (pluginId, commandId, input, artifactSha256, options) => request('commands.run', {pluginId, commandId, input, artifactSha256}, options),
     getJobCapabilities: options => request('jobs.capabilities', {}, options),
     getJobStorageCapabilities,
+    getArtifactStorageCapabilities,
+    listStoredJobArtifacts,
+    getStoredJobArtifact,
+    readStoredJobArtifactChunk,
+    readStoredJobArtifactText,
     listJobHistory: (pluginId,artifactSha256,query={},options) => historyRequest('history.list',pluginId,artifactSha256,{query:parseJobHistoryQuery(query)},options),
     recoverJob: (pluginId,jobId,artifactSha256,options) => historyRequest('history.recover',pluginId,artifactSha256,{jobId:parseJobId(jobId)},options),
     retryCommandJob: (pluginId,previousJobId,input,artifactSha256,job,options) => historyRequest('history.retry',pluginId,artifactSha256,{previousJobId:parseJobId(previousJobId),input,...parseJobOptions(job)},options),

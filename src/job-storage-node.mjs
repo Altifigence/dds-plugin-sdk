@@ -8,6 +8,7 @@ import {ErrorCode, PluginSdkError} from './limits.mjs';
 import {DEFAULT_JOB_RETENTION_MS, JOB_STORE_LIMITS, parseJobStoreIdentity, parseJobStoreLimits, parseStoredJob} from './job-storage.mjs';
 import {storageInteger, storageObject} from './job-storage-validation.mjs';
 import {nodeWorkspaceIdentity} from './workspace-identity-node.mjs';
+import {registerNodeStore} from './node-store-context.mjs';
 
 const digest = value => createHash('sha256').update(value).digest('hex');
 const failure = code => new PluginSdkError(code, 'Job store operation failed');
@@ -219,7 +220,7 @@ export async function createNodeJobStore({directory, workspaceRoot, workspaceId,
     const name = jobId + '.json'; await fs.unlink(path.join(jobsDirectory, name)); await syncDirectory(jobsDirectory);
     usedBytes -= sizes.get(name) ?? 0; sizes.delete(name); records.delete(jobId);
   }
-  return Object.freeze({
+  const store = Object.freeze({
     identity, limits,
     has(jobId) {assertOpen(); parseJobId(jobId); return records.has(jobId) || problems.has(jobId);},
     get(jobId) {assertOpen(); parseJobId(jobId); if (problems.has(jobId)) throw failure(problems.get(jobId) === 'unsupported' ? ErrorCode.VERSION_MISMATCH : ErrorCode.CONFLICT); return records.get(jobId) ?? null;},
@@ -239,6 +240,7 @@ export async function createNodeJobStore({directory, workspaceRoot, workspaceId,
         if (old) {
           const retained = new Map(record.events.map(event => [event.sequence, event]));
           for (const event of old.events) if (retained.has(event.sequence) && JSON.stringify(retained.get(event.sequence)) !== JSON.stringify(event)) throw failure(ErrorCode.CONFLICT);
+          for(const artifact of old.retainedArtifacts??[])if(!record.retainedArtifacts?.some(next=>JSON.stringify(next)===JSON.stringify(artifact)))throw failure(ErrorCode.CONFLICT);
         }
         const bytes = envelope(record), size = Buffer.byteLength(bytes), name = jobId + '.json';
         if (!old && records.size + problems.size >= limits.records || usedBytes - (sizes.get(name) ?? 0) + size > limits.storeBytes) throw failure(ErrorCode.BUDGET_EXCEEDED);
@@ -270,4 +272,6 @@ export async function createNodeJobStore({directory, workspaceRoot, workspaceId,
       return closePromise;
     },
   });
+  registerNodeStore(store, {root, enqueue, checkOwned, syncDirectory, regularBytes, atomic, isJobPinned: jobId => pins.has(jobId)});
+  return store;
 }

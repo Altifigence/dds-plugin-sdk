@@ -7,6 +7,15 @@ import {createJobStorageSession} from './job-storage-session.mjs';
 const failure = code => new PluginSdkError(code, 'Job operation failed');
 const canonical = value => JSON.stringify(value, function (_key, v) {return v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.keys(v).sort().map(key => [key, v[key]])) : v;});
 const hash = async text => [...new Uint8Array(await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)))].map(v => v.toString(16).padStart(2, '0')).join('');
+const hashBytes = async bytes => [...new Uint8Array(await globalThis.crypto.subtle.digest('SHA-256',bytes))].map(v=>v.toString(16).padStart(2,'0')).join('');
+function textSource(file){
+  const bytes=new TextEncoder().encode(file.content);
+  return{path:file.path,revision:file.revision,byteLength:bytes.length,async readChunk(offset,length,{signal}={}){
+    parseBinaryArtifactRange(offset,length,bytes.length);if(signal?.aborted)throw failure(ErrorCode.CANCELLED);
+    const chunk=bytes.subarray(offset,offset+length);let raw='';for(const byte of chunk)raw+=String.fromCharCode(byte);
+    return{offset,nextOffset:offset+chunk.length,eof:offset+chunk.length===bytes.length,data:btoa(raw),sha256:await hashBytes(chunk)};
+  }};
+}
 
 /** Host-owned bounded jobs. Cancellation is cooperative; unsettled work keeps its slot. */
 export function createJobRegistry({scope, enabled = false, binaryArtifacts = false, jobStorage}) {
@@ -57,6 +66,10 @@ export function createJobRegistry({scope, enabled = false, binaryArtifacts = fal
     capabilities() {if (closed) throw failure(ErrorCode.DISPOSED); return Object.freeze({protocolVersion: 1, enabled, limits: JOB_LIMITS});},
     binaryCapabilities() {if (closed) throw failure(ErrorCode.DISPOSED); return Object.freeze({protocolVersion: 1, enabled: enabled && binaryArtifacts, limits: BINARY_ARTIFACT_LIMITS});},
     storageCapabilities() {if (closed) throw failure(ErrorCode.DISPOSED); return storage.capabilities();},
+    artifactStorageCapabilities(){if(closed)throw failure(ErrorCode.DISPOSED);return storage.artifactStorage.capabilities();},
+    listStoredArtifacts(pluginId,recovery){assertOpen();return storage.listStoredArtifacts(pluginId,recovery);},
+    verifyStoredArtifact(snapshot,options){assertOpen();return storage.artifactStorage.verify(snapshot,options);},
+    readStoredArtifact(snapshot,offset,length,options){assertOpen();return storage.artifactStorage.readChunk(snapshot,offset,length,options);},
     flushStorage() {return storage.flush();},
     recover(pluginId, jobId, grants) {assertOpen(); return storage.recover(pluginId, jobId, grants, records.has(jobId));},
     history(pluginId, query, grants, commands) {assertOpen(); return storage.history(pluginId, query, grants, commands);},
@@ -81,7 +94,7 @@ export function createJobRegistry({scope, enabled = false, binaryArtifacts = fal
       if (active >= JOB_LIMITS.concurrent || records.size >= JOB_LIMITS.retained) throw failure(ErrorCode.BUDGET_EXCEEDED);
       if (signal.aborted) throw failure(ErrorCode.DISPOSED);
       const now = Date.now(), controller = new AbortController();
-      const r = {...options, attemptOf, pluginId, commandId, signature, assertActive, assertRead, readFile, readBinaryChunk, controller, state: 'running', startedAt: now, updatedAt: now, progress: null, artifacts: new Map(), binaryArtifacts: new Map(), pendingArtifacts: new Set(), operations: new Set(), events: [], eventBytes: 0, sequence: 0, settled: false};
+      const r = {...options, attemptOf, pluginId, commandId, signature, assertActive, assertRead, readFile, readBinaryChunk, controller, state: 'running', startedAt: now, updatedAt: now, progress: null, artifacts: new Map(), binaryArtifacts: new Map(), storedArtifacts: new Map(), pendingArtifacts: new Set(), operations: new Set(), events: [], eventBytes: 0, sequence: 0, settled: false};
       storage.register(r, grants);
       records.set(r.jobId, r); active++; emit(r, 'state', {state: 'running'});
       const onOwnerAbort = () => controller.abort(failure(ErrorCode.DISPOSED));
@@ -102,6 +115,8 @@ export function createJobRegistry({scope, enabled = false, binaryArtifacts = fal
             const file = parseWorkspaceRead(await readFile(parseWorkspacePath(draft.path), controller.signal), draft.path); live(r);
             if (await hash(file.content) !== file.revision) throw failure(ErrorCode.CONFLICT); live(r);
             const artifact = parseJobArtifact({...draft, revision: file.revision, byteLength: new TextEncoder().encode(file.content).length});
+            const stored=await storage.captureArtifact(r,'text',artifact,textSource(file),controller.signal);live(r);
+            if(stored)r.storedArtifacts.set(artifact.id,stored);
             emit(r, 'artifact', artifact); r.artifacts.set(artifact.id, artifact); return artifact;
           } finally {r.pendingArtifacts.delete(draft.id);}
         });},
@@ -112,6 +127,8 @@ export function createJobRegistry({scope, enabled = false, binaryArtifacts = fal
           try {
             const source = parseBinaryArtifactSource(await captureBinaryFile(draft.path, controller.signal), draft.path); live(r);
             const artifact = parseBinaryArtifact({...draft, revision: source.revision, byteLength: source.byteLength});
+            const stored=await storage.captureArtifact(r,'binary',artifact,source,controller.signal);live(r);
+            if(stored)r.storedArtifacts.set(artifact.id,stored);
             // Existing readers understand this event and the unchanged v1 snapshot.
             emit(r, 'log', {level: 'info', message: `Binary artifact registered: ${artifact.id}`});
             r.binaryArtifacts.set(artifact.id, {artifact, source}); return artifact;

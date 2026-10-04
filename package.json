@@ -1,6 +1,6 @@
 {
   "name": "@altifigence/dds-plugin-sdk",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Plugin, theme and user-owned workspace tools for Digital Design Studio",
   "type": "module",
   "license": "Apache-2.0",
@@ -68,6 +68,14 @@
       "types": "./src/job-storage-node.d.mts",
       "import": "./src/job-storage-node.mjs"
     },
+    "./artifact-storage": {
+      "types": "./src/artifact-storage.d.mts",
+      "import": "./src/artifact-storage.mjs"
+    },
+    "./artifact-storage-node": {
+      "types": "./src/artifact-storage-node.d.mts",
+      "import": "./src/artifact-storage-node.mjs"
+    },
     "./devtools": {
       "types": "./src/devtools.d.mts",
       "import": "./src/devtools.mjs"
@@ -108,6 +116,7 @@
     "example:verify": "node examples/release-verification/run.mjs",
     "example:jobs": "node examples/command-jobs/run.mjs",
     "example:durable-jobs": "node examples/durable-jobs/run.mjs",
+    "example:stored-artifacts": "node examples/stored-artifacts/run.mjs",
     "example:observe": "node examples/workspace-observation/run.mjs",
     "benchmark:files": "node scripts/benchmark-file-reads.mjs",
     "example:artifacts": "node examples/binary-artifacts/run.mjs",

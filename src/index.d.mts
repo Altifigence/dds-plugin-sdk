@@ -60,6 +60,7 @@ import type {JobReporter, JobOptions, JobSnapshot, JobEvents, JobArtifactContent
 import type {BinaryArtifactSource, BinaryArtifactCapabilities, BinaryArtifactList, BinaryArtifactChunk} from './artifacts.mjs';
 import type {JobStorageOptions, JobStorageCapabilities, JobRecovery} from './job-storage.mjs';
 import type {JobHistoryQuery, JobHistoryPage} from './job-history.mjs';
+import type {ArtifactStorageCapabilities,StoredArtifactList,StoredArtifactReference,StoredArtifactChunk} from './artifact-storage.mjs';
 export type {JobReporter, JobOptions, JobSnapshot, JobEvents, JobArtifactContent, JobCapabilities} from './jobs.mjs';
 export type CommandHandler = (input: JsonValue, options: {readonly signal: AbortSignal; readonly job?: JobReporter}) => JsonValue | Promise<JsonValue>;
 export interface WorkspaceFile {readonly path: string; readonly content: string; readonly revision: string;}
@@ -165,6 +166,10 @@ export interface PluginHost extends Disposable {
   jobCapabilities(): JobCapabilities;
   binaryArtifactCapabilities(): BinaryArtifactCapabilities;
   jobStorageCapabilities(): JobStorageCapabilities;
+  artifactStorageCapabilities():ArtifactStorageCapabilities;
+  listStoredJobArtifacts(pluginId:string,jobId:string):StoredArtifactList;
+  getStoredJobArtifact(pluginId:string,jobId:string,artifactId:string,options?:RequestOptions):Promise<StoredArtifactReference>;
+  readStoredJobArtifactChunk(reference:StoredArtifactReference,offset:number,length:number,options?:RequestOptions):Promise<StoredArtifactChunk>;
   /** Flush the checkpoints requested before this call; allowed after dispose(). */
   flushJobStore(): Promise<void>;
   recoverJob(pluginId:string,jobId:string): JobRecovery;

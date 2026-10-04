@@ -3,6 +3,7 @@ import {JOB_LIMITS, parseJobId, parseJobEvent, parseJobSnapshot} from './jobs.mj
 import {parseBinaryArtifact} from './artifacts.mjs';
 import {ErrorCode, PluginSdkError} from './limits.mjs';
 import {storageObject, storageInteger, storageSha} from './job-storage-validation.mjs';
+import {parseStoredArtifact} from './artifact-storage.mjs';
 
 export const JOB_STORAGE_VERSION = 1;
 export const JOB_STORE_LIMITS = Object.freeze({records: 256, recordBytes: 524_288, storeBytes: 67_108_864, retentionMs: 604_800_000, pendingWrites: 32});
@@ -39,7 +40,7 @@ export function parseJobStoreLimits(value) {
 
 /** The snapshot remains v1. Recovery state and redaction live in a separate envelope. */
 export function parseStoredJob(value) {
-  storageObject(value, ['schemaVersion', 'storeId', 'workspaceId', 'workspaceIdentity', 'pluginArtifactSha256', 'requestSha256', 'revision', 'savedAt', 'expiresAt', 'settled', 'contentPolicy', 'grants', 'snapshot', 'events', 'binaryArtifacts'], ['attemptOf']);
+  storageObject(value, ['schemaVersion', 'storeId', 'workspaceId', 'workspaceIdentity', 'pluginArtifactSha256', 'requestSha256', 'revision', 'savedAt', 'expiresAt', 'settled', 'contentPolicy', 'grants', 'snapshot', 'events', 'binaryArtifacts'], ['attemptOf','retainedArtifacts']);
   const {schemaVersion, storeId, workspaceId, workspaceIdentity, pluginArtifactSha256, requestSha256, revision, savedAt, expiresAt, settled, contentPolicy} = value;
   if (schemaVersion !== JOB_STORAGE_VERSION) fail(ErrorCode.VERSION_MISMATCH);
   parseJobStoreIdentity({schemaVersion, storeId, workspaceId, workspaceIdentity});
@@ -63,13 +64,22 @@ export function parseStoredJob(value) {
   const binaryArtifacts = storageList(value.binaryArtifacts, JOB_LIMITS.artifacts, parseBinaryArtifact);
   const artifactIds = [...snapshot.artifacts, ...binaryArtifacts].map(item => item.id);
   if (artifactIds.length > JOB_LIMITS.artifacts || new Set(artifactIds).size !== artifactIds.length) fail();
+  let retainedArtifacts;
+  if(value.retainedArtifacts!==undefined){
+    retainedArtifacts=storageList(value.retainedArtifacts,JOB_LIMITS.artifacts,parseStoredArtifact);const ids=new Set(),snapshots=new Set();
+    for(const stored of retainedArtifacts){
+      const source=(stored.kind==='text'?snapshot.artifacts:binaryArtifacts).find(a=>a.id===stored.artifact.id);
+      if(stored.storeId!==storeId||stored.workspaceId!==workspaceId||stored.workspaceIdentity!==workspaceIdentity||stored.pluginArtifactSha256!==pluginArtifactSha256||stored.pluginId!==snapshot.pluginId||stored.jobId!==snapshot.jobId||!source||['id','path','revision','byteLength'].some(key=>source[key]!==stored.artifact[key])||ids.has(stored.artifact.id)||snapshots.has(stored.snapshotId))fail();
+      ids.add(stored.artifact.id);snapshots.add(stored.snapshotId);
+    }
+  }
   if (value.attemptOf !== undefined) {parseJobId(value.attemptOf); if (value.attemptOf === snapshot.jobId) fail();}
   if (contentPolicy === 'metadata-only') {
     if (snapshot.state === 'succeeded' && snapshot.result !== null || snapshot.progress?.message !== undefined) fail();
     if ([...snapshot.artifacts, ...binaryArtifacts].some(item => item.label !== undefined)) fail();
     for (const event of events) if (event.kind === 'log' && event.data.message !== '[redacted]' || event.kind === 'progress' && event.data.message !== undefined || event.kind === 'artifact' && event.data.label !== undefined) fail();
   }
-  const result = Object.freeze({schemaVersion, storeId, workspaceId, workspaceIdentity, pluginArtifactSha256, requestSha256, revision, savedAt, expiresAt, settled, contentPolicy, grants, snapshot, events, binaryArtifacts, ...(value.attemptOf === undefined ? {} : {attemptOf: value.attemptOf})});
+  const result = Object.freeze({schemaVersion, storeId, workspaceId, workspaceIdentity, pluginArtifactSha256, requestSha256, revision, savedAt, expiresAt, settled, contentPolicy, grants, snapshot, events, binaryArtifacts, ...(value.attemptOf === undefined ? {} : {attemptOf: value.attemptOf}), ...(retainedArtifacts===undefined?{}:{retainedArtifacts})});
   if (bytes(result) > JOB_STORE_LIMITS.recordBytes) fail(ErrorCode.BUDGET_EXCEEDED);
   return result;
 }

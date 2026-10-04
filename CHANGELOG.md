@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased — 0.8 development
+## 0.8.0 — 2026-10-04
 
 - Add bounded history queries with snapshot cursors, current-grant filtering and
   explicit retry relationships. Repeated attempts are idempotent across restart.
@@ -13,7 +13,14 @@
   interrupted, expired, corrupt and unsupported records without rerunning commands.
 - Default to metadata-only retention with explicit reviewed redaction, quotas,
   pruning, stale-owner checks and an opt-in legacy import preserving original bytes.
-- Include types, four schemas and a packed real-process restart example.
+- Add optional verified text/binary result snapshots sharing the job store lock,
+  bounded retention and explicit operator inspection/removal/pruning. Current
+  authority and fresh references allow downloads to resume after process restart
+  and source deletion; existing source-reference APIs keep their semantics.
+- Include typed APIs, eleven storage/history schemas and packed real-process
+  examples for crash recovery, explicit retry and snapshot downloads.
+- New plugin archives declare `>=0.8.0 <0.9.0`; verification preserves exact
+  0.3/0.4/0.5/0.6/0.7 metadata without widening peer ranges.
 
 ## 0.7.0 — 2026-10-04
 
