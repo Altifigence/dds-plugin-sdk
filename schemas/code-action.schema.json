@@ -1,0 +1,341 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.11.0/schemas/code-action.schema.json",
+  "title": "code-action",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "kind": {
+      "enum": [
+        "quickfix",
+        "refactor",
+        "refactor.extract",
+        "refactor.inline",
+        "refactor.rewrite",
+        "source.organizeImports",
+        "source.fixAll"
+      ]
+    },
+    "isPreferred": {
+      "type": "boolean"
+    },
+    "disabled": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        }
+      },
+      "required": [
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "diagnosticIndices": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 499
+      },
+      "maxItems": 500,
+      "uniqueItems": true
+    },
+    "edit": {
+      "type": "object",
+      "properties": {
+        "formatVersion": {
+          "const": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 36,
+          "maxLength": 36,
+          "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "changes": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "const": "edit"
+                  },
+                  "path": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1024,
+                    "$comment": "Runtime enforces the shared relative workspace path policy, protected components and cross-platform case-insensitive disjoint paths."
+                  },
+                  "baseRevision": {
+                    "type": "string",
+                    "minLength": 64,
+                    "maxLength": 64,
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "edits": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "range": {
+                          "type": "object",
+                          "properties": {
+                            "start": {
+                              "type": "object",
+                              "properties": {
+                                "line": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 262144
+                                },
+                                "character": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 262144
+                                }
+                              },
+                              "required": [
+                                "line",
+                                "character"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "end": {
+                              "type": "object",
+                              "properties": {
+                                "line": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 262144
+                                },
+                                "character": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 262144
+                                }
+                              },
+                              "required": [
+                                "line",
+                                "character"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "start",
+                            "end"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "text": {
+                          "type": "string",
+                          "minLength": 0,
+                          "maxLength": 262144,
+                          "x-maxUtf8Bytes": 262144
+                        }
+                      },
+                      "required": [
+                        "range",
+                        "text"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "minItems": 1,
+                    "maxItems": 500
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2048
+                  }
+                },
+                "required": [
+                  "kind",
+                  "path",
+                  "baseRevision",
+                  "edits"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "const": "create"
+                  },
+                  "path": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1024,
+                    "$comment": "Runtime enforces the shared relative workspace path policy, protected components and cross-platform case-insensitive disjoint paths."
+                  },
+                  "content": {
+                    "type": "string",
+                    "minLength": 0,
+                    "maxLength": 262144,
+                    "x-maxUtf8Bytes": 262144
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2048
+                  }
+                },
+                "required": [
+                  "kind",
+                  "path",
+                  "content"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "const": "move"
+                  },
+                  "path": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1024,
+                    "$comment": "Runtime enforces the shared relative workspace path policy, protected components and cross-platform case-insensitive disjoint paths."
+                  },
+                  "baseRevision": {
+                    "type": "string",
+                    "minLength": 64,
+                    "maxLength": 64,
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "newPath": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1024,
+                    "$comment": "Runtime enforces the shared relative workspace path policy, protected components and cross-platform case-insensitive disjoint paths."
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2048
+                  }
+                },
+                "required": [
+                  "kind",
+                  "path",
+                  "baseRevision",
+                  "newPath"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "const": "delete"
+                  },
+                  "path": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1024,
+                    "$comment": "Runtime enforces the shared relative workspace path policy, protected components and cross-platform case-insensitive disjoint paths."
+                  },
+                  "baseRevision": {
+                    "type": "string",
+                    "minLength": 64,
+                    "maxLength": 64,
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2048
+                  }
+                },
+                "required": [
+                  "kind",
+                  "path",
+                  "baseRevision"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 32
+        }
+      },
+      "required": [
+        "formatVersion",
+        "id",
+        "title",
+        "changes"
+      ],
+      "additionalProperties": false,
+      "x-maxUtf8Bytes": 1048576,
+      "$comment": "At most 1000 edits in all files. Runtime validates paths, scalar strings and edit geometry. Revisions are full content SHA-256. Destinations must be absent, and affected paths cannot be duplicated or nested."
+    },
+    "resolveData": {
+      "x-maxUtf8Bytes": 4096
+    },
+    "resolveToken": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 36,
+      "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$"
+    }
+  },
+  "required": [
+    "title",
+    "kind"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "required": [
+          "disabled"
+        ]
+      },
+      "then": {
+        "properties": {
+          "edit": false,
+          "resolveData": false,
+          "resolveToken": false
+        }
+      },
+      "else": {
+        "anyOf": [
+          {
+            "required": [
+              "edit"
+            ]
+          },
+          {
+            "required": [
+              "resolveData"
+            ]
+          },
+          {
+            "required": [
+              "resolveToken"
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "$comment": "Runtime validates bounded JSON, diagnostics against the current bundle, action kinds against requested filters, and current-document edits. Host tokens cannot be supplied by providers. Labels, disabled reasons and other display text are never executable."
+}

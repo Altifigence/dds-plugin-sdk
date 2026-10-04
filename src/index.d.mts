@@ -165,6 +165,10 @@ export interface PluginHost extends Disposable {
   resolveCompletion(token: string, options?: RequestOptions): Promise<LanguageResult<'completion'>>;
   prepareCompletion(result: LanguageResult<'completion'>, itemIndex?: number): CompletionInsertion;
   releaseCompletion(result: LanguageResult<'completion'>): void;
+  resolveCodeAction(token: string, options?: RequestOptions): Promise<LanguageResult<'code-actions'>>;
+  prepareCodeAction(result: LanguageResult<'code-actions'>, itemIndex?: number): import('./workspace-edits.mjs').WorkspaceEdit;
+  releaseCodeActions(result: LanguageResult<'code-actions'>): void;
+  prepareFormatting(result: LanguageResult<'format-document' | 'format-range'>): import('./workspace-edits.mjs').WorkspaceEdit | null;
   listCommands(): readonly RegisteredCommand[];
   executeCommand(pluginId: string, commandId: string, input: JsonValue, options?: RequestOptions): Promise<JsonValue>;
   jobCapabilities(): JobCapabilities;
@@ -192,18 +196,22 @@ export interface PluginHost extends Disposable {
 /** Executes trusted plugins in-process. Ports enforce file/backend authority; this is not a sandbox. */
 export function createPluginHost(options?: PluginHostOptions): PluginHost;
 
-export type LanguageFeature = 'completion' | 'hover' | 'definition' | 'references' | 'document-symbols' | 'signature-help' | 'prepare-rename' | 'rename';
-export type LanguageCapability = LanguageFeature | 'completion-resolve' | 'completion-snippets';
+export type FormattingFeature = 'format-document' | 'format-range';
+export type LanguageFeature = 'completion' | 'hover' | 'definition' | 'references' | 'document-symbols' | 'signature-help' | 'prepare-rename' | 'rename' | FormattingFeature | 'code-actions';
+export type LanguageCapability = LanguageFeature | 'completion-resolve' | 'completion-snippets' | 'code-action-resolve';
 export const LANGUAGE_FEATURES: readonly LanguageFeature[];
 export const LANGUAGE_CAPABILITIES: readonly LanguageCapability[];
-export type LanguageInput<K extends LanguageFeature> = K extends 'document-symbols'
+export type LanguageInput<K extends LanguageFeature> = K extends FormattingFeature
+  ? {readonly path: string; readonly formatOptions: FormattingOptions; readonly position?: never} & (K extends 'format-range' ? {readonly range: Range} : {readonly range?: never})
+  : K extends 'code-actions' ? {readonly path: string; readonly range: Range; readonly context?: CodeActionContext; readonly position?: never}
+  : K extends 'document-symbols'
   ? {readonly position?: never; readonly includeDeclaration?: never; readonly context?: never; readonly newName?: never}
   : {readonly position: Position} & (K extends 'references' ? {readonly includeDeclaration?: boolean; readonly context?: never}
     : K extends 'completion' ? {readonly includeDeclaration?: never; readonly context?: CompletionContext}
     : K extends 'signature-help' ? {readonly includeDeclaration?: never; readonly context?: SignatureHelpContext}
     : {readonly includeDeclaration?: never; readonly context?: never}) & (K extends 'rename' ? {readonly newName: string} : {readonly newName?: never});
 export type LanguageRequest<K extends LanguageFeature = LanguageFeature> = K extends LanguageFeature
-  ? DiagnosticsRequest & {readonly kind: K} & LanguageInput<K> : never;
+  ? DiagnosticsRequest & {readonly kind: K} & LanguageInput<K> & (K extends 'code-actions' ? {readonly diagnosticContext: {readonly revision: number; readonly diagnostics: readonly Diagnostic[]}} : {}) : never;
 /** Literal by default. A declared snippet capability enables the bounded data-only subset. */
 export interface CompletionItem {
   readonly label: string; readonly insertText: string; readonly detail?: string; readonly range?: Range;
@@ -234,10 +242,26 @@ export const LANGUAGE_LIMITS: Readonly<{
 }>;
 export interface LanguageCapabilities {
   readonly protocolVersion: 1; readonly features: readonly LanguageFeature[];
-  readonly completionResolve: true; readonly snippets: true; readonly positions: 'utf16-zero-based'; readonly limits: typeof LANGUAGE_LIMITS;
+  readonly completionResolve: true; readonly codeActionResolve: true; readonly snippets: true; readonly positions: 'utf16-zero-based'; readonly limits: typeof LANGUAGE_LIMITS;
 }
 export function parseSnippet(value: unknown): ParsedSnippet;
 export function parseCompletionItem(value: unknown): CompletionItem;
+export interface FormattingOptions {
+  readonly tabSize: number; readonly insertSpaces: boolean; readonly trimTrailingWhitespace?: boolean;
+  readonly insertFinalNewline?: boolean; readonly trimFinalNewlines?: boolean; readonly endOfLine?: 'preserve' | 'lf' | 'crlf';
+}
+export type CodeActionKind = 'quickfix' | 'refactor' | 'refactor.extract' | 'refactor.inline' | 'refactor.rewrite' | 'source.organizeImports' | 'source.fixAll';
+export const CODE_ACTION_KINDS: readonly CodeActionKind[];
+export const LANGUAGE_EDIT_LIMITS: Readonly<{actions: 100; diagnosticIndices: 500; title: 256; disabledReason: 2048; tabSize: 16}>;
+export interface CodeActionContext {readonly triggerKind: 'invoked' | 'automatic'; readonly only?: readonly CodeActionKind[];}
+export interface CodeAction {
+  readonly title: string; readonly kind: CodeActionKind; readonly isPreferred?: boolean;
+  readonly disabled?: {readonly reason: string}; readonly diagnosticIndices?: readonly number[];
+  readonly edit?: import('./workspace-edits.mjs').WorkspaceEdit;
+  readonly resolveData?: JsonValue; readonly resolveToken?: string;
+}
+export function parseFormattingOptions(value: unknown): FormattingOptions;
+export function parseCodeAction(value: unknown): CodeAction;
 export function parseSignatureHelp(value: unknown): SignatureHelp | null;
 export interface Hover {readonly text: string; readonly range?: Range;}
 export interface RenamePreparation {readonly range: Range; readonly placeholder: string;}
@@ -256,17 +280,23 @@ export interface LanguageData {
   readonly 'signature-help': SignatureHelp | null;
   readonly 'prepare-rename': RenamePreparation | null;
   readonly rename: import('./workspace-edits.mjs').WorkspaceEdit | null;
+  readonly 'format-document': import('./workspace-edits.mjs').WorkspaceEdit | null;
+  readonly 'format-range': import('./workspace-edits.mjs').WorkspaceEdit | null;
+  readonly 'code-actions': readonly CodeAction[];
 }
 export type LanguageResult<K extends LanguageFeature = LanguageFeature> = K extends LanguageFeature
   ? Omit<DiagnosticsResult, 'diagnostics'> & {readonly kind: K; readonly data: LanguageData[K]} : never;
 export interface LanguageProvider<K extends LanguageFeature> {
   provide(request: LanguageRequest<K>, options: {readonly signal: AbortSignal}): LanguageResult<K> | Promise<LanguageResult<K>>;
-  readonly resolve?: K extends 'completion' ? (request: LanguageRequest<'completion'>, item: CompletionItem, options: {readonly signal: AbortSignal}) => CompletionItem | Promise<CompletionItem> : never;
+  readonly resolve?: K extends 'completion' ? (request: LanguageRequest<'completion'>, item: CompletionItem, options: {readonly signal: AbortSignal}) => CompletionItem | Promise<CompletionItem>
+    : K extends 'code-actions' ? (request: LanguageRequest<'code-actions'>, item: CodeAction, options: {readonly signal: AbortSignal}) => CodeAction | Promise<CodeAction> : never;
 }
 export interface LanguageRegistry<K extends LanguageFeature> extends Disposable {
-  register(pluginId: string, selector: ProviderSelector, provider: LanguageProvider<K>, options?: K extends 'completion' ? {readonly resolve?: boolean; readonly snippets?: boolean} : never): Disposable;
+  register(pluginId: string, selector: ProviderSelector, provider: LanguageProvider<K>, options?: K extends 'completion' ? {readonly resolve?: boolean; readonly snippets?: boolean} : K extends 'code-actions' ? {readonly resolve?: boolean} : never): Disposable;
   request(request: LanguageRequest<K>, options?: RequestOptions): Promise<LanguageResult<K>>;
-  resolve(token: string, options?: RequestOptions): Promise<LanguageResult<'completion'>>;
+  resolve(token: string, options?: RequestOptions): Promise<LanguageResult<K extends 'code-actions' ? 'code-actions' : 'completion'>>;
+  prepareEdit(result: K extends FormattingFeature | 'code-actions' ? LanguageResult<K> : never, itemIndex?: number): import('./workspace-edits.mjs').WorkspaceEdit | null;
+  release(result: LanguageResult<K>): void;
   prepareCompletion(result: LanguageResult<'completion'>, itemIndex?: number): CompletionInsertion;
   releaseCompletion(result: LanguageResult<'completion'>): void;
   invalidate(): void;

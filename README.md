@@ -15,6 +15,8 @@ including lazy item resolution, limited snippets and pure insertion previews.
 Run `npm run example:assistance` for the nested-call and Unicode example.
 [Reviewed workspace edits](docs/WORKSPACE_EDITS.md) add rename proposals, multi-file
 previews, conditional application and readback after interrupted operations.
+[Formatting and code actions](docs/LANGUAGE_EDITING.md) use that review path for
+document/range formatting and diagnostic-bound, optionally lazy quick fixes.
 
 The 0.10 line adds [browser artifact streaming](docs/BROWSER_ARTIFACTS.md)
 with bounded sinks, incremental whole-file hashes, explicit storage readback and

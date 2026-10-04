@@ -2,6 +2,7 @@ import {parseProviderSelector, parseLanguageRequest, parseLanguageResult, assert
 import {LANGUAGE_LIMITS, parseCompletionItem, completionInsertion} from './language-assistance.mjs';
 import {languageObject, languageInteger, invalidLanguage} from './language-values.mjs';
 import {ErrorCode, LIMITS, PluginSdkError} from './limits.mjs';
+import {parseCodeAction, sameCodeActionSelection, validateFormattingEdit} from './language-editing.mjs';
 
 const failure = (code, message) => new PluginSdkError(code, message);
 const sameRange = (a, b) => ['start', 'end'].every(key => a[key].line === b[key].line && a[key].character === b[key].character);
@@ -19,6 +20,7 @@ function providerMethod(provider, name) {
 export function createLanguageRegistry(kind, {isCurrent = () => true} = {}) {
   if (!LANGUAGE_FEATURES.includes(kind) || typeof isCurrent !== 'function') invalidLanguage();
   const registrations = new Set(), live = new Set(), tokens = new Map(), results = new WeakMap();
+  const resolvable = kind === 'completion' || kind === 'code-actions';
   let disposed = false, sequence = 0, epoch = 0, tokenBytes = 0, resolving = 0;
   const open = () => {if (disposed) throw failure(ErrorCode.DISPOSED, 'Language registry is disposed');};
   const current = (request, expectedEpoch = epoch) => {
@@ -34,10 +36,10 @@ export function createLanguageRegistry(kind, {isCurrent = () => true} = {}) {
     if (typeof pluginId !== 'string' || !pluginId.length || pluginId.length > 128) invalidLanguage();
     selector = parseProviderSelector(selector); languageObject(options, [], ['resolve', 'snippets']);
     for (const value of Object.values(options)) if (typeof value !== 'boolean') invalidLanguage();
-    if (kind !== 'completion' && (options.resolve || options.snippets)) invalidLanguage();
+    if (!resolvable && options.resolve || kind !== 'completion' && options.snippets) invalidLanguage();
     const provide = providerMethod(provider, 'provide'), resolve = providerMethod(provider, 'resolve');
     if (!provide) invalidLanguage('Expected provider data methods');
-    if (resolve && !options.resolve || options.resolve && !resolve) throw failure(ErrorCode.PERMISSION_DENIED, 'Completion resolve needs an explicit capability');
+    if (resolve && !options.resolve || options.resolve && !resolve) throw failure(ErrorCode.PERMISSION_DENIED, 'Language resolve needs an explicit capability');
     if (registrations.size >= LIMITS.maxRegistrations) throw failure(ErrorCode.BUDGET_EXCEEDED, 'Language provider limit exceeded');
     const entry = {pluginId, selector, provider, provide, resolve, snippets: options.snippets === true, sequence: sequence++, active: true};
     registrations.add(entry);
@@ -84,15 +86,16 @@ export function createLanguageRegistry(kind, {isCurrent = () => true} = {}) {
   }
   function checkedResult(raw, request, entry, allowTokens) {
     let result = parseLanguageResult(raw); assertLanguageResultMatchesRequest(result, request);
+    if (['format-document', 'format-range'].includes(kind) && !validateFormattingEdit(request, result.data)) result = parseLanguageResult({...result, data: null});
     const additions = []; let bytes = 0;
-    if (kind === 'completion') {
+    if (resolvable) {
       purgeTokens();
       const data = result.data.map(item => {
         if (item.resolveToken !== undefined) invalidLanguage('Providers cannot supply host resolve tokens');
-        if (item.insertTextFormat === 'snippet' && !entry.snippets) throw failure(ErrorCode.PERMISSION_DENIED, 'Snippet capability was not declared');
+        if (kind === 'completion' && item.insertTextFormat === 'snippet' && !entry.snippets) throw failure(ErrorCode.PERMISSION_DENIED, 'Snippet capability was not declared');
         const {resolveData, ...visible} = item;
         if (resolveData !== undefined && allowTokens) {
-          if (!entry.resolve) throw failure(ErrorCode.CAPABILITY_UNAVAILABLE, 'Completion resolver is unavailable');
+          if (!entry.resolve) throw failure(ErrorCode.CAPABILITY_UNAVAILABLE, 'Language resolver is unavailable');
           if (typeof globalThis.crypto?.randomUUID !== 'function') throw failure(ErrorCode.CAPABILITY_UNAVAILABLE, 'Secure token generation is unavailable');
           const id = globalThis.crypto.randomUUID(), size = new TextEncoder().encode(JSON.stringify({request, item})).byteLength;
           additions.push([id, {provider: entry, request, item, epoch, bytes: size, expiresAt: Date.now() + LANGUAGE_LIMITS.resolveTtlMs}]); bytes += size;
@@ -100,12 +103,18 @@ export function createLanguageRegistry(kind, {isCurrent = () => true} = {}) {
         }
         return visible;
       });
-      if (tokens.size + additions.length > LANGUAGE_LIMITS.resolveTokens || tokenBytes + bytes > LANGUAGE_LIMITS.resolveBytes) throw failure(ErrorCode.BUDGET_EXCEEDED, 'Completion resolve retention limit exceeded');
+      if (tokens.size + additions.length > LANGUAGE_LIMITS.resolveTokens || tokenBytes + bytes > LANGUAGE_LIMITS.resolveBytes) throw failure(ErrorCode.BUDGET_EXCEEDED, 'Language resolve retention limit exceeded');
       result = parseLanguageResult({...result, data});
     }
     for (const [id, entry] of additions) tokens.set(id, entry);
     tokenBytes += bytes; results.set(result, {request, entry, epoch, tokenIds: additions.map(([id]) => id)});
     return result;
+  }
+  function releaseResult(result) {
+    open();
+    const saved = results.get(result); if (!saved) return;
+    for (const id of saved.tokenIds) removeToken(id);
+    results.delete(result);
   }
   return Object.freeze({
     register,
@@ -121,17 +130,19 @@ export function createLanguageRegistry(kind, {isCurrent = () => true} = {}) {
     },
     async resolve(token, options) {
       open(); purgeTokens();
-      if (kind !== 'completion') throw failure(ErrorCode.CAPABILITY_UNAVAILABLE, 'This feature has no resolver');
+      if (!resolvable) throw failure(ErrorCode.CAPABILITY_UNAVAILABLE, 'This feature has no resolver');
       if (typeof token !== 'string' || token.length !== 36) invalidLanguage('Invalid completion resolve token');
       const saved = tokens.get(token);
       if (!saved) throw failure(ErrorCode.STALE_SNAPSHOT, 'Completion resolve token is unknown or expired');
       current(saved.request, saved.epoch); removeToken(token);
       const raw = await invoke(saved.provider, saved.request, options => saved.provider.resolve.call(saved.provider.provider, saved.request, saved.item, options), options, true);
       current(saved.request, saved.epoch);
-      const item = parseCompletionItem(raw), previous = saved.item;
-      const initialRange = previous.range ?? {start: saved.request.position, end: saved.request.position};
-      const resolvedRange = item.range ?? {start: saved.request.position, end: saved.request.position};
-      if (item.label !== previous.label || item.insertText !== previous.insertText || (item.insertTextFormat ?? 'literal') !== (previous.insertTextFormat ?? 'literal') || !sameRange(initialRange, resolvedRange)) invalidLanguage('Completion resolver changed the selected insertion');
+      const item = kind === 'completion' ? parseCompletionItem(raw) : parseCodeAction(raw), previous = saved.item;
+      if (kind === 'completion') {
+        const initialRange = previous.range ?? {start: saved.request.position, end: saved.request.position};
+        const resolvedRange = item.range ?? {start: saved.request.position, end: saved.request.position};
+        if (item.label !== previous.label || item.insertText !== previous.insertText || (item.insertTextFormat ?? 'literal') !== (previous.insertTextFormat ?? 'literal') || !sameRange(initialRange, resolvedRange)) invalidLanguage('Completion resolver changed the selected insertion');
+      } else if (!sameCodeActionSelection(item, previous)) invalidLanguage('Resolver changed the selected action');
       return checkedResult(createLanguageResult(saved.request, [item]), saved.request, saved.provider, false);
     },
     prepareCompletion(result, itemIndex = 0) {
@@ -143,12 +154,21 @@ export function createLanguageRegistry(kind, {isCurrent = () => true} = {}) {
       languageInteger(itemIndex, result.data.length - 1);
       return completionInsertion(saved.request, result.data[itemIndex]);
     },
-    releaseCompletion(result) {
+    prepareEdit(result, itemIndex = 0) {
       open();
-      const saved = results.get(result); if (!saved) return;
-      for (const id of saved.tokenIds) removeToken(id);
-      results.delete(result);
+      if (!['format-document', 'format-range', 'code-actions'].includes(kind)) invalidLanguage();
+      const saved = results.get(result);
+      if (!saved) throw failure(ErrorCode.STALE_SNAPSHOT, 'Edit result does not belong to this registry');
+      current(saved.request, saved.epoch);
+      if (!saved.entry.active) throw failure(ErrorCode.DISPOSED, 'Edit provider is no longer active');
+      if (kind !== 'code-actions') return result.data;
+      languageInteger(itemIndex, result.data.length - 1);
+      const item = result.data[itemIndex];
+      if (item.disabled || item.edit === undefined) throw failure(ErrorCode.CAPABILITY_UNAVAILABLE, 'Action has no available edit');
+      return item.edit;
     },
+    releaseCompletion: releaseResult,
+    release: releaseResult,
     invalidate() {
       open(); epoch++; clearTokens();
       for (const ticket of live) ticket.controller.abort(failure(ErrorCode.STALE_SNAPSHOT, 'Language snapshot is no longer current'));

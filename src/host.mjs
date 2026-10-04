@@ -37,16 +37,24 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
   let nextRequest = 0;
   let disposed = false;
   let commandCount = 0;
+  let diagnosticRevision = 0, diagnosticSequence = 0, acceptedDiagnosticSequence = 0;
+  let diagnosticItems = Object.freeze([]);
   const plugins = new Map();
   const pending = new Set();
   if (typeof binaryArtifacts !== 'boolean') throw error(ErrorCode.INVALID_CONTRACT, 'Invalid binary artifact capability');
   const jobRegistry = createJobRegistry({scope, enabled: jobs, binaryArtifacts: binaryArtifacts && typeof workspace?.captureBinaryFile === 'function', jobStorage});
   function isCurrent(request) {
     return !!document && request.scope.projectId === scope.projectId && request.scope.sessionId === scope.sessionId &&
-      ['uri', 'languageId', 'modelVersion', 'workspaceRevision', 'text'].every(key => request.snapshot[key] === document[key]);
+      ['uri', 'languageId', 'modelVersion', 'workspaceRevision', 'text'].every(key => request.snapshot[key] === document[key]) &&
+      (request.kind !== 'code-actions' || request.diagnosticContext.revision === diagnosticRevision);
   }
   const registry = createDiagnosticsRegistry({isCurrent});
   const languages = new Map(LANGUAGE_FEATURES.map(kind => [kind, createLanguageRegistry(kind, {isCurrent})]));
+  function updateDiagnosticContext(items = [], resetSource = false) {
+    diagnosticItems = Object.freeze(items); diagnosticRevision++;
+    if (resetSource) acceptedDiagnosticSequence = ++diagnosticSequence;
+    languages.get('code-actions').invalidate();
+  }
 
   function assertOpen() { if (disposed) throw error(ErrorCode.DISPOSED, 'Plugin host is disposed'); }
   function assertActive(state) { assertOpen(); if (!state.active || state.controller.signal.aborted) throw error(ErrorCode.DISPOSED, 'Plugin is deactivated'); }
@@ -146,11 +154,16 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
         if (!effectiveGrants.includes('document.read') || !effectiveGrants.includes('diagnostics.publish')) {
           throw error(ErrorCode.PERMISSION_DENIED, 'Diagnostics require document.read and diagnostics.publish grants');
         }
-        let registration;
-        try { registration = registry.register(manifest.id, selector, provider); }
+        let rawRegistration;
+        try { rawRegistration = registry.register(manifest.id, selector, provider); }
         catch (failure) {
           throw error(failure instanceof PluginSdkError ? failure.code : ErrorCode.PROVIDER_FAILED, 'Diagnostics provider registration failed');
         }
+        updateDiagnosticContext([], true);
+        let registered = true;
+        const registration = Object.freeze({dispose() {
+          if (!registered) return; registered = false; rawRegistration.dispose(); updateDiagnosticContext([], true);
+        }});
         state.registrations.add(registration);
         return Object.freeze({dispose() {
           registration.dispose();
@@ -163,7 +176,7 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
         if (!manifest.capabilities.includes(kind)) throw error(ErrorCode.PERMISSION_DENIED, 'Language capability was not declared');
         let registration;
         try { registration = languages.get(kind).register(manifest.id, selector, provider, {
-          resolve: kind === 'completion' && manifest.capabilities.includes('completion-resolve'),
+          resolve: kind === 'completion' && manifest.capabilities.includes('completion-resolve') || kind === 'code-actions' && manifest.capabilities.includes('code-action-resolve'),
           snippets: kind === 'completion' && manifest.capabilities.includes('completion-snippets'),
         }); }
         catch (failure) { throw error(failure instanceof PluginSdkError ? failure.code : ErrorCode.PROVIDER_FAILED, 'Language provider registration failed'); }
@@ -328,6 +341,7 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
       }
       registry.invalidate();
       for (const language of languages.values()) language.invalidate();
+      diagnosticItems = Object.freeze([]); diagnosticRevision++; acceptedDiagnosticSequence = ++diagnosticSequence;
       document = updated;
       revision++;
       return updated;
@@ -336,8 +350,10 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
       assertOpen();
       if (!document) throw error(ErrorCode.INVALID_CONTRACT, 'Set a document before requesting diagnostics');
       const currentRevision = revision;
+      const sequence = ++diagnosticSequence;
       const result = await registry.request(parseDiagnosticsRequest({protocolVersion: 1, requestId: `request-${++nextRequest}`, scope, snapshot: document}), options);
       if (currentRevision !== revision) throw error(ErrorCode.STALE_SNAPSHOT, 'Document changed while diagnostics were pending');
+      if (sequence >= acceptedDiagnosticSequence) {acceptedDiagnosticSequence = sequence; updateDiagnosticContext(result.diagnostics);}
       return result;
     },
     async requestLanguage(kind, input = {}, options = {}) {
@@ -345,14 +361,16 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
       if (!document) throw error(ErrorCode.INVALID_CONTRACT, 'Set a document before requesting language features');
       if (!languages.has(kind)) throw error(ErrorCode.INVALID_CONTRACT, 'Unknown language feature');
       const value = parseJsonValue(input);
-      if (!value || Array.isArray(value) || typeof value !== 'object' || Object.keys(value).some(key => !['position', 'includeDeclaration', 'context', 'newName'].includes(key))) throw error(ErrorCode.INVALID_CONTRACT, 'Expected language request input');
-      const request = parseLanguageRequest({protocolVersion: 1, requestId: `request-${++nextRequest}`, scope, snapshot: document, kind, ...value});
+      if (!value || Array.isArray(value) || typeof value !== 'object' || Object.keys(value).some(key => !['position', 'includeDeclaration', 'context', 'newName', 'range', 'path', 'formatOptions'].includes(key))) throw error(ErrorCode.INVALID_CONTRACT, 'Expected language request input');
+      const diagnostics = kind === 'code-actions' ? {diagnosticContext: {revision: diagnosticRevision, diagnostics: diagnosticItems}} : {};
+      const request = parseLanguageRequest({protocolVersion: 1, requestId: `request-${++nextRequest}`, scope, snapshot: document, kind, ...value, ...diagnostics});
       const currentRevision = revision;
+      const currentDiagnostics = diagnosticRevision;
       const result = await languages.get(kind).request(request, options);
-      if (revision !== currentRevision) throw error(ErrorCode.STALE_SNAPSHOT, 'Document changed while language features were pending');
+      if (revision !== currentRevision || kind === 'code-actions' && diagnosticRevision !== currentDiagnostics) throw error(ErrorCode.STALE_SNAPSHOT, 'Document or diagnostics changed while language features were pending');
       return result;
     },
-    languageCapabilities() {assertOpen(); return Object.freeze({protocolVersion: 1, features: LANGUAGE_FEATURES, completionResolve: true, snippets: true, positions: 'utf16-zero-based', limits: LANGUAGE_LIMITS});},
+    languageCapabilities() {assertOpen(); return Object.freeze({protocolVersion: 1, features: LANGUAGE_FEATURES, completionResolve: true, codeActionResolve: true, snippets: true, positions: 'utf16-zero-based', limits: LANGUAGE_LIMITS});},
     async resolveCompletion(token, options = {}) {
       assertOpen(); const currentRevision = revision;
       const result = await languages.get('completion').resolve(token, options);
@@ -361,6 +379,19 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
     },
     prepareCompletion(result, itemIndex = 0) {assertOpen(); return languages.get('completion').prepareCompletion(result, itemIndex);},
     releaseCompletion(result) {assertOpen(); languages.get('completion').releaseCompletion(result);},
+    async resolveCodeAction(token, options = {}) {
+      assertOpen(); const currentRevision = revision, currentDiagnostics = diagnosticRevision;
+      const result = await languages.get('code-actions').resolve(token, options);
+      if (revision !== currentRevision || diagnosticRevision !== currentDiagnostics) throw error(ErrorCode.STALE_SNAPSHOT, 'Document or diagnostics changed while action resolution was pending');
+      return result;
+    },
+    prepareCodeAction(result, itemIndex = 0) {assertOpen(); return languages.get('code-actions').prepareEdit(result, itemIndex);},
+    releaseCodeActions(result) {assertOpen(); languages.get('code-actions').release(result);},
+    prepareFormatting(result) {
+      assertOpen(); const kind = Object.getOwnPropertyDescriptor(result ?? {}, 'kind')?.value;
+      if (!['format-document', 'format-range'].includes(kind)) throw error(ErrorCode.INVALID_CONTRACT, 'Expected a formatting result');
+      return languages.get(kind).prepareEdit(result);
+    },
     listPlugins() {assertOpen(); return Object.freeze([...plugins.values()].filter(state => state.ready && state.active).map(state => state.manifest));},
     listCommands() {
       assertOpen();

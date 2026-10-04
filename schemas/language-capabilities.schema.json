@@ -16,10 +16,16 @@
         "document-symbols",
         "signature-help",
         "prepare-rename",
-        "rename"
+        "rename",
+        "format-document",
+        "format-range",
+        "code-actions"
       ]
     },
     "completionResolve": {
+      "const": true
+    },
+    "codeActionResolve": {
       "const": true
     },
     "snippets": {
@@ -89,6 +95,7 @@
     "protocolVersion",
     "features",
     "completionResolve",
+    "codeActionResolve",
     "snippets",
     "positions",
     "limits"

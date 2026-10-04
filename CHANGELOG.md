@@ -2,6 +2,10 @@
 
 ## 0.11.0 — Unreleased
 
+- Add document/range formatting and diagnostic-bound code action lists/resolution.
+  Validate selection scope, newline policy and current snapshots; route proposed
+  changes through separately reviewed workspace edits. Preserve diagnostic APIs.
+
 - Add prepare-rename/rename providers, reviewed multi-file edit plans, reproducible
   previews, per-file CAS, durable intent/receipt journals and observational recovery.
   Add independently reviewed inverse proposals and killed-process HTTP examples.

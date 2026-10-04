@@ -189,12 +189,16 @@
               "signature-help",
               "prepare-rename",
               "rename",
+              "format-document",
+              "format-range",
+              "code-actions",
               "completion-resolve",
-              "completion-snippets"
+              "completion-snippets",
+              "code-action-resolve"
             ]
           },
           "minItems": 1,
-          "maxItems": 12,
+          "maxItems": 16,
           "uniqueItems": true
         },
         "permissions": {
@@ -321,6 +325,26 @@
               "capabilities": {
                 "contains": {
                   "const": "completion"
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "capabilities": {
+                "contains": {
+                  "const": "code-action-resolve"
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "capabilities": {
+                "contains": {
+                  "const": "code-actions"
                 }
               }
             }

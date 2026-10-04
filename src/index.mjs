@@ -8,6 +8,7 @@ export { createDiagnosticsRegistry } from './lifecycle.mjs';
 export { createLanguageRegistry } from './lifecycle.mjs';
 export { LANGUAGE_FEATURES, LANGUAGE_CAPABILITIES, parseLanguageRequest, parseLanguageResult, createLanguageResult } from './contracts.mjs';
 export {LANGUAGE_LIMITS, parseSnippet, parseCompletionItem, parseSignatureHelp} from './language-assistance.mjs';
+export {CODE_ACTION_KINDS, LANGUAGE_EDIT_LIMITS, parseFormattingOptions, parseCodeAction} from './language-editing.mjs';
 export { createPluginHost } from './host.mjs';
 
 /** Declare an ESM plugin. Activation is performed by a host with explicit grants. */

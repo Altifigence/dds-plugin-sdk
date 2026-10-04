@@ -25,5 +25,5 @@ export const LANGUAGE_ASSISTANCE_SCHEMAS = Object.freeze({
   'completion-item': COMPLETION_ITEM_SCHEMA,
   'signature-help': SIGNATURE_HELP_SCHEMA,
   'language-snippet': {...text(limits.snippetChars), $comment: 'Runtime accepts $n, ${n}, ${n:literal}, one $0 and escapes for backslash/dollar/braces. Indices are 0..99; no variables, nesting, choices or transforms. Mirrored defaults must agree; expansion is <=16384 UTF-16 units and <=128 explicit stops.'},
-  'language-capabilities': object({protocolVersion: {const: 1}, features: {const: LANGUAGE_FEATURES}, completionResolve: {const: true}, snippets: {const: true}, positions: {const: 'utf16-zero-based'}, limits: object(Object.fromEntries(Object.entries(limits).map(([key, value]) => [key, {const: value}])))}),
+  'language-capabilities': object({protocolVersion: {const: 1}, features: {const: LANGUAGE_FEATURES}, completionResolve: {const: true}, codeActionResolve: {const: true}, snippets: {const: true}, positions: {const: 'utf16-zero-based'}, limits: object(Object.fromEntries(Object.entries(limits).map(([key, value]) => [key, {const: value}])))}),
 });

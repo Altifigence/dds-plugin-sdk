@@ -3,6 +3,7 @@ import { SEMVER_PATTERN } from './patterns.mjs';
 import {parseCompletionItem, parseLanguageContext, parseSignatureHelp, completionEdits} from './language-assistance.mjs';
 import {textIndex, languageText, languageCall} from './language-values.mjs';
 import {parseWorkspaceEdit} from './workspace-edit-contracts.mjs';
+import {parseFormattingOptions, parseCodeActionContext, parseCodeActions, validateFormattingEdit, validateCodeActions} from './language-editing.mjs';
 
 const encoder = new TextEncoder();
 const identifierPattern = /^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$/;
@@ -11,8 +12,8 @@ const uriPattern = /^[A-Za-z][A-Za-z0-9+.-]*:[^\s\u0000-\u001f\u007f]+$/;
 const permissions = ['document.read', 'diagnostics.publish'];
 const workspacePermissions = ['workspace.read', 'workspace.write', 'backend.invoke'];
 const allPermissions = [...permissions, ...workspacePermissions, 'language.provide'];
-export const LANGUAGE_FEATURES = Object.freeze(['completion', 'hover', 'definition', 'references', 'document-symbols', 'signature-help', 'prepare-rename', 'rename']);
-export const LANGUAGE_CAPABILITIES = Object.freeze([...LANGUAGE_FEATURES, 'completion-resolve', 'completion-snippets']);
+export const LANGUAGE_FEATURES = Object.freeze(['completion', 'hover', 'definition', 'references', 'document-symbols', 'signature-help', 'prepare-rename', 'rename', 'format-document', 'format-range', 'code-actions']);
+export const LANGUAGE_CAPABILITIES = Object.freeze([...LANGUAGE_FEATURES, 'completion-resolve', 'completion-snippets', 'code-action-resolve']);
 
 function fail(path, message) {
   throw new PluginSdkError(ErrorCode.INVALID_CONTRACT, `${path}: ${message}`);
@@ -173,6 +174,7 @@ export function parseManifest(value) {
   };
   if (manifestVersion === 2) {
     if (output.capabilities.some(capability => ['completion-resolve', 'completion-snippets'].includes(capability)) && !output.capabilities.includes('completion')) fail('manifest.capabilities', 'completion extension requires completion');
+    if (output.capabilities.includes('code-action-resolve') && !output.capabilities.includes('code-actions')) fail('manifest.capabilities', 'code action resolve requires code-actions');
     output.runtime = enumeration(value.runtime, ['ui', 'workspace'], 'manifest.runtime');
     if (output.runtime === 'ui' && output.permissions.some(permission => workspacePermissions.includes(permission))) fail('manifest.permissions', 'UI plugins cannot request workspace or backend permissions');
     record(value.source, ['visibility', 'licenseFile'], ['repository'], 'manifest.source');
@@ -431,15 +433,16 @@ function inDocumentRange(value, text) {
 /** Language API v1: returned text is never HTML or a command. Snippets are explicit data. */
 export function parseLanguageRequest(value) {
   value = input(value, LIMITS.requestBytes, 'request');
-  record(value, ['protocolVersion', 'requestId', 'scope', 'snapshot', 'kind'], ['position', 'includeDeclaration', 'context', 'newName'], 'request');
+  record(value, ['protocolVersion', 'requestId', 'scope', 'snapshot', 'kind'], ['position', 'includeDeclaration', 'context', 'newName', 'range', 'path', 'formatOptions', 'diagnosticContext'], 'request');
   const kind = enumeration(value.kind, LANGUAGE_FEATURES, 'request.kind');
   const output = {
     protocolVersion: version(value.protocolVersion, 'request.protocolVersion'),
     requestId: string(value.requestId, 128, 'request.requestId'),
     scope: scope(value.scope, 'request.scope'), snapshot: snapshot(value.snapshot, 'request.snapshot', true), kind,
   };
-  if (kind === 'document-symbols') {
-    if (Object.hasOwn(value, 'position')) fail('request.position', 'document symbols do not take a position');
+  const formatting = ['format-document', 'format-range'].includes(kind);
+  if (kind === 'document-symbols' || formatting || kind === 'code-actions') {
+    if (Object.hasOwn(value, 'position')) fail('request.position', 'this feature does not take a position');
   } else {
     output.position = position(value.position, 'request.position');
     inDocument(output.position, output.snapshot.text, 'request.position');
@@ -449,7 +452,21 @@ export function parseLanguageRequest(value) {
     if (kind !== 'references' || typeof value.includeDeclaration !== 'boolean') fail('request.includeDeclaration', 'only references accept a boolean');
     output.includeDeclaration = value.includeDeclaration;
   }
-  if (Object.hasOwn(value, 'context')) output.context = parseLanguageContext(kind, value.context);
+  if (kind === 'code-actions') output.context = parseCodeActionContext(value.context);
+  else if (Object.hasOwn(value, 'context')) output.context = parseLanguageContext(kind, value.context);
+  if (formatting || kind === 'code-actions') output.path = parseWorkspacePath(value.path);
+  else if (Object.hasOwn(value, 'path')) fail('request.path', 'path is unsupported for this feature');
+  if (kind === 'format-range' || kind === 'code-actions') {
+    output.range = range(value.range, 'request.range'); textIndex(output.snapshot.text).range(output.range);
+  } else if (Object.hasOwn(value, 'range')) fail('request.range', 'range is unsupported for this feature');
+  if (formatting) output.formatOptions = parseFormattingOptions(value.formatOptions);
+  else if (Object.hasOwn(value, 'formatOptions')) fail('request.formatOptions', 'options are unsupported for this feature');
+  if (kind === 'code-actions') {
+    record(value.diagnosticContext, ['revision', 'diagnostics'], [], 'request.diagnosticContext');
+    const diagnostics = Object.freeze(array(value.diagnosticContext.diagnostics, LIMITS.maxDiagnostics, 'request.diagnosticContext.diagnostics', diagnostic));
+    const index = textIndex(output.snapshot.text); for (const diagnostic of diagnostics) index.range(diagnostic.range);
+    output.diagnosticContext = Object.freeze({revision: integer(value.diagnosticContext.revision, Number.MAX_SAFE_INTEGER, 'request.diagnosticContext.revision'), diagnostics});
+  } else if (Object.hasOwn(value, 'diagnosticContext')) fail('request.diagnosticContext', 'diagnostics are unsupported for this feature');
   if (kind === 'rename') {
     output.newName = languageText(value.newName, 256);
     if (/[\u0000-\u001f\u007f]/.test(output.newName)) fail('request.newName', 'control characters are unsupported');
@@ -503,6 +520,8 @@ export function parseLanguageResult(value) {
     data: kind === 'signature-help' ? parseSignatureHelp(value.data)
       : kind === 'prepare-rename' ? renamePreparation(value.data)
       : kind === 'rename' ? value.data === null ? null : languageCall(() => parseWorkspaceEdit(value.data))
+      : ['format-document', 'format-range'].includes(kind) ? value.data === null ? null : languageCall(() => parseWorkspaceEdit(value.data))
+      : kind === 'code-actions' ? parseCodeActions(value.data)
       : kind === 'hover' ? hover(value.data, 'result.data') : Object.freeze(array(value.data, LIMITS.maxLanguageItems, 'result.data', readers[kind])),
   }), LIMITS.resultBytes, 'result');
 }
@@ -511,6 +530,8 @@ export function assertLanguageResultMatchesRequest(result, request) {
   assertIdentityMatches(result, request);
   if (result.kind !== request.kind) fail('result.kind', 'does not match request');
   if (['signature-help', 'rename'].includes(result.kind)) return;
+  if (['format-document', 'format-range'].includes(result.kind)) {validateFormattingEdit(request, result.data); return;}
+  if (result.kind === 'code-actions') {validateCodeActions(request, result.data); return;}
   if (result.kind === 'prepare-rename') {
     if (result.data !== null) {
       textIndex(request.snapshot.text).range(result.data.range);

@@ -11,6 +11,9 @@ See [language assistance](LANGUAGE_ASSISTANCE.md) for bounds and runtime checks.
 `prepare-rename`/`rename` add proposals; [workspace edits](WORKSPACE_EDITS.md) preview
 and apply them through existing file methods with a separate current approval and
 journal. The Node journal is optional, operator-owned storage outside the workspace.
+[Formatting and code actions](LANGUAGE_EDITING.md) are opt-in language proposals;
+accepted diagnostic publications invalidate action selections. Existing diagnostic
+call results and single-file edit sessions retain their contracts.
 
 | Surface | Supported scope |
 | --- | --- |
