@@ -80,7 +80,15 @@
       "types": "./src/devtools.d.mts",
       "import": "./src/devtools.mjs"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./project-watch": {
+      "types": "./src/project-watch.d.mts",
+      "import": "./src/project-watch.mjs"
+    },
+    "./project-watch-node": {
+      "types": "./src/project-watch-node.d.mts",
+      "import": "./src/project-watch-node.mjs"
+    }
   },
   "bin": {
     "dds-plugin": "./bin/dds-plugin.mjs"
@@ -120,7 +128,9 @@
     "example:observe": "node examples/workspace-observation/run.mjs",
     "benchmark:files": "node scripts/benchmark-file-reads.mjs",
     "example:artifacts": "node examples/binary-artifacts/run.mjs",
-    "benchmark:artifacts": "node scripts/benchmark-artifacts.mjs"
+    "benchmark:artifacts": "node scripts/benchmark-artifacts.mjs",
+    "example:project-watch": "node examples/project-watch/run.mjs",
+    "benchmark:project-watch": "node scripts/benchmark-project-watch.mjs"
   },
   "devDependencies": {
     "typescript": "5.9.3"

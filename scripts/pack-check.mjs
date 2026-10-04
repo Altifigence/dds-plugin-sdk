@@ -53,6 +53,8 @@ try {
   assert.match(run(process.execPath, ['durable-job-example/run.mjs'], consumer), /killed child, current authorization and no automatic replay verified/);
   await cp(join(installed, 'examples', 'stored-artifacts'), join(consumer, 'stored-artifacts-example'), {recursive:true});
   assert.match(run(process.execPath, ['stored-artifacts-example/run.mjs'], consumer), /source deletion, verified resumed download and explicit retry verified/);
+  await cp(join(installed, 'examples', 'project-watch'), join(consumer, 'project-watch-example'), {recursive:true});
+  assert.match(run(process.execPath, ['project-watch-example/run.mjs'], consumer), /initial snapshot, atomic save and resource cleanup verified/);
   await cp(join(installed, 'examples', 'workspace-observation'), join(consumer, 'observation-example'), {recursive:true});
   assert.match(run(process.execPath, ['observation-example/run.mjs'], consumer), /file changes, retained draft and resumed job verified/);
   for (const entry of Object.values(metadata.exports)) {

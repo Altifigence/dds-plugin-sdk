@@ -10,6 +10,7 @@ import {BINARY_ARTIFACT_LIMITS, parseBinaryArtifactRange} from './artifacts.mjs'
 import {JOB_STORE_LIMITS} from './job-storage.mjs';
 import {storageObject} from './job-storage-validation.mjs';
 import {nodeWorkspaceIdentity} from './workspace-identity-node.mjs';
+import {registerNodeWorkspace} from './node-workspace-context.mjs';
 import {ARTIFACT_STORE_LIMITS} from './artifact-storage.mjs';
 export {downloadJobBinaryArtifact} from './artifact-download-node.mjs';
 export {downloadStoredJobArtifact} from './stored-artifact-download-node.mjs';
@@ -37,6 +38,7 @@ export async function createNodeWorkspace({root, writable = true, manage = writa
   if (supplied.isSymbolicLink() || !supplied.isDirectory()) throw workspaceFailure('unsafe_path', 'Workspace root must be a real directory');
   const canonical = await fs.realpath(root), initial = await fs.lstat(canonical, {bigint: true});
   let closed = false, queued = 0, binaryOperations = 0, tail = Promise.resolve();
+  const lifetime = new AbortController();
   async function checkRoot() {
     if (closed) throw workspaceFailure('disposed', 'Workspace is disposed');
     const now = await fs.lstat(canonical, {bigint: true});
@@ -125,7 +127,7 @@ export async function createNodeWorkspace({root, writable = true, manage = writa
     await checkRoot(); const parent = path.dirname(target), current = await fs.lstat(parent, {bigint:true});
     if (current.isSymbolicLink() || !sameIdentity(current,expected) || !contained(canonical,await fs.realpath(parent))) throw workspaceFailure('unsafe_path','Workspace parent identity changed');
   }
-  return Object.freeze({
+  const workspace = Object.freeze({
     capabilities: Object.freeze({read: true, write: !!writable, manage: !!writable && !!manage}),
     async listFiles(relative = '', {signal} = {}) {
       try {
@@ -229,8 +231,10 @@ export async function createNodeWorkspace({root, writable = true, manage = writa
       requireManage();if(expectedRevision!==undefined)requireSha256(expectedRevision);
       return mutate(async()=>{const entry=await resolve(relative);if(entry.stat.isFile()){requireSingleLink(entry.stat);if(expectedRevision!==undefined&&(await rawRead(relative,signal)).revision!==expectedRevision)throw workspaceFailure('conflict','The file revision changed');aborted(signal);await fs.unlink(entry.target);}else if(entry.stat.isDirectory()){if(expectedRevision!==undefined)throw workspaceFailure('invalid_request','Directory removal has no file revision');aborted(signal);await fs.rmdir(entry.target);}else throw workspaceFailure('unsupported','Unsupported workspace entry');return Object.freeze({path:relative});},signal);
     },
-    dispose(){closed=true;},
+    dispose(){if(closed)return;closed=true;lifetime.abort(workspaceFailure('disposed','Workspace is disposed'));},
   });
+  registerNodeWorkspace(workspace, {canonical, initial, resolve, checkRoot, rawRead, signal:lifetime.signal});
+  return workspace;
 }
 
 /** Operator-pinned executable/arguments. No request-controlled shell or command line. */
