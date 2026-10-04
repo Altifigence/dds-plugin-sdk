@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.10.0/schemas/project-snapshot.schema.json",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.11.0/schemas/project-snapshot.schema.json",
   "title": "project-snapshot",
   "type": "object",
   "properties": {

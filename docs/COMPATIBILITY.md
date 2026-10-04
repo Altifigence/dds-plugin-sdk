@@ -1,5 +1,23 @@
 # Compatibility and availability
 
+## 0.11 language assistance and editing
+
+Optional `signature-help`, `completion-resolve` and `completion-snippets` extend the
+in-process host. Existing five language features and literal completion remain
+available. Older SDKs reject unknown manifest capabilities; these extensions do not
+change the workspace HTTP protocol. New plugin archives declare `>=0.11.0 <0.12.0`;
+verification retains the exact previously published 0.3.x through 0.10.x metadata.
+See [language assistance](LANGUAGE_ASSISTANCE.md) for bounds and runtime checks.
+`prepare-rename`/`rename` add proposals; [workspace edits](WORKSPACE_EDITS.md) preview
+and apply them through existing file methods with a separate current approval and
+journal. The Node journal is optional, operator-owned storage outside the workspace.
+[Formatting and code actions](LANGUAGE_EDITING.md) are opt-in language proposals;
+accepted diagnostic publications invalidate action selections. Existing diagnostic
+call results and single-file edit sessions retain their contracts.
+[Semantic tokens, folding, hints and hierarchical symbols](LANGUAGE_DISPLAY.md)
+extend SDK hosts and include a standalone browser example. The flat symbol API
+is unchanged. These features do not establish a DDS product editor integration.
+
 | Surface | Supported scope |
 | --- | --- |
 | SDK runtime | Node.js 22 or 24; ESM with TypeScript declarations; no runtime dependencies |
@@ -11,7 +29,7 @@
 | Browser-only DDS host | Native workspace transport is unavailable |
 | Language providers | Diagnostics plus completion, hover, definition, references and document symbols in SDK hosts since 0.3.0; no released DDS editor bridge is implied |
 | Project edit sessions | Client helpers in 0.3.0 over unchanged workspace protocol v1, including 0.2.x servers |
-| Download verification | Node API/CLI since 0.3.1; 0.10.0 accepts exact 0.3.x–0.10.x package metadata; no extraction, code execution or publisher authentication |
+| Download verification | Node API/CLI since 0.3.1; 0.11.0 accepts exact 0.3.x–0.11.x package metadata; no extraction, code execution or publisher authentication |
 | Development tools | `init`, `doctor`, `dev` since 0.4.0; local Node tools, explicit trusted-code execution |
 | Command jobs | Opt-in SDK host/client extension since 0.4.0; progress/logs/UTF-8 artifacts; v1 hello unchanged |
 | File and job observation | Client helpers since 0.5.0; 0.6 uses revision reads when supported; job reads need enabled 0.4+ hosts |

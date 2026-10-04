@@ -13,10 +13,15 @@ import {TRANSFER_QUEUE_SCHEMAS} from './transfer-queue-schemas.mjs';
 import { SEMVER_PATTERN } from './patterns.mjs';
 import { THEME_SCHEMA } from './themes.mjs';
 import {WORKSPACE_LIMITS} from './workspace-protocol.mjs';
-import { LANGUAGE_FEATURES } from './contracts.mjs';
+import { LANGUAGE_FEATURES, LANGUAGE_CAPABILITIES } from './contracts.mjs';
+import {LANGUAGE_ASSISTANCE_SCHEMAS, COMPLETION_ITEM_SCHEMA, SIGNATURE_HELP_SCHEMA, languageContextSchema} from './language-assistance-schemas.mjs';
+import {SDK_VERSION} from './version.mjs';
+import {WORKSPACE_EDIT_SCHEMA, WORKSPACE_EDIT_SCHEMAS} from './workspace-edit-schemas.mjs';
+import {FORMATTING_OPTIONS_SCHEMA, CODE_ACTION_SCHEMA, CODE_ACTION_CONTEXT_SCHEMA, LANGUAGE_EDITING_SCHEMAS} from './language-editing-schemas.mjs';
+import {LANGUAGE_DISPLAY_SCHEMAS, SEMANTIC_TOKENS_SCHEMA, FOLDING_SCHEMA, INLAY_SCHEMA} from './language-display-schemas.mjs';
 
 const schema = 'https://json-schema.org/draft/2020-12/schema';
-const base = 'https://github.com/Altifigence/dds-plugin-sdk/blob/v0.10.0/schemas/';
+const base = `https://github.com/Altifigence/dds-plugin-sdk/blob/v${SDK_VERSION}/schemas/`;
 const text = maxLength => ({type: 'string', minLength: 1, maxLength});
 const integer = (maximum, minimum = 0) => ({type: 'integer', minimum, maximum});
 const object = (properties, required = Object.keys(properties)) => ({type: 'object', properties, required, additionalProperties: false});
@@ -48,7 +53,7 @@ const manifestV1 = object({
 });
 const manifestV2 = object({
   manifestVersion: {const: 2}, ...commonManifest, runtime: {enum: ['ui', 'workspace']},
-  capabilities: list({enum: ['diagnostics', 'commands', ...LANGUAGE_FEATURES]}, 7, 1, true),
+  capabilities: list({enum: ['diagnostics', 'commands', ...LANGUAGE_CAPABILITIES]}, LANGUAGE_CAPABILITIES.length + 2, 1, true),
   permissions: list({enum: ['document.read', 'diagnostics.publish', 'workspace.read', 'workspace.write', 'backend.invoke', 'language.provide']}, 6, 0, true),
   supportedHosts: list({enum: ['test-host', 'workspace-host']}, 2, 1, true),
   license: {...text(512), pattern: '^[A-Za-z0-9.+:()\\s-]+$', 'x-licenseExpression': true, $comment: 'Runtime validates bounded SPDX-style expression grammar; this is not legal permission.'},
@@ -59,6 +64,9 @@ const manifestV2 = object({
   }, ['visibility', 'licenseFile']),
 });
 manifestV2.allOf = [{if: {properties: {runtime: {const: 'ui'}}}, then: {properties: {permissions: {items: {enum: ['document.read', 'diagnostics.publish', 'language.provide']}}}}}];
+manifestV2.allOf.push({if: {properties: {capabilities: {contains: {enum: ['completion-resolve', 'completion-snippets']}}}}, then: {properties: {capabilities: {contains: {const: 'completion'}}}}});
+manifestV2.allOf.push({if: {properties: {capabilities: {contains: {const: 'code-action-resolve'}}}}, then: {properties: {capabilities: {contains: {const: 'code-actions'}}}}});
+manifestV2.allOf.push({if: {properties: {capabilities: {contains: {const: 'semantic-tokens-delta'}}}}, then: {properties: {capabilities: {contains: {const: 'semantic-tokens'}}}}});
 const commandParameter = object({
   name: identifier(128), label: text(128), type: {enum: ['string', 'number', 'boolean']}, required: {type: 'boolean'},
   choices: list(text(256), 32, 1, true),
@@ -72,7 +80,15 @@ function define(name, body) {
 const range = object({start: position, end: position});
 const location = object({path: {...text(1024), $comment: 'Runtime additionally enforces a relative, traversal-free workspace path.'}, range});
 const languageData = {
-  completion: list(object({label: text(256), insertText: {type: 'string', maxLength: 16_384}, detail: text(2048), range}, ['label', 'insertText']), LIMITS.maxLanguageItems),
+  'semantic-tokens': SEMANTIC_TOKENS_SCHEMA, 'folding-ranges': FOLDING_SCHEMA, 'inlay-hints': INLAY_SCHEMA,
+  'document-symbol-tree': {$ref: base + 'document-symbol-tree.schema.json'},
+  completion: list(COMPLETION_ITEM_SCHEMA, LIMITS.maxLanguageItems),
+  'signature-help': SIGNATURE_HELP_SCHEMA,
+  'prepare-rename': {oneOf: [{type: 'null'}, object({range, placeholder: text(256)})]},
+  rename: {oneOf: [{type: 'null'}, WORKSPACE_EDIT_SCHEMA]},
+  'format-document': {oneOf: [{type: 'null'}, WORKSPACE_EDIT_SCHEMA]},
+  'format-range': {oneOf: [{type: 'null'}, WORKSPACE_EDIT_SCHEMA]},
+  'code-actions': list(CODE_ACTION_SCHEMA, 100),
   hover: {oneOf: [{type: 'null'}, object({text: text(16_384), range}, ['text'])]},
   definition: list(location, LIMITS.maxLanguageItems), references: list(location, LIMITS.maxLanguageItems),
   'document-symbols': list(object({name: text(256), kind: {enum: ['module', 'namespace', 'class', 'interface', 'function', 'method', 'variable', 'constant', 'property', 'type']}, range, selectionRange: range, detail: text(2048)}, ['name', 'kind', 'range', 'selectionRange']), LIMITS.maxLanguageItems),
@@ -101,6 +117,10 @@ const historyDisposition = {enum:['live','completed','interrupted','expired']};
 const historyCursor = {...text(40),pattern:'^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}:(?:0|[1-9][0-9]{0,2})$'};
 const historyItem = object({jobId,commandId:text(128),state:{enum:JOB_STATES},disposition:historyDisposition,startedAt:integer(Number.MAX_SAFE_INTEGER),updatedAt:integer(Number.MAX_SAFE_INTEGER),expiresAt:integer(Number.MAX_SAFE_INTEGER,1),revision:integer(Number.MAX_SAFE_INTEGER,1),attemptOf:{oneOf:[jobId,{type:'null'}]},contentPolicy:{enum:['metadata-only','host-redacted']},artifactCount:integer(JOB_LIMITS.artifacts),snapshotCount:integer(JOB_LIMITS.artifacts),resultAvailability:{enum:['none','source-references','snapshot-references','mixed-references','expired']}});
 export const SCHEMAS = Object.freeze({
+  ...Object.fromEntries(Object.entries(LANGUAGE_DISPLAY_SCHEMAS).map(([name, body]) => [name, define(name, body)])),
+  ...Object.fromEntries(Object.entries(LANGUAGE_EDITING_SCHEMAS).map(([name, body]) => [name, define(name, body)])),
+  ...Object.fromEntries(Object.entries(WORKSPACE_EDIT_SCHEMAS).map(([name, body]) => [name, define(name, body)])),
+  ...Object.fromEntries(Object.entries(LANGUAGE_ASSISTANCE_SCHEMAS).map(([name, body]) => [name, define(name, body)])),
   ...Object.fromEntries(Object.entries({...PROJECT_WATCH_SCHEMAS,...PROJECT_QUERY_SCHEMAS,...WORKSPACE_PROJECT_SCHEMAS,...ARTIFACT_TRANSFER_SCHEMAS,...UPLOAD_SCHEMAS,...TRANSFER_QUEUE_SCHEMAS}).map(([name,body])=>[name,define(name,body)])),
   'stored-artifact':define('stored-artifact',{...storedArtifact,$comment:'Runtime checks identity, labels are excluded, and capturedAt/expiresAt ordering and maximum retention.'}),
   'browser-artifact-checkpoint':define('browser-artifact-checkpoint',{
@@ -151,11 +171,21 @@ export const SCHEMAS = Object.freeze({
     protocolVersion: {const: 1}, requestId: text(128), scope, snapshot: object(identity),
     diagnostics: list(diagnostic, LIMITS.maxDiagnostics),
   })),
-  'language-request': define('language-request', {oneOf: LANGUAGE_FEATURES.map(kind => object({
-    protocolVersion: {const: 1}, requestId: text(128), scope,
-    snapshot: object({...identity, text: {type: 'string', maxLength: LIMITS.documentBytes, 'x-maxUtf8Bytes': LIMITS.documentBytes}}),
-    kind: {const: kind}, ...(kind === 'document-symbols' ? {} : {position}), ...(kind === 'references' ? {includeDeclaration: {type: 'boolean'}} : {}),
-  }, ['protocolVersion', 'requestId', 'scope', 'snapshot', 'kind', ...(kind === 'document-symbols' ? [] : ['position'])]))}),
+  'language-request': define('language-request', {oneOf: LANGUAGE_FEATURES.map(kind => {
+    const positional = !['document-symbols', 'format-document', 'format-range', 'code-actions', 'semantic-tokens', 'folding-ranges', 'inlay-hints', 'document-symbol-tree'].includes(kind);
+    const formatting = ['format-document', 'format-range'].includes(kind), action = kind === 'code-actions';
+    const fields = {
+      protocolVersion: {const: 1}, requestId: text(128), scope,
+      snapshot: object({...identity, text: {type: 'string', maxLength: LIMITS.documentBytes, 'x-maxUtf8Bytes': LIMITS.documentBytes}}), kind: {const: kind},
+      ...(positional ? {position} : {}), ...(kind === 'references' ? {includeDeclaration: {type: 'boolean'}} : {}),
+      ...(['completion', 'signature-help'].includes(kind) ? {context: languageContextSchema(kind)} : {}), ...(kind === 'rename' ? {newName: text(256)} : {}),
+      ...(formatting || action ? {path: text(1024)} : {}), ...(kind === 'format-range' || action || kind === 'inlay-hints' ? {range} : {}),
+      ...(kind === 'semantic-tokens' ? {previousResultId: {...text(36), pattern: '^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$'}} : {}),
+      ...(formatting ? {formatOptions: FORMATTING_OPTIONS_SCHEMA} : {}),
+      ...(action ? {context: CODE_ACTION_CONTEXT_SCHEMA, diagnosticContext: object({revision: integer(Number.MAX_SAFE_INTEGER), diagnostics: list(diagnostic, LIMITS.maxDiagnostics)})} : {}),
+    };
+    return object(fields, Object.keys(fields).filter(key => !['includeDeclaration', 'context', 'previousResultId'].includes(key)));
+  })}),
   'language-result': define('language-result', {oneOf: LANGUAGE_FEATURES.map(kind => object({
     protocolVersion: {const: 1}, requestId: text(128), scope, snapshot: object(identity), kind: {const: kind}, data: languageData[kind],
   }))}),

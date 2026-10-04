@@ -1,6 +1,6 @@
 {
   "name": "@altifigence/dds-plugin-sdk",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Plugin, theme and user-owned workspace tools for Digital Design Studio",
   "type": "module",
   "license": "Apache-2.0",
@@ -79,6 +79,14 @@
     "./devtools": {
       "types": "./src/devtools.d.mts",
       "import": "./src/devtools.mjs"
+    },
+    "./workspace-edits": {
+      "types": "./src/workspace-edits.d.mts",
+      "import": "./src/workspace-edits.mjs"
+    },
+    "./workspace-edits-node": {
+      "types": "./src/workspace-edits-node.d.mts",
+      "import": "./src/workspace-edits-node.mjs"
     },
     "./package.json": "./package.json",
     "./project-watch": {
@@ -180,7 +188,12 @@
     "example:transfer-queue": "node examples/transfer-queue/run.mjs",
     "example:transfer-queue-browser": "node examples/transfer-queue/serve.mjs",
     "benchmark:transfer-queue": "node scripts/benchmark-transfer-queue.mjs",
-    "example:browser-resume": "node examples/browser-resume/serve.mjs"
+    "example:browser-resume": "node examples/browser-resume/serve.mjs",
+    "example:assistance": "node examples/language-assistance/run.mjs",
+    "example:workspace-edits": "node examples/workspace-edits/run.mjs",
+    "example:language-editing": "node examples/language-editing/run.mjs",
+    "example:language-display": "node examples/language-display/run.mjs",
+    "example:language-display-browser": "node examples/language-display/serve.mjs"
   },
   "devDependencies": {
     "typescript": "5.9.3"

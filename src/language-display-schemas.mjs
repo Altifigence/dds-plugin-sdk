@@ -1,0 +1,16 @@
+import {LANGUAGE_DISPLAY_LIMITS as limits, SEMANTIC_STYLE_KEYS, DISPLAY_SYMBOL_KINDS} from './language-display.mjs';
+const object = (properties, required = Object.keys(properties)) => ({type: 'object', properties, required, additionalProperties: false});
+const text = maximum => ({type: 'string', minLength: 1, maxLength: maximum});
+const integer = (maximum, minimum = 0) => ({type: 'integer', minimum, maximum});
+const list = (items, maxItems, minItems = 0) => ({type: 'array', items, maxItems, minItems});
+const position = object({line: integer(262144), character: integer(262144)}), range = object({start: position, end: position});
+const id = {...text(128), pattern: '^[^\\u0000-\\u001f\\u007f]+$'};
+const name = {...text(64), pattern: '^[A-Za-z][A-Za-z0-9_.-]*$'};
+const data = list(integer(0x7fffffff), limits.semanticTokens * 5);
+export const SEMANTIC_LEGEND_SCHEMA = {...object({tokenTypes: list(object({name, style: {enum: SEMANTIC_STYLE_KEYS}}), limits.tokenTypes, 1), tokenModifiers: {...list(name, limits.tokenModifiers), uniqueItems: true}}), $comment: 'Runtime enforces unique type names.'};
+export const SEMANTIC_TOKENS_SCHEMA = {...object({resultId: id, legend: SEMANTIC_LEGEND_SCHEMA, data, updateKind: {enum: ['full', 'delta', 'fallback']}}, ['resultId', 'legend', 'data']), $comment: 'Five integers per token. Runtime validates legend references, sorted nonoverlapping UTF-16 ranges and the current document. Host overwrites resultId and updateKind.'};
+export const SEMANTIC_DELTA_SCHEMA = {...object({baseResultId: id, resultId: id, edits: list(object({start: integer(limits.semanticTokens * 5), deleteCount: integer(limits.semanticTokens * 5), data}, ['start', 'deleteCount']), limits.deltaEdits)}), $comment: 'Edits address the original integer array, are ordered and disjoint, and share the total insertion budget. The complete reconstructed result is validated against the new document.'};
+export const FOLDING_SCHEMA = {...list(object({range, kind: {enum: ['region', 'comment', 'imports']}, collapsedText: text(256)}, ['range']), limits.foldingRanges), $comment: 'Runtime rejects empty, duplicate, crossing or unordered ranges and nesting deeper than 32.'};
+export const INLAY_SCHEMA = {...list(object({position, label: {...text(1024), pattern: '^[^\\r\\n\\u0000]+$'}, kind: {enum: ['type', 'parameter']}, paddingLeft: {type: 'boolean'}, paddingRight: {type: 'boolean'}, tooltip: {type: 'string', maxLength: 4096}}, ['position', 'label']), limits.inlayHints), $comment: 'Plain text only. Runtime checks sorted positions within the requested range and document.'};
+export const SYMBOL_TREE_SCHEMA = {...list({$ref: '#/$defs/symbol'}, limits.symbols), $defs: {symbol: object({name: text(256), kind: {enum: DISPLAY_SYMBOL_KINDS}, range, selectionRange: range, detail: text(2048), children: list({$ref: '#/$defs/symbol'}, limits.symbols)}, ['name', 'kind', 'range', 'selectionRange'])}, $comment: 'Runtime limits the entire tree to 1000 symbols and 16 levels, with contained selections/children and ordered nonoverlapping siblings.'};
+export const LANGUAGE_DISPLAY_SCHEMAS = Object.freeze({'semantic-legend': SEMANTIC_LEGEND_SCHEMA, 'semantic-tokens': SEMANTIC_TOKENS_SCHEMA, 'semantic-tokens-delta': SEMANTIC_DELTA_SCHEMA, 'folding-ranges': FOLDING_SCHEMA, 'inlay-hints': INLAY_SCHEMA, 'document-symbol-tree': SYMBOL_TREE_SCHEMA});

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.10.0/schemas/manifest.schema.json",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.11.0/schemas/manifest.schema.json",
   "title": "manifest",
   "properties": {
     "id": {
@@ -185,11 +185,25 @@
               "hover",
               "definition",
               "references",
-              "document-symbols"
+              "document-symbols",
+              "signature-help",
+              "prepare-rename",
+              "rename",
+              "format-document",
+              "format-range",
+              "code-actions",
+              "semantic-tokens",
+              "folding-ranges",
+              "inlay-hints",
+              "document-symbol-tree",
+              "completion-resolve",
+              "completion-snippets",
+              "code-action-resolve",
+              "semantic-tokens-delta"
             ]
           },
           "minItems": 1,
-          "maxItems": 7,
+          "maxItems": 21,
           "uniqueItems": true
         },
         "permissions": {
@@ -293,6 +307,69 @@
                     "diagnostics.publish",
                     "language.provide"
                   ]
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "capabilities": {
+                "contains": {
+                  "enum": [
+                    "completion-resolve",
+                    "completion-snippets"
+                  ]
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "capabilities": {
+                "contains": {
+                  "const": "completion"
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "capabilities": {
+                "contains": {
+                  "const": "code-action-resolve"
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "capabilities": {
+                "contains": {
+                  "const": "code-actions"
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "capabilities": {
+                "contains": {
+                  "const": "semantic-tokens-delta"
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "capabilities": {
+                "contains": {
+                  "const": "semantic-tokens"
                 }
               }
             }

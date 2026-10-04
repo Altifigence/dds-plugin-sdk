@@ -1,4 +1,4 @@
-# API reference — 0.10.0
+# API reference — 0.11.0
 
 SDK 0.8 adds optional [job storage](JOB_STORAGE.md), [history and retry](JOB_HISTORY.md)
 and [stored result files](ARTIFACT_STORAGE.md). Existing v1 response shapes remain valid.
@@ -80,7 +80,7 @@ license eligibility or agreement acceptance. See [LICENSING](LICENSING.md).
 
 | Activation context member | Behavior |
 | --- | --- |
-| `host` | `{id: 'test-host' \| 'workspace-host', version: '0.10.0', protocolVersion: 1}` |
+| `host` | `{id: 'test-host' \| 'workspace-host', version: '0.11.0', protocolVersion: 1}` |
 | `pluginId`, `scope` | Manifest ID and opaque host `{projectId, sessionId}` |
 | `grants` | Frozen intersection of host grants and manifest permissions |
 | `signal` | Aborted on deactivation, host disposal or activation timeout |
@@ -311,3 +311,21 @@ explicit `File`. The HTTP client adds capability/begin/query/write/commit/abort
 methods. `/transfer-queue` exports `createTransferQueue`, options/snapshot validators,
 limits, states and phases. See [uploads](UPLOADS.md), [streaming](BROWSER_ARTIFACTS.md),
 [queue](TRANSFER_QUEUE.md) and [persistent recovery](BROWSER_RESUME.md).
+
+## Language assistance and editing (SDK 0.11.0)
+
+The root import adds signature help, completion resolution/snippets, rename,
+formatting, code actions, semantic tokens, folding, inlay hints and symbol trees.
+`host.languageCapabilities()` describes current features and limits;
+`host.validateLanguageResult(result)` checks actual host ownership and currency
+before painting. Features and modifiers require explicit manifest declarations.
+
+`/workspace-edits` supplies proposal/preview/receipt contracts, pure preview,
+reviewed application, observational recovery and explicit inverse proposals.
+`/workspace-edits-node` adds an operator-owned intent/receipt journal outside the
+workspace. Application uses existing conditional file methods and current
+authorization, with no automatic rollback or retry.
+
+See [assistance](LANGUAGE_ASSISTANCE.md), [workspace edits](WORKSPACE_EDITS.md),
+[formatting/actions](LANGUAGE_EDITING.md) and [language display](LANGUAGE_DISPLAY.md)
+for complete contracts, limits and independent examples.

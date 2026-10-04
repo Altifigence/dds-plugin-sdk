@@ -4,6 +4,11 @@ SDK 0.3.0 adds completion, hover, definition, references and flat document symbo
 Run `node examples/hello-language/run.mjs` after installing the SDK. The example
 implements a tiny teaching language; it is not a SystemVerilog compiler or LSP server.
 
+SDK 0.11 adds [signature help, lazy completion resolution and opt-in snippets](LANGUAGE_ASSISTANCE.md).
+It also adds [reviewed rename edits](WORKSPACE_EDITS.md), [formatting and code actions](LANGUAGE_EDITING.md),
+and [semantic tokens, folding, hints and hierarchical symbols](LANGUAGE_DISPLAY.md).
+The original literal contracts below continue to work without these capabilities.
+
 Declare each feature in manifest v2 `capabilities`, and declare `document.read`
 and `language.provide` in `permissions`. The host must explicitly grant both.
 Upgrading a plugin or installing its package does not grant permission.
@@ -39,7 +44,8 @@ const hover = await host.requestLanguage('hover', {
 | `document-symbols` | `{}` | Up to 500 `{name, kind, range, selectionRange, detail?}` symbols |
 
 Positions are zero-based lines and UTF-16 code-unit offsets, including CRLF input.
-Completion insertion is literal text, not snippets or commands. Hover and detail
+Completion insertion defaults to literal text. Opt-in 0.11 snippets use the bounded
+grammar in the assistance guide. Hover and detail
 strings are plain text: render them as text, never `innerHTML` or trusted Markdown.
 The runtime validates current-document positions, ordered ranges and symbol
 selection containment. Location paths are relative workspace paths; they do not
@@ -56,7 +62,8 @@ additional 16,384-character limits. Type declarations and JSON Schemas accompany
 runtime validation; the runtime additionally checks UTF-8 budgets and document ranges.
 
 Provider selection uses the highest selector priority, then earliest registration.
-One provider answers each request. Document symbols are flat; this version does
+One provider answers each request. `document-symbols` remains flat; the separate
+`document-symbol-tree` feature returns a validated hierarchy. This version does
 not merge providers, auto-apply edits, execute completion commands or start LSP processes.
 
 These APIs run in the SDK's trusted in-process host. They do not add editor UI
@@ -71,8 +78,9 @@ manifest v2에 해당 capability와 `document.read`, `language.provide` 권한�
 선언하고 호스트가 두 권한을 명시적으로 승인해야 합니다. 설치·업데이트만으로
 권한이 생기지 않습니다. `examples/hello-language/run.mjs`는 다섯 기능을 실제로 실행합니다.
 
-좌표는 0부터 시작하는 줄과 UTF-16 문자 위치입니다. 자동완성은 일반 삽입 문자열,
-호버는 일반 텍스트이며 HTML·명령·스니펫으로 실행하지 않습니다. 정의·참조의
+좌표는 0부터 시작하는 줄과 UTF-16 문자 위치입니다. 자동완성은 기본적으로 일반
+삽입 문자열이며, 0.11의 스니펫은 별도 capability와 제한 문법을 사용합니다.
+호버는 일반 텍스트이며 HTML·명령을 실행하지 않습니다. 정의·참조의
 상대 경로는 파일 접근 권한을 부여하지 않습니다. 문서 변경, 취소, 시간 초과,
 등록 해제 또는 호스트 종료 뒤의 결과는 폐기합니다. 결과의 요청 ID와 문서 버전도 확인합니다.
 

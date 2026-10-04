@@ -17,7 +17,7 @@ async function hostFor(kind, provide, extra) {
   await host.activate(plugin(kind, provide, extra)); host.setDocument(document); return host;
 }
 
-for (const kind of LANGUAGE_FEATURES) {
+for (const kind of Object.keys(payload)) {
   test(`${kind}: immutable scoped contracts and host result`, async () => {
     const req = parseLanguageRequest(JSON.stringify(request(kind)));
     const result = createLanguageResult(req, payload[kind]);

@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.11.0/schemas/workspace-edit-receipt.schema.json",
+  "title": "workspace-edit-receipt",
+  "type": "object",
+  "properties": {
+    "formatVersion": {
+      "const": 1
+    },
+    "planId": {
+      "type": "string",
+      "minLength": 36,
+      "maxLength": 36,
+      "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+    },
+    "digest": {
+      "type": "string",
+      "minLength": 64,
+      "maxLength": 64,
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "workspaceId": {
+      "type": "string",
+      "minLength": 36,
+      "maxLength": 36,
+      "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+    },
+    "status": {
+      "enum": [
+        "completed",
+        "partial",
+        "not-applied",
+        "uncertain"
+      ]
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "index": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 31
+          },
+          "state": {
+            "enum": [
+              "applied",
+              "not-applied",
+              "conflicted",
+              "unknown"
+            ]
+          },
+          "canCompensate": {
+            "type": "boolean"
+          },
+          "errorCode": {
+            "enum": [
+              "invalid_request",
+              "authentication_required",
+              "permission_denied",
+              "workspace_mismatch",
+              "generation_mismatch",
+              "not_found",
+              "conflict",
+              "unsafe_path",
+              "budget_exceeded",
+              "cancelled",
+              "disposed",
+              "plugin_mismatch",
+              "provider_failed",
+              "unsupported",
+              "unavailable",
+              "transport_failed"
+            ]
+          }
+        },
+        "required": [
+          "index",
+          "state",
+          "canCompensate"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1,
+      "maxItems": 32
+    },
+    "executionStopped": {
+      "type": "boolean"
+    },
+    "errorCode": {
+      "enum": [
+        "invalid_request",
+        "authentication_required",
+        "permission_denied",
+        "workspace_mismatch",
+        "generation_mismatch",
+        "not_found",
+        "conflict",
+        "unsafe_path",
+        "budget_exceeded",
+        "cancelled",
+        "disposed",
+        "plugin_mismatch",
+        "provider_failed",
+        "unsupported",
+        "unavailable",
+        "transport_failed"
+      ]
+    },
+    "journalError": {
+      "enum": [
+        "invalid_request",
+        "authentication_required",
+        "permission_denied",
+        "workspace_mismatch",
+        "generation_mismatch",
+        "not_found",
+        "conflict",
+        "unsafe_path",
+        "budget_exceeded",
+        "cancelled",
+        "disposed",
+        "plugin_mismatch",
+        "provider_failed",
+        "unsupported",
+        "unavailable",
+        "transport_failed"
+      ]
+    },
+    "currentGeneration": {
+      "type": "string",
+      "minLength": 36,
+      "maxLength": 36,
+      "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+    },
+    "journalPhase": {
+      "enum": [
+        "applying",
+        "completed",
+        "stopped"
+      ]
+    },
+    "journalRevision": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    }
+  },
+  "required": [
+    "formatVersion",
+    "planId",
+    "digest",
+    "workspaceId",
+    "status",
+    "steps"
+  ],
+  "additionalProperties": false
+}

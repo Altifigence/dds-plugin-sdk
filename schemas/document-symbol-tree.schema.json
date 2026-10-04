@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.11.0/schemas/document-symbol-tree.schema.json",
+  "title": "document-symbol-tree",
+  "type": "array",
+  "items": {
+    "$ref": "#/$defs/symbol"
+  },
+  "maxItems": 1000,
+  "minItems": 0,
+  "$defs": {
+    "symbol": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "kind": {
+          "enum": [
+            "module",
+            "namespace",
+            "class",
+            "interface",
+            "function",
+            "method",
+            "variable",
+            "constant",
+            "property",
+            "type"
+          ]
+        },
+        "range": {
+          "type": "object",
+          "properties": {
+            "start": {
+              "type": "object",
+              "properties": {
+                "line": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 262144
+                },
+                "character": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 262144
+                }
+              },
+              "required": [
+                "line",
+                "character"
+              ],
+              "additionalProperties": false
+            },
+            "end": {
+              "type": "object",
+              "properties": {
+                "line": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 262144
+                },
+                "character": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 262144
+                }
+              },
+              "required": [
+                "line",
+                "character"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "start",
+            "end"
+          ],
+          "additionalProperties": false
+        },
+        "selectionRange": {
+          "type": "object",
+          "properties": {
+            "start": {
+              "type": "object",
+              "properties": {
+                "line": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 262144
+                },
+                "character": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 262144
+                }
+              },
+              "required": [
+                "line",
+                "character"
+              ],
+              "additionalProperties": false
+            },
+            "end": {
+              "type": "object",
+              "properties": {
+                "line": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 262144
+                },
+                "character": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 262144
+                }
+              },
+              "required": [
+                "line",
+                "character"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "start",
+            "end"
+          ],
+          "additionalProperties": false
+        },
+        "detail": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/symbol"
+          },
+          "maxItems": 1000,
+          "minItems": 0
+        }
+      },
+      "required": [
+        "name",
+        "kind",
+        "range",
+        "selectionRange"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$comment": "Runtime limits the entire tree to 1000 symbols and 16 levels, with contained selections/children and ordered nonoverlapping siblings."
+}

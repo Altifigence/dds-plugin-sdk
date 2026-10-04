@@ -10,6 +10,16 @@ a small ESM package, TypeScript declarations and versioned contracts. Connect
 your own workspace and tools with the Node.js host and HTTP client. The SDK has
 **zero runtime dependencies**.
 
+Version 0.11 adds [signature help and completion assistance](docs/LANGUAGE_ASSISTANCE.md),
+including lazy item resolution, limited snippets and pure insertion previews.
+Run `npm run example:assistance` for the nested-call and Unicode example.
+[Reviewed workspace edits](docs/WORKSPACE_EDITS.md) add rename proposals, multi-file
+previews, conditional application and readback after interrupted operations.
+[Formatting and code actions](docs/LANGUAGE_EDITING.md) use that review path for
+document/range formatting and diagnostic-bound, optionally lazy quick fixes.
+[Language display](docs/LANGUAGE_DISPLAY.md) adds bounded semantic full/delta
+tokens, folding, literal inlay hints and hierarchical symbols with a browser example.
+
 The 0.10 line adds [browser artifact streaming](docs/BROWSER_ARTIFACTS.md)
 with bounded sinks, incremental whole-file hashes, explicit storage readback and
 main-thread/Worker examples, and [selected-file uploads](docs/UPLOADS.md) with private
@@ -24,7 +34,7 @@ application, private engines/services and production signing systems are outside
 this repository. Read the [public scope](docs/PUBLIC_SCOPE.md) and
 [compatibility table](docs/COMPATIBILITY.md) for exact boundaries.
 
-Version **0.10.0** supports Node 22 and 24. Manifest v1 diagnostic plugins remain
+Version **0.11.0** supports Node 22 and 24. Manifest v1 diagnostic plugins remain
 compatible. Manifest v2 adds commands, permission-scoped workspace and backend
 APIs, and open-source or proprietary distribution metadata. Themes export to
 the XML format already supported by DDS. The workspace host runs trusted plugins
@@ -84,7 +94,7 @@ mkdir my-dds-plugin
 cd my-dds-plugin
 npm init -y
 npm pkg set type=module
-npm install --ignore-scripts --save-exact https://github.com/Altifigence/dds-plugin-sdk/releases/download/v0.10.0/altifigence-dds-plugin-sdk-0.10.0.tgz
+npm install --ignore-scripts --save-exact https://github.com/Altifigence/dds-plugin-sdk/releases/download/v0.11.0/altifigence-dds-plugin-sdk-0.11.0.tgz
 ```
 
 Copy the example's `plugin.mjs` and `run.mjs` into this directory, then run:
@@ -102,7 +112,7 @@ and the install command includes the release URL rather than an npm registry loo
 
 | Import | Use |
 | --- | --- |
-| `@altifigence/dds-plugin-sdk` | Plugin host, diagnostics and five language providers, bounded parsers, types and lifecycle helpers |
+| `@altifigence/dds-plugin-sdk` | Plugin host, diagnostics, language providers and completion assistance, bounded parsers, types and lifecycle helpers |
 | `@altifigence/dds-plugin-sdk/testing` | `createTestHost` for trusted local plugins |
 | `@altifigence/dds-plugin-sdk/schemas` | JSON Schema objects, loaded separately from the core API |
 | `@altifigence/dds-plugin-sdk/themes` | Validate a theme and export DDS XML without executing theme code |

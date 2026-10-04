@@ -1,0 +1,169 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.11.0/schemas/language-capabilities.schema.json",
+  "title": "language-capabilities",
+  "type": "object",
+  "properties": {
+    "protocolVersion": {
+      "const": 1
+    },
+    "features": {
+      "const": [
+        "completion",
+        "hover",
+        "definition",
+        "references",
+        "document-symbols",
+        "signature-help",
+        "prepare-rename",
+        "rename",
+        "format-document",
+        "format-range",
+        "code-actions",
+        "semantic-tokens",
+        "folding-ranges",
+        "inlay-hints",
+        "document-symbol-tree"
+      ]
+    },
+    "completionResolve": {
+      "const": true
+    },
+    "codeActionResolve": {
+      "const": true
+    },
+    "semanticTokensDelta": {
+      "const": true
+    },
+    "snippets": {
+      "const": true
+    },
+    "positions": {
+      "const": "utf16-zero-based"
+    },
+    "limits": {
+      "type": "object",
+      "properties": {
+        "signatures": {
+          "const": 16
+        },
+        "parameters": {
+          "const": 64
+        },
+        "signatureLabel": {
+          "const": 2048
+        },
+        "documentation": {
+          "const": 16384
+        },
+        "snippetChars": {
+          "const": 16384
+        },
+        "snippetStops": {
+          "const": 128
+        },
+        "additionalEdits": {
+          "const": 32
+        },
+        "resolveDataBytes": {
+          "const": 4096
+        },
+        "resolveTokens": {
+          "const": 128
+        },
+        "resolveBytes": {
+          "const": 4194304
+        },
+        "resolveTtlMs": {
+          "const": 60000
+        },
+        "resolvePending": {
+          "const": 4
+        }
+      },
+      "required": [
+        "signatures",
+        "parameters",
+        "signatureLabel",
+        "documentation",
+        "snippetChars",
+        "snippetStops",
+        "additionalEdits",
+        "resolveDataBytes",
+        "resolveTokens",
+        "resolveBytes",
+        "resolveTtlMs",
+        "resolvePending"
+      ],
+      "additionalProperties": false
+    },
+    "displayLimits": {
+      "type": "object",
+      "properties": {
+        "semanticTokens": {
+          "const": 20000
+        },
+        "tokenTypes": {
+          "const": 64
+        },
+        "tokenModifiers": {
+          "const": 16
+        },
+        "deltaEdits": {
+          "const": 64
+        },
+        "semanticCacheEntries": {
+          "const": 8
+        },
+        "semanticCacheBytes": {
+          "const": 4194304
+        },
+        "semanticCacheTtlMs": {
+          "const": 60000
+        },
+        "foldingRanges": {
+          "const": 1000
+        },
+        "foldingDepth": {
+          "const": 32
+        },
+        "inlayHints": {
+          "const": 1000
+        },
+        "symbols": {
+          "const": 1000
+        },
+        "symbolDepth": {
+          "const": 16
+        }
+      },
+      "required": [
+        "semanticTokens",
+        "tokenTypes",
+        "tokenModifiers",
+        "deltaEdits",
+        "semanticCacheEntries",
+        "semanticCacheBytes",
+        "semanticCacheTtlMs",
+        "foldingRanges",
+        "foldingDepth",
+        "inlayHints",
+        "symbols",
+        "symbolDepth"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "protocolVersion",
+    "features",
+    "completionResolve",
+    "codeActionResolve",
+    "semanticTokensDelta",
+    "snippets",
+    "positions",
+    "limits",
+    "displayLimits"
+  ],
+  "additionalProperties": false
+}

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.10.0/schemas/language-result.schema.json",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.11.0/schemas/language-result.schema.json",
   "title": "language-result",
   "oneOf": [
     {
@@ -83,6 +83,7 @@
               },
               "insertText": {
                 "type": "string",
+                "minLength": 0,
                 "maxLength": 16384
               },
               "detail": {
@@ -139,13 +140,105 @@
                   "end"
                 ],
                 "additionalProperties": false
+              },
+              "documentation": {
+                "type": "string",
+                "minLength": 0,
+                "maxLength": 16384
+              },
+              "insertTextFormat": {
+                "enum": [
+                  "literal",
+                  "snippet"
+                ]
+              },
+              "additionalTextEdits": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "range": {
+                      "type": "object",
+                      "properties": {
+                        "start": {
+                          "type": "object",
+                          "properties": {
+                            "line": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 262144
+                            },
+                            "character": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 262144
+                            }
+                          },
+                          "required": [
+                            "line",
+                            "character"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "end": {
+                          "type": "object",
+                          "properties": {
+                            "line": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 262144
+                            },
+                            "character": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 262144
+                            }
+                          },
+                          "required": [
+                            "line",
+                            "character"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "start",
+                        "end"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "text": {
+                      "type": "string",
+                      "minLength": 0,
+                      "maxLength": 16384
+                    }
+                  },
+                  "required": [
+                    "range",
+                    "text"
+                  ],
+                  "additionalProperties": false
+                },
+                "minItems": 0,
+                "maxItems": 32
+              },
+              "resolveData": {
+                "x-maxUtf8Bytes": 4096,
+                "$comment": "Bounded plain JSON. The host retains this provider data privately and issues a one-use opaque token."
+              },
+              "resolveToken": {
+                "type": "string",
+                "minLength": 36,
+                "maxLength": 36,
+                "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$"
               }
             },
             "required": [
               "label",
               "insertText"
             ],
-            "additionalProperties": false
+            "additionalProperties": false,
+            "$comment": "Runtime checks well-formed UTF-16, exact snippet grammar, expanded text, document ranges, non-overlap and final file size. Provider-supplied resolveToken is rejected by the registry. Resolution cannot change label/insertion/format/range."
           },
           "minItems": 0,
           "maxItems": 500
@@ -819,6 +912,2273 @@
           },
           "minItems": 0,
           "maxItems": 500
+        }
+      },
+      "required": [
+        "protocolVersion",
+        "requestId",
+        "scope",
+        "snapshot",
+        "kind",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "protocolVersion": {
+          "const": 1
+        },
+        "requestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "sessionId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "projectId",
+            "sessionId"
+          ],
+          "additionalProperties": false
+        },
+        "snapshot": {
+          "type": "object",
+          "properties": {
+            "uri": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048,
+              "pattern": "^[A-Za-z][A-Za-z0-9+.-]*:[^\\s\\u0000-\\u001f\\u007f]+$"
+            },
+            "languageId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
+            },
+            "modelVersion": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "workspaceRevision": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "uri",
+            "languageId",
+            "modelVersion",
+            "workspaceRevision"
+          ],
+          "additionalProperties": false
+        },
+        "kind": {
+          "const": "signature-help"
+        },
+        "data": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "signatures": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 2048
+                      },
+                      "parameters": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "label": {
+                              "type": "array",
+                              "items": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 2048
+                              },
+                              "minItems": 2,
+                              "maxItems": 2,
+                              "$comment": "Ordered nonempty UTF-16 label offsets within the signature, without split Unicode characters."
+                            },
+                            "documentation": {
+                              "type": "string",
+                              "minLength": 0,
+                              "maxLength": 16384
+                            }
+                          },
+                          "required": [
+                            "label"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "minItems": 0,
+                        "maxItems": 64
+                      },
+                      "documentation": {
+                        "type": "string",
+                        "minLength": 0,
+                        "maxLength": 16384
+                      }
+                    },
+                    "required": [
+                      "label",
+                      "parameters"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "minItems": 1,
+                  "maxItems": 16
+                },
+                "activeSignature": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 15
+                },
+                "activeParameter": {
+                  "oneOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 63
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "signatures",
+                "activeSignature",
+                "activeParameter"
+              ],
+              "additionalProperties": false
+            }
+          ],
+          "$comment": "Runtime additionally checks active indices; activeParameter is null only for the selected signature with no parameters."
+        }
+      },
+      "required": [
+        "protocolVersion",
+        "requestId",
+        "scope",
+        "snapshot",
+        "kind",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "protocolVersion": {
+          "const": 1
+        },
+        "requestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "sessionId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "projectId",
+            "sessionId"
+          ],
+          "additionalProperties": false
+        },
+        "snapshot": {
+          "type": "object",
+          "properties": {
+            "uri": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048,
+              "pattern": "^[A-Za-z][A-Za-z0-9+.-]*:[^\\s\\u0000-\\u001f\\u007f]+$"
+            },
+            "languageId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
+            },
+            "modelVersion": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "workspaceRevision": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "uri",
+            "languageId",
+            "modelVersion",
+            "workspaceRevision"
+          ],
+          "additionalProperties": false
+        },
+        "kind": {
+          "const": "prepare-rename"
+        },
+        "data": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "range": {
+                  "type": "object",
+                  "properties": {
+                    "start": {
+                      "type": "object",
+                      "properties": {
+                        "line": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 262144
+                        },
+                        "character": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 262144
+                        }
+                      },
+                      "required": [
+                        "line",
+                        "character"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "end": {
+                      "type": "object",
+                      "properties": {
+                        "line": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 262144
+                        },
+                        "character": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 262144
+                        }
+                      },
+                      "required": [
+                        "line",
+                        "character"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "start",
+                    "end"
+                  ],
+                  "additionalProperties": false
+                },
+                "placeholder": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                }
+              },
+              "required": [
+                "range",
+                "placeholder"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "required": [
+        "protocolVersion",
+        "requestId",
+        "scope",
+        "snapshot",
+        "kind",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "protocolVersion": {
+          "const": 1
+        },
+        "requestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "sessionId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "projectId",
+            "sessionId"
+          ],
+          "additionalProperties": false
+        },
+        "snapshot": {
+          "type": "object",
+          "properties": {
+            "uri": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048,
+              "pattern": "^[A-Za-z][A-Za-z0-9+.-]*:[^\\s\\u0000-\\u001f\\u007f]+$"
+            },
+            "languageId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
+            },
+            "modelVersion": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "workspaceRevision": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "uri",
+            "languageId",
+            "modelVersion",
+            "workspaceRevision"
+          ],
+          "additionalProperties": false
+        },
+        "kind": {
+          "const": "rename"
+        },
+        "data": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "formatVersion": {
+                  "const": 1
+                },
+                "id": {
+                  "type": "string",
+                  "minLength": 36,
+                  "maxLength": 36,
+                  "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                },
+                "title": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "changes": {
+                  "type": "array",
+                  "items": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "const": "edit"
+                          },
+                          "path": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1024,
+                            "$comment": "Runtime enforces the shared relative workspace path policy, protected components and cross-platform case-insensitive disjoint paths."
+                          },
+                          "baseRevision": {
+                            "type": "string",
+                            "minLength": 64,
+                            "maxLength": 64,
+                            "pattern": "^[a-f0-9]{64}$"
+                          },
+                          "edits": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "range": {
+                                  "type": "object",
+                                  "properties": {
+                                    "start": {
+                                      "type": "object",
+                                      "properties": {
+                                        "line": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 262144
+                                        },
+                                        "character": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 262144
+                                        }
+                                      },
+                                      "required": [
+                                        "line",
+                                        "character"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "end": {
+                                      "type": "object",
+                                      "properties": {
+                                        "line": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 262144
+                                        },
+                                        "character": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 262144
+                                        }
+                                      },
+                                      "required": [
+                                        "line",
+                                        "character"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "required": [
+                                    "start",
+                                    "end"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "text": {
+                                  "type": "string",
+                                  "minLength": 0,
+                                  "maxLength": 262144,
+                                  "x-maxUtf8Bytes": 262144
+                                }
+                              },
+                              "required": [
+                                "range",
+                                "text"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "minItems": 1,
+                            "maxItems": 500
+                          },
+                          "reason": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 2048
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "path",
+                          "baseRevision",
+                          "edits"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "const": "create"
+                          },
+                          "path": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1024,
+                            "$comment": "Runtime enforces the shared relative workspace path policy, protected components and cross-platform case-insensitive disjoint paths."
+                          },
+                          "content": {
+                            "type": "string",
+                            "minLength": 0,
+                            "maxLength": 262144,
+                            "x-maxUtf8Bytes": 262144
+                          },
+                          "reason": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 2048
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "path",
+                          "content"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "const": "move"
+                          },
+                          "path": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1024,
+                            "$comment": "Runtime enforces the shared relative workspace path policy, protected components and cross-platform case-insensitive disjoint paths."
+                          },
+                          "baseRevision": {
+                            "type": "string",
+                            "minLength": 64,
+                            "maxLength": 64,
+                            "pattern": "^[a-f0-9]{64}$"
+                          },
+                          "newPath": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1024,
+                            "$comment": "Runtime enforces the shared relative workspace path policy, protected components and cross-platform case-insensitive disjoint paths."
+                          },
+                          "reason": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 2048
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "path",
+                          "baseRevision",
+                          "newPath"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "const": "delete"
+                          },
+                          "path": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1024,
+                            "$comment": "Runtime enforces the shared relative workspace path policy, protected components and cross-platform case-insensitive disjoint paths."
+                          },
+                          "baseRevision": {
+                            "type": "string",
+                            "minLength": 64,
+                            "maxLength": 64,
+                            "pattern": "^[a-f0-9]{64}$"
+                          },
+                          "reason": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 2048
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "path",
+                          "baseRevision"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  },
+                  "minItems": 1,
+                  "maxItems": 32
+                }
+              },
+              "required": [
+                "formatVersion",
+                "id",
+                "title",
+                "changes"
+              ],
+              "additionalProperties": false,
+              "x-maxUtf8Bytes": 1048576,
+              "$comment": "At most 1000 edits in all files. Runtime validates paths, scalar strings and edit geometry. Revisions are full content SHA-256. Destinations must be absent, and affected paths cannot be duplicated or nested."
+            }
+          ]
+        }
+      },
+      "required": [
+        "protocolVersion",
+        "requestId",
+        "scope",
+        "snapshot",
+        "kind",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "protocolVersion": {
+          "const": 1
+        },
+        "requestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "sessionId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "projectId",
+            "sessionId"
+          ],
+          "additionalProperties": false
+        },
+        "snapshot": {
+          "type": "object",
+          "properties": {
+            "uri": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048,
+              "pattern": "^[A-Za-z][A-Za-z0-9+.-]*:[^\\s\\u0000-\\u001f\\u007f]+$"
+            },
+            "languageId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
+            },
+            "modelVersion": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "workspaceRevision": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "uri",
+            "languageId",
+            "modelVersion",
+            "workspaceRevision"
+          ],
+          "additionalProperties": false
+        },
+        "kind": {
+          "const": "format-document"
+        },
+        "data": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "formatVersion": {
+                  "const": 1
+                },
+                "id": {
+                  "type": "string",
+                  "minLength": 36,
+                  "maxLength": 36,
+                  "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                },
+                "title": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "changes": {
+                  "type": "array",
+                  "items": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "const": "edit"
+                          },
+                          "path": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1024,
+                            "$comment": "Runtime enforces the shared relative workspace path policy, protected components and cross-platform case-insensitive disjoint paths."
+                          },
+                          "baseRevision": {
+                            "type": "string",
+                            "minLength": 64,
+                            "maxLength": 64,
+                            "pattern": "^[a-f0-9]{64}$"
+                          },
+                          "edits": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "range": {
+                                  "type": "object",
+                                  "properties": {
+                                    "start": {
+                                      "type": "object",
+                                      "properties": {
+                                        "line": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 262144
+                                        },
+                                        "character": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 262144
+                                        }
+                                      },
+                                      "required": [
+                                        "line",
+                                        "character"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "end": {
+                                      "type": "object",
+                                      "properties": {
+                                        "line": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 262144
+                                        },
+                                        "character": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 262144
+                                        }
+                                      },
+                                      "required": [
+                                        "line",
+                                        "character"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "required": [
+                                    "start",
+                                    "end"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "text": {
+                                  "type": "string",
+                                  "minLength": 0,
+                                  "maxLength": 262144,
+                                  "x-maxUtf8Bytes": 262144
+                                }
+                              },
+                              "required": [
+                                "range",
+                                "text"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "minItems": 1,
+                            "maxItems": 500
+                          },
+                          "reason": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 2048
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "path",
+                          "baseRevision",
+                          "edits"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "const": "create"
+                          },
+                          "path": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1024,
+                            "$comment": "Runtime enforces the shared relative workspace path policy, protected components and cross-platform case-insensitive disjoint paths."
+                          },
+                          "content": {
+                            "type": "string",
+                            "minLength": 0,
+                            "maxLength": 262144,
+                            "x-maxUtf8Bytes": 262144
+                          },
+                          "reason": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 2048
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "path",
+                          "content"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "const": "move"
+                          },
+                          "path": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1024,
+                            "$comment": "Runtime enforces the shared relative workspace path policy, protected components and cross-platform case-insensitive disjoint paths."
+                          },
+                          "baseRevision": {
+                            "type": "string",
+                            "minLength": 64,
+                            "maxLength": 64,
+                            "pattern": "^[a-f0-9]{64}$"
+                          },
+                          "newPath": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1024,
+                            "$comment": "Runtime enforces the shared relative workspace path policy, protected components and cross-platform case-insensitive disjoint paths."
+                          },
+                          "reason": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 2048
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "path",
+                          "baseRevision",
+                          "newPath"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "const": "delete"
+                          },
+                          "path": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1024,
+                            "$comment": "Runtime enforces the shared relative workspace path policy, protected components and cross-platform case-insensitive disjoint paths."
+                          },
+                          "baseRevision": {
+                            "type": "string",
+                            "minLength": 64,
+                            "maxLength": 64,
+                            "pattern": "^[a-f0-9]{64}$"
+                          },
+                          "reason": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 2048
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "path",
+                          "baseRevision"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  },
+                  "minItems": 1,
+                  "maxItems": 32
+                }
+              },
+              "required": [
+                "formatVersion",
+                "id",
+                "title",
+                "changes"
+              ],
+              "additionalProperties": false,
+              "x-maxUtf8Bytes": 1048576,
+              "$comment": "At most 1000 edits in all files. Runtime validates paths, scalar strings and edit geometry. Revisions are full content SHA-256. Destinations must be absent, and affected paths cannot be duplicated or nested."
+            }
+          ]
+        }
+      },
+      "required": [
+        "protocolVersion",
+        "requestId",
+        "scope",
+        "snapshot",
+        "kind",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "protocolVersion": {
+          "const": 1
+        },
+        "requestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "sessionId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "projectId",
+            "sessionId"
+          ],
+          "additionalProperties": false
+        },
+        "snapshot": {
+          "type": "object",
+          "properties": {
+            "uri": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048,
+              "pattern": "^[A-Za-z][A-Za-z0-9+.-]*:[^\\s\\u0000-\\u001f\\u007f]+$"
+            },
+            "languageId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
+            },
+            "modelVersion": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "workspaceRevision": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "uri",
+            "languageId",
+            "modelVersion",
+            "workspaceRevision"
+          ],
+          "additionalProperties": false
+        },
+        "kind": {
+          "const": "format-range"
+        },
+        "data": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "formatVersion": {
+                  "const": 1
+                },
+                "id": {
+                  "type": "string",
+                  "minLength": 36,
+                  "maxLength": 36,
+                  "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                },
+                "title": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "changes": {
+                  "type": "array",
+                  "items": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "const": "edit"
+                          },
+                          "path": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1024,
+                            "$comment": "Runtime enforces the shared relative workspace path policy, protected components and cross-platform case-insensitive disjoint paths."
+                          },
+                          "baseRevision": {
+                            "type": "string",
+                            "minLength": 64,
+                            "maxLength": 64,
+                            "pattern": "^[a-f0-9]{64}$"
+                          },
+                          "edits": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "range": {
+                                  "type": "object",
+                                  "properties": {
+                                    "start": {
+                                      "type": "object",
+                                      "properties": {
+                                        "line": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 262144
+                                        },
+                                        "character": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 262144
+                                        }
+                                      },
+                                      "required": [
+                                        "line",
+                                        "character"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "end": {
+                                      "type": "object",
+                                      "properties": {
+                                        "line": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 262144
+                                        },
+                                        "character": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 262144
+                                        }
+                                      },
+                                      "required": [
+                                        "line",
+                                        "character"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "required": [
+                                    "start",
+                                    "end"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "text": {
+                                  "type": "string",
+                                  "minLength": 0,
+                                  "maxLength": 262144,
+                                  "x-maxUtf8Bytes": 262144
+                                }
+                              },
+                              "required": [
+                                "range",
+                                "text"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "minItems": 1,
+                            "maxItems": 500
+                          },
+                          "reason": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 2048
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "path",
+                          "baseRevision",
+                          "edits"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "const": "create"
+                          },
+                          "path": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1024,
+                            "$comment": "Runtime enforces the shared relative workspace path policy, protected components and cross-platform case-insensitive disjoint paths."
+                          },
+                          "content": {
+                            "type": "string",
+                            "minLength": 0,
+                            "maxLength": 262144,
+                            "x-maxUtf8Bytes": 262144
+                          },
+                          "reason": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 2048
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "path",
+                          "content"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "const": "move"
+                          },
+                          "path": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1024,
+                            "$comment": "Runtime enforces the shared relative workspace path policy, protected components and cross-platform case-insensitive disjoint paths."
+                          },
+                          "baseRevision": {
+                            "type": "string",
+                            "minLength": 64,
+                            "maxLength": 64,
+                            "pattern": "^[a-f0-9]{64}$"
+                          },
+                          "newPath": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1024,
+                            "$comment": "Runtime enforces the shared relative workspace path policy, protected components and cross-platform case-insensitive disjoint paths."
+                          },
+                          "reason": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 2048
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "path",
+                          "baseRevision",
+                          "newPath"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "const": "delete"
+                          },
+                          "path": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1024,
+                            "$comment": "Runtime enforces the shared relative workspace path policy, protected components and cross-platform case-insensitive disjoint paths."
+                          },
+                          "baseRevision": {
+                            "type": "string",
+                            "minLength": 64,
+                            "maxLength": 64,
+                            "pattern": "^[a-f0-9]{64}$"
+                          },
+                          "reason": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 2048
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "path",
+                          "baseRevision"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  },
+                  "minItems": 1,
+                  "maxItems": 32
+                }
+              },
+              "required": [
+                "formatVersion",
+                "id",
+                "title",
+                "changes"
+              ],
+              "additionalProperties": false,
+              "x-maxUtf8Bytes": 1048576,
+              "$comment": "At most 1000 edits in all files. Runtime validates paths, scalar strings and edit geometry. Revisions are full content SHA-256. Destinations must be absent, and affected paths cannot be duplicated or nested."
+            }
+          ]
+        }
+      },
+      "required": [
+        "protocolVersion",
+        "requestId",
+        "scope",
+        "snapshot",
+        "kind",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "protocolVersion": {
+          "const": 1
+        },
+        "requestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "sessionId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "projectId",
+            "sessionId"
+          ],
+          "additionalProperties": false
+        },
+        "snapshot": {
+          "type": "object",
+          "properties": {
+            "uri": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048,
+              "pattern": "^[A-Za-z][A-Za-z0-9+.-]*:[^\\s\\u0000-\\u001f\\u007f]+$"
+            },
+            "languageId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
+            },
+            "modelVersion": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "workspaceRevision": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "uri",
+            "languageId",
+            "modelVersion",
+            "workspaceRevision"
+          ],
+          "additionalProperties": false
+        },
+        "kind": {
+          "const": "code-actions"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "kind": {
+                "enum": [
+                  "quickfix",
+                  "refactor",
+                  "refactor.extract",
+                  "refactor.inline",
+                  "refactor.rewrite",
+                  "source.organizeImports",
+                  "source.fixAll"
+                ]
+              },
+              "isPreferred": {
+                "type": "boolean"
+              },
+              "disabled": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2048
+                  }
+                },
+                "required": [
+                  "reason"
+                ],
+                "additionalProperties": false
+              },
+              "diagnosticIndices": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 499
+                },
+                "maxItems": 500,
+                "uniqueItems": true
+              },
+              "edit": {
+                "type": "object",
+                "properties": {
+                  "formatVersion": {
+                    "const": 1
+                  },
+                  "id": {
+                    "type": "string",
+                    "minLength": 36,
+                    "maxLength": 36,
+                    "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "changes": {
+                    "type": "array",
+                    "items": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "const": "edit"
+                            },
+                            "path": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 1024,
+                              "$comment": "Runtime enforces the shared relative workspace path policy, protected components and cross-platform case-insensitive disjoint paths."
+                            },
+                            "baseRevision": {
+                              "type": "string",
+                              "minLength": 64,
+                              "maxLength": 64,
+                              "pattern": "^[a-f0-9]{64}$"
+                            },
+                            "edits": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "range": {
+                                    "type": "object",
+                                    "properties": {
+                                      "start": {
+                                        "type": "object",
+                                        "properties": {
+                                          "line": {
+                                            "type": "integer",
+                                            "minimum": 0,
+                                            "maximum": 262144
+                                          },
+                                          "character": {
+                                            "type": "integer",
+                                            "minimum": 0,
+                                            "maximum": 262144
+                                          }
+                                        },
+                                        "required": [
+                                          "line",
+                                          "character"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      "end": {
+                                        "type": "object",
+                                        "properties": {
+                                          "line": {
+                                            "type": "integer",
+                                            "minimum": 0,
+                                            "maximum": 262144
+                                          },
+                                          "character": {
+                                            "type": "integer",
+                                            "minimum": 0,
+                                            "maximum": 262144
+                                          }
+                                        },
+                                        "required": [
+                                          "line",
+                                          "character"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "required": [
+                                      "start",
+                                      "end"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "text": {
+                                    "type": "string",
+                                    "minLength": 0,
+                                    "maxLength": 262144,
+                                    "x-maxUtf8Bytes": 262144
+                                  }
+                                },
+                                "required": [
+                                  "range",
+                                  "text"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "minItems": 1,
+                              "maxItems": 500
+                            },
+                            "reason": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 2048
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "path",
+                            "baseRevision",
+                            "edits"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "const": "create"
+                            },
+                            "path": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 1024,
+                              "$comment": "Runtime enforces the shared relative workspace path policy, protected components and cross-platform case-insensitive disjoint paths."
+                            },
+                            "content": {
+                              "type": "string",
+                              "minLength": 0,
+                              "maxLength": 262144,
+                              "x-maxUtf8Bytes": 262144
+                            },
+                            "reason": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 2048
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "path",
+                            "content"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "const": "move"
+                            },
+                            "path": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 1024,
+                              "$comment": "Runtime enforces the shared relative workspace path policy, protected components and cross-platform case-insensitive disjoint paths."
+                            },
+                            "baseRevision": {
+                              "type": "string",
+                              "minLength": 64,
+                              "maxLength": 64,
+                              "pattern": "^[a-f0-9]{64}$"
+                            },
+                            "newPath": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 1024,
+                              "$comment": "Runtime enforces the shared relative workspace path policy, protected components and cross-platform case-insensitive disjoint paths."
+                            },
+                            "reason": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 2048
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "path",
+                            "baseRevision",
+                            "newPath"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "const": "delete"
+                            },
+                            "path": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 1024,
+                              "$comment": "Runtime enforces the shared relative workspace path policy, protected components and cross-platform case-insensitive disjoint paths."
+                            },
+                            "baseRevision": {
+                              "type": "string",
+                              "minLength": 64,
+                              "maxLength": 64,
+                              "pattern": "^[a-f0-9]{64}$"
+                            },
+                            "reason": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 2048
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "path",
+                            "baseRevision"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    "minItems": 1,
+                    "maxItems": 32
+                  }
+                },
+                "required": [
+                  "formatVersion",
+                  "id",
+                  "title",
+                  "changes"
+                ],
+                "additionalProperties": false,
+                "x-maxUtf8Bytes": 1048576,
+                "$comment": "At most 1000 edits in all files. Runtime validates paths, scalar strings and edit geometry. Revisions are full content SHA-256. Destinations must be absent, and affected paths cannot be duplicated or nested."
+              },
+              "resolveData": {
+                "x-maxUtf8Bytes": 4096
+              },
+              "resolveToken": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 36,
+                "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$"
+              }
+            },
+            "required": [
+              "title",
+              "kind"
+            ],
+            "additionalProperties": false,
+            "allOf": [
+              {
+                "if": {
+                  "required": [
+                    "disabled"
+                  ]
+                },
+                "then": {
+                  "properties": {
+                    "edit": false,
+                    "resolveData": false,
+                    "resolveToken": false
+                  }
+                },
+                "else": {
+                  "anyOf": [
+                    {
+                      "required": [
+                        "edit"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "resolveData"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "resolveToken"
+                      ]
+                    }
+                  ]
+                }
+              }
+            ],
+            "$comment": "Runtime validates bounded JSON, diagnostics against the current bundle, action kinds against requested filters, and current-document edits. Host tokens cannot be supplied by providers. Labels, disabled reasons and other display text are never executable."
+          },
+          "minItems": 0,
+          "maxItems": 100
+        }
+      },
+      "required": [
+        "protocolVersion",
+        "requestId",
+        "scope",
+        "snapshot",
+        "kind",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "protocolVersion": {
+          "const": 1
+        },
+        "requestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "sessionId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "projectId",
+            "sessionId"
+          ],
+          "additionalProperties": false
+        },
+        "snapshot": {
+          "type": "object",
+          "properties": {
+            "uri": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048,
+              "pattern": "^[A-Za-z][A-Za-z0-9+.-]*:[^\\s\\u0000-\\u001f\\u007f]+$"
+            },
+            "languageId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
+            },
+            "modelVersion": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "workspaceRevision": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "uri",
+            "languageId",
+            "modelVersion",
+            "workspaceRevision"
+          ],
+          "additionalProperties": false
+        },
+        "kind": {
+          "const": "semantic-tokens"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "resultId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+            },
+            "legend": {
+              "type": "object",
+              "properties": {
+                "tokenTypes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64,
+                        "pattern": "^[A-Za-z][A-Za-z0-9_.-]*$"
+                      },
+                      "style": {
+                        "enum": [
+                          "plain",
+                          "keyword",
+                          "type",
+                          "function",
+                          "variable",
+                          "number",
+                          "string",
+                          "comment",
+                          "operator"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "style"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "maxItems": 64,
+                  "minItems": 1
+                },
+                "tokenModifiers": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "pattern": "^[A-Za-z][A-Za-z0-9_.-]*$"
+                  },
+                  "maxItems": 16,
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "tokenTypes",
+                "tokenModifiers"
+              ],
+              "additionalProperties": false,
+              "$comment": "Runtime enforces unique type names."
+            },
+            "data": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2147483647
+              },
+              "maxItems": 100000,
+              "minItems": 0
+            },
+            "updateKind": {
+              "enum": [
+                "full",
+                "delta",
+                "fallback"
+              ]
+            }
+          },
+          "required": [
+            "resultId",
+            "legend",
+            "data"
+          ],
+          "additionalProperties": false,
+          "$comment": "Five integers per token. Runtime validates legend references, sorted nonoverlapping UTF-16 ranges and the current document. Host overwrites resultId and updateKind."
+        }
+      },
+      "required": [
+        "protocolVersion",
+        "requestId",
+        "scope",
+        "snapshot",
+        "kind",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "protocolVersion": {
+          "const": 1
+        },
+        "requestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "sessionId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "projectId",
+            "sessionId"
+          ],
+          "additionalProperties": false
+        },
+        "snapshot": {
+          "type": "object",
+          "properties": {
+            "uri": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048,
+              "pattern": "^[A-Za-z][A-Za-z0-9+.-]*:[^\\s\\u0000-\\u001f\\u007f]+$"
+            },
+            "languageId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
+            },
+            "modelVersion": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "workspaceRevision": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "uri",
+            "languageId",
+            "modelVersion",
+            "workspaceRevision"
+          ],
+          "additionalProperties": false
+        },
+        "kind": {
+          "const": "folding-ranges"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "range": {
+                "type": "object",
+                "properties": {
+                  "start": {
+                    "type": "object",
+                    "properties": {
+                      "line": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 262144
+                      },
+                      "character": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 262144
+                      }
+                    },
+                    "required": [
+                      "line",
+                      "character"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "end": {
+                    "type": "object",
+                    "properties": {
+                      "line": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 262144
+                      },
+                      "character": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 262144
+                      }
+                    },
+                    "required": [
+                      "line",
+                      "character"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "start",
+                  "end"
+                ],
+                "additionalProperties": false
+              },
+              "kind": {
+                "enum": [
+                  "region",
+                  "comment",
+                  "imports"
+                ]
+              },
+              "collapsedText": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            },
+            "required": [
+              "range"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 1000,
+          "minItems": 0,
+          "$comment": "Runtime rejects empty, duplicate, crossing or unordered ranges and nesting deeper than 32."
+        }
+      },
+      "required": [
+        "protocolVersion",
+        "requestId",
+        "scope",
+        "snapshot",
+        "kind",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "protocolVersion": {
+          "const": 1
+        },
+        "requestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "sessionId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "projectId",
+            "sessionId"
+          ],
+          "additionalProperties": false
+        },
+        "snapshot": {
+          "type": "object",
+          "properties": {
+            "uri": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048,
+              "pattern": "^[A-Za-z][A-Za-z0-9+.-]*:[^\\s\\u0000-\\u001f\\u007f]+$"
+            },
+            "languageId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
+            },
+            "modelVersion": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "workspaceRevision": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "uri",
+            "languageId",
+            "modelVersion",
+            "workspaceRevision"
+          ],
+          "additionalProperties": false
+        },
+        "kind": {
+          "const": "inlay-hints"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "position": {
+                "type": "object",
+                "properties": {
+                  "line": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 262144
+                  },
+                  "character": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 262144
+                  }
+                },
+                "required": [
+                  "line",
+                  "character"
+                ],
+                "additionalProperties": false
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024,
+                "pattern": "^[^\\r\\n\\u0000]+$"
+              },
+              "kind": {
+                "enum": [
+                  "type",
+                  "parameter"
+                ]
+              },
+              "paddingLeft": {
+                "type": "boolean"
+              },
+              "paddingRight": {
+                "type": "boolean"
+              },
+              "tooltip": {
+                "type": "string",
+                "maxLength": 4096
+              }
+            },
+            "required": [
+              "position",
+              "label"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 1000,
+          "minItems": 0,
+          "$comment": "Plain text only. Runtime checks sorted positions within the requested range and document."
+        }
+      },
+      "required": [
+        "protocolVersion",
+        "requestId",
+        "scope",
+        "snapshot",
+        "kind",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "protocolVersion": {
+          "const": 1
+        },
+        "requestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "projectId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "sessionId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "projectId",
+            "sessionId"
+          ],
+          "additionalProperties": false
+        },
+        "snapshot": {
+          "type": "object",
+          "properties": {
+            "uri": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048,
+              "pattern": "^[A-Za-z][A-Za-z0-9+.-]*:[^\\s\\u0000-\\u001f\\u007f]+$"
+            },
+            "languageId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
+            },
+            "modelVersion": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "workspaceRevision": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "uri",
+            "languageId",
+            "modelVersion",
+            "workspaceRevision"
+          ],
+          "additionalProperties": false
+        },
+        "kind": {
+          "const": "document-symbol-tree"
+        },
+        "data": {
+          "$ref": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.11.0/schemas/document-symbol-tree.schema.json"
         }
       },
       "required": [
