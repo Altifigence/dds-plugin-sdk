@@ -1,3 +1,4 @@
+import {hostRuntime} from './host-runtime.mjs';
 import {parseSecretReference, configurationCopy as copy, configurationObject as object, configurationInteger as integer, configurationText as text, configurationPluginId, configurationMethod, configurationFailure as fail} from './configuration-values.mjs';
 import {createConfigurationOperations, configurationOptions, configurationError as error} from './configuration-operations.mjs';
 import {ErrorCode} from './limits.mjs';
@@ -23,10 +24,12 @@ function scope(input) {
 
 /** Host-owned references. The provider keeps actual values outside settings and metadata. */
 export function createSecretResolver(options) {
-  object(options, ['resolve', 'authorize'], ['now']);
+  object(options, ['resolve', 'authorize'], ['now','runtime']);
   if (typeof options.resolve !== 'function' || typeof options.authorize !== 'function' || options.now !== undefined && typeof options.now !== 'function') fail('secret_port');
-  const {resolve, authorize, now = Date.now} = options;
-  const records = new Map(), operations = createConfigurationOperations(SECRET_LIMITS.pending); let closed = false;
+  const runtime=hostRuntime(options.runtime);
+  const {resolve, authorize, now = runtime.now} = options;
+  if(options.now!==undefined&&options.runtime!==undefined)fail('choose_runtime_or_now');
+  const records = new Map(), operations = createConfigurationOperations(SECRET_LIMITS.pending,runtime); let closed = false;
   const open = () => {if (closed) throw error(ErrorCode.DISPOSED);};
   const time = () => {let value; try {value = now();} catch {throw error(ErrorCode.PROVIDER_FAILED);} return integer(value, Number.MAX_SAFE_INTEGER - SECRET_LIMITS.maxTtlMs);};
   function retire(entry) {entry.revoked = true; records.delete(entry.reference.id); operations.abort(entry);}
@@ -48,7 +51,7 @@ export function createSecretResolver(options) {
       value.commandIds.forEach(name => configurationPluginId(name));
       const ttlMs = integer(value.ttlMs ?? SECRET_LIMITS.defaultTtlMs, SECRET_LIMITS.maxTtlMs, 1);
       if (records.size >= SECRET_LIMITS.references) throw error(ErrorCode.BUDGET_EXCEEDED);
-      const reference = parseSecretReference({kind: 'dds-secret-reference', id: globalThis.crypto.randomUUID()});
+      const reference = parseSecretReference({kind: 'dds-secret-reference', id: runtime.randomUUID()});
       records.set(reference.id, {...value, reference, expiresAt: time() + ttlMs, revoked: false});
       return reference;
     },
@@ -77,7 +80,7 @@ export function createSecretResolver(options) {
       }, requestOptions, {tag: entry, expiresIn: entry.expiresAt - time()});
     },
     revoke(input) {open(); const reference = parseSecretReference(input), entry = records.get(reference.id); if (!entry) return false; retire(entry); return true;},
-    inspect() {open(); prune(); return Object.freeze({references: records.size, pending: operations.pending});},
+    inspect() {if(!closed)prune(); return Object.freeze({references: records.size, pending: operations.pending});},
     dispose() {if (closed) return; closed = true; for (const entry of records.values()) entry.revoked = true; records.clear(); operations.dispose();},
   });
 }

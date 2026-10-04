@@ -1,5 +1,23 @@
 # Compatibility and availability
 
+## 0.13 development and diagnostics
+
+Six feature templates, guarded contract generation, synthetic scenario ports,
+optional owner-supplied runtimes and local diagnostics add no workspace protocol
+method or implicit grant. Existing `createTestHost()` diagnostics defaults remain.
+New `host.inspect()` reports unsettled SDK-owned operations after disposal;
+diagnostic providers and pending activations now retain their slots until actual
+settlement. Operator `replaceGrants()` deactivates plugins losing permissions.
+Ports are trusted host controls, not APIs granted to a plugin.
+Settings-store `inspect()` now also remains available after disposal for cleanup
+checks; its data read and mutation methods still reject a disposed store.
+
+New plugin archives use `>=0.13.0 <0.14.0`. Archive verification retains exact
+released 0.3.x through 0.12.x metadata, without widening an old plugin's declared
+range. Independent source/contract compatibility checks are separate from that
+package-manager range. See [development tools](DEVTOOLS.md), [testing](testing.md)
+and [local diagnostics](DIAGNOSTICS.md) for the v1 report and trace contracts.
+
 ## 0.12 configuration and display
 
 [Settings](SETTINGS.md) and [secret references](SECRETS.md) are operator-owned
@@ -45,8 +63,8 @@ is unchanged. These features do not establish a DDS product editor integration.
 | Browser-only DDS host | Native workspace transport is unavailable |
 | Language providers | Diagnostics plus completion, hover, definition, references and document symbols in SDK hosts since 0.3.0; no released DDS editor bridge is implied |
 | Project edit sessions | Client helpers in 0.3.0 over unchanged workspace protocol v1, including 0.2.x servers |
-| Download verification | Node API/CLI since 0.3.1; 0.12.0 accepts exact 0.3.x–0.12.x package metadata; no extraction, code execution or publisher authentication |
-| Development tools | `init`, `doctor`, `dev` since 0.4.0; local Node tools, explicit trusted-code execution |
+| Download verification | Node API/CLI since 0.3.1; 0.13.0 accepts exact 0.3.x–0.13.x package metadata; no extraction, code execution or publisher authentication |
+| Development tools | `init`, `doctor`, `dev` since 0.4.0; six templates, `generate`, synthetic testing and local profiles in 0.13 |
 | Command jobs | Opt-in SDK host/client extension since 0.4.0; progress/logs/UTF-8 artifacts; v1 hello unchanged |
 | File and job observation | Client helpers since 0.5.0; 0.6 uses revision reads when supported; job reads need enabled 0.4+ hosts |
 | Binary job results | Optional 0.7.0 extension; explicit host opt-in; 1 GiB files and 64 KiB chunks; Node resume/full-file verification |

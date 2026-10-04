@@ -142,6 +142,7 @@ export interface Plugin {
 }
 export interface RequestOptions { readonly signal?: AbortSignal; readonly timeoutMs?: number; }
 export interface DiagnosticsRegistry extends Disposable {
+  inspect(): Readonly<{disposed:boolean;registrations:number;pending:number}>;
   register(pluginId: string, selector: ProviderSelector, provider: DiagnosticsProvider): Disposable;
   request(request: DiagnosticsRequest, options?: RequestOptions): Promise<DiagnosticsResult>;
   invalidate(): void;
@@ -159,8 +160,12 @@ export function parseDiagnosticsResult(value: unknown): DiagnosticsResult;
 export function createDiagnosticsResult(request: DiagnosticsRequest, diagnostics: readonly Diagnostic[]): DiagnosticsResult;
 export function definePlugin(manifest: PluginManifest, activate: Plugin['activate']): Plugin;
 /** For trusted host implementers. Authorization and isolation belong to the host. */
-export function createDiagnosticsRegistry(options?: {readonly isCurrent?: (request: DiagnosticsRequest) => boolean}): DiagnosticsRegistry;
+export function createDiagnosticsRegistry(options?: {readonly isCurrent?: (request: DiagnosticsRequest) => boolean;readonly runtime?:HostRuntime}): DiagnosticsRegistry;
+/** Owner-supplied trusted runtime. Test entropy must never be used for production tokens. */
+export interface HostRuntime {now():number;setTimeout(callback:()=>void,delayMs:number):unknown;clearTimeout(handle:unknown):void;randomUUID():string;}
+export interface HostInspection {readonly disposed:boolean;readonly plugins:number;readonly commands:number;readonly registrations:number;readonly pendingActivations:number;readonly pendingOperations:number;readonly providerOperations:number;readonly pendingJobs:number;readonly binaryOperations:number;readonly pendingCheckpoints:number;readonly retainedJobs:number;readonly resolveTokens:number;readonly semanticEntries:number;readonly timers:number;}
 export interface PluginHostOptions {
+  readonly runtime?:HostRuntime;
   readonly secrets?: SecretResolverPort;
   readonly settings?: Readonly<Record<string, SettingsReadPort>>;
   readonly jobStorage?: JobStorageOptions;
@@ -170,6 +175,10 @@ export interface PluginHostOptions {
   readonly workspace?: WorkspacePort; readonly backends?: Readonly<Record<string, BackendHandler>>;
 }
 export interface PluginHost extends Disposable {
+  /** SDK-owned counts; includes unsettled work after cancellation/disposal. No process-wide tracking. */
+  inspect(): HostInspection;
+  /** Deactivates plugins losing any grant. New grants take effect on the next activation. */
+  replaceGrants(grants:readonly Permission[]):void;
   activate(plugin: Plugin): Promise<Disposable>;
   setDocument(snapshot: DocumentSnapshot): DocumentSnapshot;
   requestDiagnostics(options?: RequestOptions): Promise<DiagnosticsResult>;
@@ -341,6 +350,7 @@ export interface LanguageProvider<K extends LanguageFeature> {
   readonly provideDelta?: K extends 'semantic-tokens' ? (request: LanguageRequest<'semantic-tokens'>, previous: PreviousSemanticTokens, options: {readonly signal: AbortSignal}) => SemanticTokensDelta | null | Promise<SemanticTokensDelta | null> : never;
 }
 export interface LanguageRegistry<K extends LanguageFeature> extends Disposable {
+  inspect(): Readonly<{disposed:boolean;registrations:number;pending:number;resolving:number;tokens:number;tokenBytes:number;semanticEntries:number;semanticBytes:number}>;
   register(pluginId: string, selector: ProviderSelector, provider: LanguageProvider<K>, options?: K extends 'completion' ? {readonly resolve?: boolean; readonly snippets?: boolean} : K extends 'code-actions' ? {readonly resolve?: boolean} : K extends 'semantic-tokens' ? {readonly semanticDelta?: boolean} : never): Disposable;
   request(request: LanguageRequest<K>, options?: RequestOptions): Promise<LanguageResult<K>>;
   resolve(token: string, options?: RequestOptions): Promise<LanguageResult<K extends 'code-actions' ? 'code-actions' : 'completion'>>;
@@ -355,4 +365,4 @@ export function parseLanguageRequest(value: unknown): LanguageRequest;
 export function parseLanguageResult(value: unknown): LanguageResult;
 export function createLanguageResult<K extends LanguageFeature>(request: LanguageRequest<K>, data: LanguageData[K]): LanguageResult<K>;
 /** Trusted host primitive. Authorization and isolation are enforced by the host. */
-export function createLanguageRegistry<K extends LanguageFeature>(kind: K, options?: {readonly isCurrent?: (request: LanguageRequest<K>) => boolean}): LanguageRegistry<K>;
+export function createLanguageRegistry<K extends LanguageFeature>(kind: K, options?: {readonly isCurrent?: (request: LanguageRequest<K>) => boolean;readonly runtime?:HostRuntime}): LanguageRegistry<K>;

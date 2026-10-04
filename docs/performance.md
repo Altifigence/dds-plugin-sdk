@@ -1,5 +1,15 @@
 # Performance
 
+## Development diagnostics (0.13)
+
+`npm run benchmark:devtools` compares five batches of 10,000 tiny synchronous
+calls: an uninstrumented loop, disabled diagnostics, every-tenth sampling and
+all-event recording. It reports median batch time and measured extra microseconds
+per operation, then verifies 100 independent scenario activate/execute/dispose
+cycles. This workload measures recorder overhead, not plugin compute speed or
+production network throughput. Reports include Node/platform and are regenerated
+in the supported Windows/Linux CI matrix; inspect the run's actual output.
+
 `npm run benchmark` measures five cold core imports in fresh Node processes,
 ten warmed validation batches, ten local provider batches and ten command batches. It also
 measures a one-item completion response and a single text edit in ten 100-call batches. The input is a

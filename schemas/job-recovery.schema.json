@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.12.0/schemas/job-recovery.schema.json",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.13.0/schemas/job-recovery.schema.json",
   "title": "job-recovery",
   "oneOf": [
     {
@@ -125,7 +125,7 @@
               "uniqueItems": true
             },
             "snapshot": {
-              "$ref": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.12.0/schemas/job-snapshot.schema.json"
+              "$ref": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.13.0/schemas/job-snapshot.schema.json"
             },
             "events": {
               "type": "array",
@@ -691,7 +691,7 @@
               "uniqueItems": true
             },
             "snapshot": {
-              "$ref": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.12.0/schemas/job-snapshot.schema.json"
+              "$ref": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.13.0/schemas/job-snapshot.schema.json"
             },
             "events": {
               "type": "array",
@@ -1257,7 +1257,7 @@
               "uniqueItems": true
             },
             "snapshot": {
-              "$ref": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.12.0/schemas/job-snapshot.schema.json"
+              "$ref": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.13.0/schemas/job-snapshot.schema.json"
             },
             "events": {
               "type": "array",

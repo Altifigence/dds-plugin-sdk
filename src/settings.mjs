@@ -67,7 +67,7 @@ export function parseSettingsSnapshot(input) {
 
 /** One plugin's operator-owned in-memory settings. The owner retains write authority. */
 export function createSettingsStore(input, options = {}) {
-  object(options, [], ['state']);
+  object(options, [], ['state','runtime']);
   let definition = parseSettingsDefinition(input), revision = 0, closed = false, queued = false;
   let values = layers({user: {}, workspaces: {}}, definition);
   if (options.state !== undefined) {
@@ -77,7 +77,7 @@ export function createSettingsStore(input, options = {}) {
     revision = integer(state.revision, Number.MAX_SAFE_INTEGER - 1);
     values = layers({user: state.user, workspaces: state.workspaces}, definition);
   }
-  const subscribers = new Set(), operations = createConfigurationOperations(SETTINGS_LIMITS.pendingMigrations);
+  const subscribers = new Set(), operations = createConfigurationOperations(SETTINGS_LIMITS.pendingMigrations,options.runtime);
   function open() {if (closed) throw error(ErrorCode.DISPOSED);}
   function compare(expected) {integer(expected, Number.MAX_SAFE_INTEGER); if (expected !== revision) throw error(ErrorCode.CONFLICT);}
   function read(id) {
@@ -161,7 +161,7 @@ export function createSettingsStore(input, options = {}) {
         return exportState();
       }, {signal: options.signal, timeoutMs: options.timeoutMs});
     },
-    inspect() {open(); return freezeConfiguration({revision, definitionVersion: definition.version, workspaces: Object.keys(values.workspaces).length, subscriptions: subscribers.size, pendingMigrations: operations.pending});},
+    inspect() {return freezeConfiguration({revision, definitionVersion: definition.version, workspaces: values?Object.keys(values.workspaces).length:0, subscriptions: subscribers.size, pendingMigrations: operations.pending});},
     dispose() {if (closed) return; closed = true; subscribers.clear(); values = undefined; operations.dispose();},
   });
 }

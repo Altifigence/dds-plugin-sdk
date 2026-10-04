@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.13.0/schemas/memory-job-snapshot.schema.json",
+  "title": "memory-job-snapshot",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "identity": {
+      "$ref": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.13.0/schemas/job-store-identity.schema.json"
+    },
+    "records": {
+      "type": "array",
+      "items": {
+        "$ref": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.13.0/schemas/stored-job.schema.json"
+      },
+      "maxItems": 256
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "identity",
+    "records",
+    "sha256"
+  ],
+  "additionalProperties": false
+}

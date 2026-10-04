@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.13.0 — 2026-10-05
+
+- Add command/language/theme/job/browser/configuration scaffolds with preview,
+  generated runtime metadata, TypeScript declarations, JSON schemas and tests.
+  Exact-digest regeneration preserves edited/additional files and cooperatively
+  stages verified output; doctor detects source drift and packaging omissions.
+- Add owner-injected clocks, deterministic scenario fixtures, CAS memory files,
+  settings/secret ports, memory checkpoints, fault injection and explicit resource
+  ledgers. Retain actual activation/diagnostic work slots after ignored cancellation.
+  Expose host inspection and explicit grant replacement without implicit authority.
+- Add opt-in synthetic fixture hashes and versioned pure replay, bounded local
+  diagnostic sessions, host/transport adapters, redacted error codes and measured
+  profiler overhead. Reports do not collect request/response bodies or paths.
+- Add explicit CLI profile and ephemeral loopback debug/wait flags. Each debugger
+  child has a hard lifetime limit and uses the existing owned process cleanup.
+- Exercise all templates and the combined scenario from an actual packed install;
+  keep existing protocol contracts and historical archive verification through 0.12.
+  New plugin packages declare `>=0.13.0 <0.14.0`.
+
 ## 0.12.0 — 2026-10-05
 
 - Add bounded versioned settings, default/user/workspace precedence, atomic CAS,

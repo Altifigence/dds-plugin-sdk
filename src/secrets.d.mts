@@ -16,6 +16,8 @@ export function createSecretResolver(options: {
   readonly resolve: (request: {readonly secretId: string; readonly reference: SecretReference; readonly scope: SecretExecutionScope; readonly expiresAt: number}, options: {readonly signal: AbortSignal}) => Uint8Array | Promise<Uint8Array>;
   readonly authorize: (request: SecretExecutionScope & {readonly reference: SecretReference; readonly expiresAt: number}) => boolean;
   readonly now?: () => number;
+  /** Alternative to now; owner-only deterministic test support. */
+  readonly runtime?: import('./index.mjs').HostRuntime;
 }): SecretResolver;
 export interface SecretExecutionApi {withSecret(reference: SecretReference, callback: SecretLeaseCallback, options?: RequestOptions): Promise<void>;}
 export interface SecretExecution extends Disposable {readonly scope: SecretExecutionScope; readonly secrets: SecretExecutionApi;}

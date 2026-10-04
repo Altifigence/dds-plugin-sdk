@@ -7,10 +7,12 @@ import {spawn} from 'node:child_process';
 import {parseManifest, parseJsonValue} from './index.mjs';
 import {validatePluginPackage} from './publishing.mjs';
 import {JOB_LIMITS} from './jobs.mjs';
+import {generatePluginContracts,parseDevelopmentDefinition,DEVTOOLS_LIMITS} from './dev-generation.mjs';
+import {readDevFile,destinationExists} from './dev-files.mjs';
+import {parseDiagnosticReport} from './diagnostics.mjs';
 
 const sdk = JSON.parse(await fs.readFile(new URL('../package.json', import.meta.url), 'utf8'));
 const sdkLine = sdk.version.split('.').slice(0, 2).join('.');
-const json = value => `${JSON.stringify(value, null, 2)}\n`;
 const error = message => new Error(message);
 const nodeSupported = version => /^(?:22|24)\./.test(version);
 const plainOptions = (options, allowed) => {
@@ -28,32 +30,8 @@ async function readJson(file) {
   return JSON.parse(contents);
 }
 
-/** Creates only a new directory; never installs dependencies or executes plugin code. */
-export async function initPlugin(directory, options = {}) {
-  plainOptions(options, ['id', 'publisher', 'name']);
-  if (typeof directory !== 'string' || !directory) throw error('Provide a new plugin directory');
-  const target = path.resolve(directory);
-  const manifest = parseManifest({manifestVersion: 2, id: options.id ?? path.basename(target), publisher: options.publisher ?? 'example', name: options.name ?? 'My DDS Plugin', version: '0.1.0', protocolVersion: 1, entry: './plugin.mjs', runtime: 'workspace', capabilities: ['commands'], permissions: [], supportedHosts: ['test-host', 'workspace-host'], license: 'Apache-2.0', source: {visibility: 'open', licenseFile: 'LICENSE'}});
-  if (`@${manifest.publisher}/${manifest.id}`.length > 214) throw error('Publisher and plugin ID exceed the package name limit');
-  // Prepare and validate all contents before claiming the destination.
-  const files = new Map([
-    ['plugin.json', json(manifest)],
-    ['plugin.mjs', `import {definePlugin} from '@altifigence/dds-plugin-sdk';\nimport manifest from './plugin.json' with {type: 'json'};\n\nexport default definePlugin(manifest, context => context.registerCommand({\n  id: 'greet', title: 'Say hello',\n  parameters: [{name: 'name', label: 'Your name', type: 'string', required: true}],\n}, (input, {signal, job}) => {\n  signal.throwIfAborted();\n  job?.reportProgress({completed: 1, total: 1, message: 'Greeting ready'});\n  job?.log('info', 'Greeting command completed');\n  return {message: 'Hello, ' + input.name + '!', pluginId: context.pluginId};\n}));\n`],
-    ['plugin.test.mjs', `import test from 'node:test';\nimport assert from 'node:assert/strict';\nimport {createPluginHost} from '@altifigence/dds-plugin-sdk';\nimport plugin from './plugin.mjs';\n\ntest('greet returns the supplied name', async t => {\n  const host = createPluginHost();\n  t.after(() => host.dispose());\n  await host.activate(plugin);\n  assert.deepEqual(await host.executeCommand(plugin.manifest.id, 'greet', {name: 'Developer'}), {message: 'Hello, Developer!', pluginId: plugin.manifest.id});\n  await assert.rejects(host.executeCommand(plugin.manifest.id, 'greet', {}), {code: 'invalid_contract'});\n});\n`],
-    ['dds-package.json', json({schemaVersion: 1, files: ['plugin.json', 'plugin.mjs', 'disclosure.json', 'LICENSE', 'NOTICE']})],
-    ['disclosure.json', json({schemaVersion: 1, publisher: manifest.publisher, pluginId: manifest.id, pluginVersion: manifest.version, license: manifest.license, sourceVisibility: 'open', supportUrl: 'https://example.com/support', dataUse: 'The greet command uses the supplied name to return a greeting. It does not read workspace files, use external backends, or store input.', backends: []})],
-    ['package.json', json({name: `@${manifest.publisher}/${manifest.id}`, version: manifest.version, private: true, type: 'module', scripts: {test: 'node --test plugin.test.mjs', doctor: 'dds-plugin doctor .', dev: 'dds-plugin dev . --trust-local-code --watch', 'validate:plugin': 'dds-plugin validate .', 'pack:plugin': 'dds-plugin pack . --out dist'}, dependencies: {'@altifigence/dds-plugin-sdk': `https://github.com/Altifigence/dds-plugin-sdk/releases/download/v${sdk.version}/altifigence-dds-plugin-sdk-${sdk.version}.tgz`}})],
-    ['.gitignore', 'node_modules/\ndist/\n'],
-    ['README.md', `# ${manifest.name}\n\nInstall the pinned SDK with \`npm install --ignore-scripts\`, then run \`npm run doctor\`.\n\nRun trusted local code with:\n\n\`\`\`sh\nnpx --no-install dds-plugin dev . --trust-local-code --command greet --input '{"name":"World"}'\nnpx --no-install dds-plugin dev . --trust-local-code --job --command greet --input '{"name":"World"}'\nnpm run dev\n\`\`\`\n\nThe dev host has no workspace or backend grants. Watch mode restarts a child process after a declared package file changes; Ctrl+C stops it. This is trusted local execution, not a security sandbox.\n\nBefore distribution, replace example publisher/support metadata, review the Apache-2.0 license and NOTICE inherited from this scaffold, and update disclosure.json for any behavior changes. Add each distributable file to dds-package.json.\n\nRun \`npm run pack:plugin\` to build a release archive. The development package.json is private; the pack command generates inert consumer metadata without install scripts.\n`],
-    ['LICENSE', await fs.readFile(new URL('../LICENSE', import.meta.url), 'utf8')],
-    ['NOTICE', await fs.readFile(new URL('../NOTICE', import.meta.url), 'utf8')],
-  ]);
-  const parent = await fs.lstat(path.dirname(target));
-  if (!parent.isDirectory() || parent.isSymbolicLink()) throw error('Destination parent must be a real existing directory');
-  try {await fs.mkdir(target);} catch (failure) {if (failure.code === 'EEXIST') throw error('Destination already exists; choose a new directory'); throw failure;}
-  for (const [name, text] of files) await fs.writeFile(path.join(target, name), text, {flag: 'wx'});
-  return Object.freeze({directory: target, pluginId: manifest.id, sdkVersion: sdk.version, files: Object.freeze([...files.keys()]), next: ['npm install --ignore-scripts', 'npm run doctor', 'npm run dev']});
-}
+export {initPlugin,planPlugin} from './dev-scaffolds.mjs';
+export {generatePluginContracts,parseDevelopmentDefinition,PLUGIN_TEMPLATES,DEVTOOLS_LIMITS} from './dev-generation.mjs';
 
 /** Reads metadata only. No import, install, npm script, or plugin entry execution. */
 export async function doctorPlugin(directory) {
@@ -66,9 +44,29 @@ export async function doctorPlugin(directory) {
     check('package', 'pass', `${report.pluginId}: manifest, disclosure, license and allowlisted files are valid.`);
     const manifest = await readJson(path.join(root, 'plugin.json'));
     const disclosure = await readJson(path.join(root, 'disclosure.json'));
+    const parsed=parseManifest(manifest);
+    check('manifest','pass',`${parsed.manifestVersion === 1 ? 'ui' : parsed.runtime} plugin; ${parsed.capabilities.length} capabilities, ${parsed.permissions.length} requested permissions.`);
+    check('permissions',parsed.permissions.length?'warning':'pass',parsed.permissions.length?`Operator grants are required: ${parsed.permissions.join(', ')}.`:'This plugin requests no host permissions.');
+    if(await destinationExists(path.join(root,'dds-dev.json'))){
+      const definition=parseDevelopmentDefinition(JSON.parse(await readDevFile(path.join(root,'dds-dev.json'),DEVTOOLS_LIMITS.definitionBytes)),parsed);
+      check('development-definition','pass',`${definition.template} template; ${definition.commands.length} declared commands.`);
+      const generated=await generatePluginContracts(root,{check:true});
+      check('generated',generated.ok?'pass':'error',generated.ok?'Generated runtime metadata, declarations and schemas match the current SDK/source.':'Generated files are missing, modified or out of date.','Review dds-plugin generate . --dry-run. Preserve manual changes before replacing exact generated output.');
+      const packaged=new Set(report.files.map(file=>file.path));
+      const missing=generated.files.filter(file=>!packaged.has('generated/'+file.path));
+      check('generated-package',missing.length?'error':'pass',missing.length?'Generated files are absent from the package allowlist.':'All generated files are included in the package allowlist.','Review generated output and add its files to dds-package.json before distribution.');
+      await readDevFile(path.join(root,'LICENSE.sdk'),65_536);await readDevFile(path.join(root,'NOTICE'),65_536);
+      check('scaffold-notices','pass','Publisher license and inherited SDK/scaffold notices are present.');
+    }
     if (manifest.publisher === 'example' || new URL(disclosure.supportUrl).hostname === 'example.com') check('publisher', 'warning', 'Example publisher or support metadata is still present.', 'Set your publisher and support URL before distribution.');
     else check('publisher', 'pass', 'Publisher and support metadata are customized.');
   } catch (failure) {check('package', 'error', failure instanceof Error ? failure.message.slice(0, 2_048) : 'Package metadata is invalid.', 'Correct plugin.json, disclosure.json and dds-package.json; do not add private files.');}
+  try{
+    const project=await readJson(path.join(root,'package.json'));
+    if(project.dependencies?.[sdk.name]!==`https://github.com/Altifigence/dds-plugin-sdk/releases/download/v${sdk.version}/altifigence-dds-plugin-sdk-${sdk.version}.tgz`)check('dependency-pin','warning','The project does not pin this exact official SDK archive.','Review the selected SDK source and version before installing.');
+    else check('dependency-pin','pass','The development dependency pins this exact official SDK archive.');
+    if(project.devDependencies?.typescript!==undefined)check('typescript','pass',`The project explicitly declares a separate TypeScript development dependency (${project.devDependencies.typescript}).`);
+  }catch{check('project','error','Project package.json is missing or invalid.','Provide inert development metadata; doctor does not install or run scripts.');}
   try {
     const packagePath = createRequire(path.join(root, 'package.json')).resolve('@altifigence/dds-plugin-sdk/package.json');
     const installed = await readJson(packagePath);
@@ -111,10 +109,12 @@ function stopTree(child) {
 
 /** Runs explicitly trusted plugin code in a replaceable child; not an OS sandbox. */
 export async function runPluginDev(directory, options = {}) {
-  plainOptions(options, ['trustLocalCode', 'watch', 'command', 'input', 'job', 'timeoutMs', 'signal', 'onEvent']);
+  plainOptions(options, ['trustLocalCode', 'watch', 'command', 'input', 'job', 'timeoutMs', 'signal', 'onEvent','profile','debug','debugWait']);
   if (options.trustLocalCode !== true) throw error('dev executes local plugin code; pass --trust-local-code for a plugin you trust.');
-  for (const key of ['watch', 'job']) if (options[key] !== undefined && typeof options[key] !== 'boolean') throw error(`Invalid ${key} option`);
-  const {watch = false, command, job = false, timeoutMs = 30_000, signal, onEvent = () => {}} = options;
+  for (const key of ['watch', 'job','profile','debug','debugWait']) if (options[key] !== undefined && typeof options[key] !== 'boolean') throw error(`Invalid ${key} option`);
+  const {watch = false, command, job = false, timeoutMs = 30_000, signal, onEvent = () => {},profile=false,debug=false,debugWait=false} = options;
+  if(debugWait&&!debug)throw error('debugWait requires debug.');
+  if(debug&&timeoutMs>30000)throw error('Debug sessions are limited to 30000 ms per child.');
   const input = parseJsonValue(options.input ?? {});
   if (command !== undefined && (typeof command !== 'string' || !/^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$/.test(command))) throw error('Invalid command ID');
   if (job && !command) throw error('--job requires --command');
@@ -157,7 +157,8 @@ export async function runPluginDev(directory, options = {}) {
     await refreshWatches(); if (stopping) return;
     changing = false; runs++;
     const owned = spawn(process.execPath, [fileURLToPath(new URL('./dev-worker.mjs', import.meta.url))], {cwd: root, stdio: ['ignore', 'pipe', 'pipe', 'ipc'], detached: process.platform !== 'win32', windowsHide: true, shell: false, env: {...process.env, NODE_OPTIONS: ''}});
-    child = owned; let bytes = 0, completed = false;
+    child = owned; let bytes = 0, completed = false,debugReported=false;
+    const debugDeadline=Date.now()+timeoutMs;
     const output = (stream, chunk) => {
       if (child !== owned || stopping) return; bytes += chunk.length;
       if (bytes > 262_144) {void finish(error('Development output exceeded 256 KiB')); return;}
@@ -166,7 +167,13 @@ export async function runPluginDev(directory, options = {}) {
     owned.stdout.on('data', chunk => output('stdout', chunk)); owned.stderr.on('data', chunk => output('stderr', chunk));
     owned.once('error', failure => {void finish(error(`Development process failed: ${failure.code ?? 'spawn'}`));});
     owned.on('message', message => {
-      if (child !== owned || stopping || completed || !message || message.type !== 'complete' || typeof message.ok !== 'boolean') return;
+      if (child !== owned || stopping || completed || !message) return;
+      if(message.type==='debug'&&debug&&!debugReported){
+        try{const url=new URL(message.url);if(url.protocol!=='ws:'||url.hostname!=='127.0.0.1'||!url.port||url.username||url.password||url.search||url.hash||!/^\/[a-f0-9-]{36}$/.test(url.pathname))throw error('Invalid development debug endpoint');debugReported=true;emit({type:'debug',run:runs,pid:owned.pid,url:url.href,expiresInMs:Math.max(0,debugDeadline-Date.now())});}
+        catch(failure){void finish(failure);}return;
+      }
+      if(message.type!=='complete'||typeof message.ok!=='boolean')return;
+      if(profile){try{emit({type:'profile',run:runs,report:parseDiagnosticReport(message.profile)});}catch(failure){void finish(failure);return;}}
       completed = true; lastOk = message.ok; clearTimeout(deadline);
       tail = tail.then(async () => {if (child !== owned || stopping) return; await stopTree(owned); emit({type: 'complete', run: runs, ok: lastOk}); if (!watch) await finish();}).catch(finish);
     });
@@ -176,8 +183,8 @@ export async function runPluginDev(directory, options = {}) {
         tail = tail.then(async () => {if(child !== owned || stopping)return; await stopTree(owned); emit({type: 'complete', run: runs, ok: false}); if (!watch) await finish();}).catch(finish);
       }
     });
-    deadline = setTimeout(() => {if (child === owned && !stopping) {lastOk = false; completed = true; tail = tail.then(async () => {if(child !== owned || stopping)return; await stopTree(owned); emit({type: 'timeout', run: runs, ok: false}); if (!watch) await finish();}).catch(finish);}}, timeoutMs + 1_000);
-    owned.send({directory: root, command, input, job, timeoutMs}, failure => {if (failure && !stopping && !completed) void finish(error('Could not configure the development process'));});
+    deadline = setTimeout(() => {if (child === owned && !stopping) {lastOk = false; completed = true; tail = tail.then(async () => {if(child !== owned || stopping)return; await stopTree(owned); emit({type: 'timeout', run: runs, ok: false}); if (!watch) await finish();}).catch(finish);}}, debug?timeoutMs:timeoutMs + 1_000);
+    owned.send({directory: root, command, input, job, timeoutMs,profile,debug,debugWait}, failure => {if (failure && !stopping && !completed) void finish(error('Could not configure the development process'));});
     emit({type: 'start', run: runs, pid: owned.pid});
   };
   const onAbort = () => {void finish();}; signal?.addEventListener('abort', onAbort, {once: true});

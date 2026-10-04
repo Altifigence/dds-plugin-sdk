@@ -25,4 +25,4 @@ export interface SettingsStore extends SettingsReadPort, Disposable {
 export const SETTINGS_LIMITS: Readonly<{definitionBytes: number; keys: number; layerBytes: number; snapshotBytes: number; stateBytes: number; workspaces: number; subscriptions: number; pendingMigrations: number}>;
 export function parseSettingsDefinition(value: unknown): SettingsDefinition;
 export function parseSettingsSnapshot(value: unknown): SettingsSnapshot;
-export function createSettingsStore(definition: SettingsDefinition, options?: {readonly state?: SettingsState}): SettingsStore;
+export function createSettingsStore(definition: SettingsDefinition, options?: {readonly state?: SettingsState;readonly runtime?:import('./index.mjs').HostRuntime}): SettingsStore;

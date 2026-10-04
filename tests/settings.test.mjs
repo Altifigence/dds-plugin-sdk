@@ -49,7 +49,8 @@ test('coalesced subscriptions are removable and isolate failing callbacks', asyn
   store.update({workspaceId: 'w', scope: 'workspace', expectedRevision: 1, values: {count: 4}});
   unsubscribe.dispose(); await flush();
   assert.equal(first.length, 1); assert.equal(first[0].values.count, 4); assert.equal(second[0].values.count, 3); assert.deepEqual(removed, []);
-  store.dispose(); assert.throws(() => store.inspect(), hasCode('disposed'));
+  store.dispose(); assert.deepEqual(store.inspect(), {revision: 2, definitionVersion: 1, workspaces: 0, subscriptions: 0, pendingMigrations: 0});
+  assert.throws(() => store.read('w'), hasCode('disposed'));
 });
 
 test('explicit migrations validate changed/deleted keys and preserve valid state on error', async () => {

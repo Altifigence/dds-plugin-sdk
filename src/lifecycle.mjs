@@ -1,15 +1,16 @@
 import { assertResultMatchesRequest, parseDiagnosticsRequest, parseDiagnosticsResult, parseProviderSelector } from './contracts.mjs';
 export {createLanguageRegistry} from './language-registry.mjs';
 import { ErrorCode, LIMITS, PluginSdkError } from './limits.mjs';
+import {hostRuntime} from './host-runtime.mjs';
 
 const sdkError = (code, message) => new PluginSdkError(code, message);
 
 /** A trusted-host lifecycle primitive. It does not load or isolate plugin code. */
-export function createDiagnosticsRegistry({isCurrent = () => true} = {}) {
-  return createProviderRegistry({isCurrent, parseRequest: parseDiagnosticsRequest, parseResult: parseDiagnosticsResult, assertMatches: assertResultMatchesRequest, method: 'provideDiagnostics'});
+export function createDiagnosticsRegistry({isCurrent = () => true,runtime} = {}) {
+  return createProviderRegistry({isCurrent,runtime:hostRuntime(runtime), parseRequest: parseDiagnosticsRequest, parseResult: parseDiagnosticsResult, assertMatches: assertResultMatchesRequest, method: 'provideDiagnostics'});
 }
 
-function createProviderRegistry({isCurrent, parseRequest, parseResult, assertMatches, method}) {
+function createProviderRegistry({isCurrent,runtime, parseRequest, parseResult, assertMatches, method}) {
   if (typeof isCurrent !== 'function') throw sdkError(ErrorCode.INVALID_CONTRACT, 'isCurrent must be a function');
   const registrations = new Set();
   const pending = new Set();
@@ -63,7 +64,7 @@ function createProviderRegistry({isCurrent, parseRequest, parseResult, assertMat
       onAbort = () => reject(controller.signal.reason);
       controller.signal.addEventListener('abort', onAbort, {once: true});
     });
-    const timer = setTimeout(() => controller.abort(sdkError(ErrorCode.BUDGET_EXCEEDED, 'Provider request timed out')), timeoutMs);
+    const timer = runtime.setTimeout(() => controller.abort(sdkError(ErrorCode.BUDGET_EXCEEDED, 'Provider request timed out')), timeoutMs);
     try {
       const operation = Promise.resolve().then(() => {
         if (controller.signal.aborted) throw controller.signal.reason;
@@ -72,7 +73,7 @@ function createProviderRegistry({isCurrent, parseRequest, parseResult, assertMat
         if (controller.signal.aborted) throw controller.signal.reason;
         // Do not expose provider exception messages, stack traces or private paths.
         throw sdkError(ErrorCode.PROVIDER_FAILED, 'Provider provider failed');
-      });
+      }).finally(()=>{pending.delete(controller);entry.pending.delete(controller);});
       const raw = await Promise.race([operation, cancelled]);
       if (controller.signal.aborted) throw controller.signal.reason;
       if (!isCurrent(request)) throw sdkError(ErrorCode.STALE_SNAPSHOT, 'Requested document snapshot is no longer current');
@@ -80,15 +81,14 @@ function createProviderRegistry({isCurrent, parseRequest, parseResult, assertMat
       assertMatches(result, request);
       return result;
     } finally {
-      clearTimeout(timer);
+      runtime.clearTimeout(timer);
       signal?.removeEventListener('abort', abort);
       controller.signal.removeEventListener('abort', onAbort);
-      pending.delete(controller);
-      entry.pending.delete(controller);
     }
   }
 
   return Object.freeze({
+    inspect(){return Object.freeze({disposed,registrations:registrations.size,pending:pending.size});},
     register,
     request,
     invalidate() {

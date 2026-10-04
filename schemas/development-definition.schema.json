@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.13.0/schemas/development-definition.schema.json",
+  "title": "development-definition",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "template": {
+      "enum": [
+        "command",
+        "language",
+        "theme",
+        "job",
+        "browser",
+        "configuration"
+      ]
+    },
+    "commands": {
+      "type": "array",
+      "items": {
+        "$ref": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.13.0/schemas/command.schema.json"
+      },
+      "maxItems": 64
+    },
+    "settings": {
+      "$ref": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.13.0/schemas/settings-definition.schema.json"
+    },
+    "catalog": {
+      "$ref": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.13.0/schemas/locale-catalog.schema.json"
+    },
+    "theme": {
+      "$ref": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.13.0/schemas/theme.schema.json"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "template",
+    "commands"
+  ],
+  "additionalProperties": false
+}

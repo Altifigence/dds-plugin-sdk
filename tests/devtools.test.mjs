@@ -23,6 +23,37 @@ async function fixture(t,{installed=true}={}) {
   return{root,directory};
 }
 async function gone(pid) {for(let i=0;i<100;i++){try{process.kill(pid,0);}catch(failure){if(failure.code==='ESRCH')return;throw failure;}await delay(20);}throw Error('Dev child survived cleanup');}
+
+test('profile reports are opt-in, bounded and exclude command inputs and provider error bodies',async t=>{
+  const {directory}=await fixture(t),events=[];
+  const normal=await runPluginDev(directory,{trustLocalCode:true,command:'greet',input:{name:'synthetic-input'},onEvent:e=>events.push(e)});assert.equal(normal.ok,true);assert.ok(!events.some(e=>e.type==='profile'));events.length=0;
+  const profiled=await runPluginDev(directory,{trustLocalCode:true,profile:true,command:'greet',input:{name:'synthetic-private-input'},onEvent:e=>events.push(e)});assert.equal(profiled.ok,true);const report=events.find(e=>e.type==='profile').report;
+  assert.ok(report.events.some(e=>e.operation==='command'));assert.equal(report.events.at(-1).operation,'dispose');assert.equal(report.events.at(-1).resources.commands,0);assert.ok(!JSON.stringify(report).includes('synthetic-private'));assert.ok(!JSON.stringify(report).includes(directory));for(const e of events.filter(e=>e.type==='start'))await gone(e.pid);
+});
+
+test('debug binds a fresh loopback inspector, resumes through its actual protocol and closes with the child',async t=>{
+  const {directory}=await fixture(t),ready=deferred(),controller=new AbortController(),events=[];
+  const running=runPluginDev(directory,{trustLocalCode:true,debug:true,debugWait:true,profile:true,command:'greet',input:{name:'Debug'},timeoutMs:8000,signal:controller.signal,onEvent:e=>{events.push(e);if(e.type==='debug')ready.resolve(e);}});let socket;
+  try{
+    const event=await Promise.race([ready.promise,running.then(()=>{throw Error('Debug child ended before readiness');})]),url=new URL(event.url);assert.equal(url.hostname,'127.0.0.1');assert.ok(Number(url.port)>0);assert.ok(event.expiresInMs<=8000);
+    const response=await fetch(`http://127.0.0.1:${url.port}/json/list`,{signal:AbortSignal.timeout(2000)}),targets=await response.json();assert.ok(targets.some(target=>target.webSocketDebuggerUrl===event.url));
+    socket=new WebSocket(event.url);await new Promise((resolve,reject)=>{socket.addEventListener('open',resolve,{once:true});socket.addEventListener('error',reject,{once:true});});socket.send(JSON.stringify({id:1,method:'Runtime.runIfWaitingForDebugger'}));
+    assert.equal((await running).ok,true);await gone(event.pid);await assert.rejects(fetch(`http://127.0.0.1:${url.port}/json/list`,{signal:AbortSignal.timeout(500)}));assert.ok(events.some(e=>e.type==='profile'));
+  }finally{socket?.close();controller.abort();await running;}
+});
+
+test('debug timeout, cancellation and crash clean only owned children and reject external bind options',async t=>{
+  const {directory}=await fixture(t);
+  await assert.rejects(runPluginDev(directory,{trustLocalCode:true,debugWait:true}),/requires debug/);
+  await assert.rejects(runPluginDev(directory,{trustLocalCode:true,debug:true,debugHost:'0.0.0.0'}),/Invalid development options/);
+  await assert.rejects(runPluginDev(directory,{trustLocalCode:true,debug:true,timeoutMs:30001}),/30000/);
+  for(const mode of ['timeout','cancel','crash']){
+    const events=[],controller=new AbortController();if(mode==='crash')await fs.writeFile(path.join(directory,'plugin.mjs'),'process.exit(7);\n');
+    const result=await runPluginDev(directory,{trustLocalCode:true,debug:true,debugWait:mode!=='crash',timeoutMs:mode==='timeout'?1500:5000,signal:controller.signal,onEvent:e=>{events.push(e);if(e.type==='debug'&&mode==='cancel')controller.abort();}});
+    const child=events.find(e=>e.type==='start');await gone(child.pid);if(mode==='cancel')assert.equal(result.stopped,true);else assert.equal(result.ok,false);if(mode==='timeout')assert.ok(events.some(e=>e.type==='timeout'));
+    const debug=events.find(e=>e.type==='debug');if(debug){const port=new URL(debug.url).port;await assert.rejects(fetch(`http://127.0.0.1:${port}/json/list`,{signal:AbortSignal.timeout(500)}));}
+  }
+});
 test('init creates a valid standalone scaffold and never replaces existing content',async t=>{
   const {directory}=await fixture(t,{installed:false});const before=await fs.readFile(path.join(directory,'plugin.mjs'),'utf8');
   assert.equal((await validatePluginPackage(directory)).pluginId,'sample-plugin');

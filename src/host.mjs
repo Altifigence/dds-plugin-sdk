@@ -16,6 +16,7 @@ import {parseCommandOutput} from './contracts.mjs';
 import {collectSecretReferences} from './data-schema.mjs';
 import {createSecretExecution} from './secrets.mjs';
 import {configurationMethod} from './configuration-values.mjs';
+import {hostRuntime} from './host-runtime.mjs';
 
 const hostFailures = new WeakSet();
 const error = (code, message) => {
@@ -25,7 +26,8 @@ const error = (code, message) => {
 };
 
 /** Executes trusted local plugins in this process. This developer host is not a sandbox. */
-export function createPluginHost({hostId = 'test-host', scope = {projectId: 'example-project', sessionId: 'example-session'}, grants = [], workspace, backends = {}, jobs = false, binaryArtifacts = false, jobStorage, settings = {}, secrets} = {}) {
+export function createPluginHost({hostId = 'test-host', scope = {projectId: 'example-project', sessionId: 'example-session'}, grants = [], workspace, backends = {}, jobs = false, binaryArtifacts = false, jobStorage, settings = {}, secrets, runtime: runtimeInput} = {}) {
+  const runtime=hostRuntime(runtimeInput);
   if (!['test-host', 'workspace-host'].includes(hostId)) throw error(ErrorCode.UNSUPPORTED_HOST, 'Unknown plugin host');
   scope = parseScope(scope);
   grants = parseGrants(grants);
@@ -52,15 +54,16 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
   let diagnosticItems = Object.freeze([]);
   const plugins = new Map();
   const pending = new Set();
+  const activations = new Set();
   if (typeof binaryArtifacts !== 'boolean') throw error(ErrorCode.INVALID_CONTRACT, 'Invalid binary artifact capability');
-  const jobRegistry = createJobRegistry({scope, enabled: jobs, binaryArtifacts: binaryArtifacts && typeof workspace?.captureBinaryFile === 'function', jobStorage});
+  const jobRegistry = createJobRegistry({scope, enabled: jobs, binaryArtifacts: binaryArtifacts && typeof workspace?.captureBinaryFile === 'function', jobStorage, runtime});
   function isCurrent(request) {
     return !!document && request.scope.projectId === scope.projectId && request.scope.sessionId === scope.sessionId &&
       ['uri', 'languageId', 'modelVersion', 'workspaceRevision', 'text'].every(key => request.snapshot[key] === document[key]) &&
       (request.kind !== 'code-actions' || request.diagnosticContext.revision === diagnosticRevision);
   }
-  const registry = createDiagnosticsRegistry({isCurrent});
-  const languages = new Map(LANGUAGE_FEATURES.map(kind => [kind, createLanguageRegistry(kind, {isCurrent})]));
+  const registry = createDiagnosticsRegistry({isCurrent,runtime});
+  const languages = new Map(LANGUAGE_FEATURES.map(kind => [kind, createLanguageRegistry(kind, {isCurrent,runtime})]));
   function updateDiagnosticContext(items = [], resetSource = false) {
     diagnosticItems = Object.freeze(items); diagnosticRevision++;
     if (resetSource) acceptedDiagnosticSequence = ++diagnosticSequence;
@@ -97,7 +100,7 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
     state.controller.signal.addEventListener('abort', abortPlugin, {once: true});
     let onAbort;
     const aborted = new Promise((_, reject) => {onAbort = () => reject(controller.signal.reason); controller.signal.addEventListener('abort', onAbort, {once: true});});
-    const timer = setTimeout(() => controller.abort(error(ErrorCode.BUDGET_EXCEEDED, 'Plugin operation timed out')), timeoutMs);
+    const timer = runtime.setTimeout(() => controller.abort(error(ErrorCode.BUDGET_EXCEEDED, 'Plugin operation timed out')), timeoutMs);
     try {
       const operationPromise = Promise.resolve().then(() => {
         assertActive(state);
@@ -121,7 +124,7 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
       if (controller.signal.aborted) throw controller.signal.reason;
       return validate(result);
     } finally {
-      clearTimeout(timer); signal?.removeEventListener('abort', abortCaller);
+      runtime.clearTimeout(timer); signal?.removeEventListener('abort', abortCaller);
       state.controller.signal.removeEventListener('abort', abortPlugin);
       controller.signal.removeEventListener('abort', onAbort);
     }
@@ -148,6 +151,7 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
     if (!manifest.supportedHosts.includes(hostId)) throw error(ErrorCode.UNSUPPORTED_HOST, 'Plugin does not support this host');
     if (plugins.has(manifest.id)) throw error(ErrorCode.INVALID_CONTRACT, 'Plugin ID is already active');
     if (plugins.size >= LIMITS.maxRegistrations) throw error(ErrorCode.BUDGET_EXCEEDED, 'Active plugin limit exceeded');
+    if (activations.size >= LIMITS.maxRegistrations) throw error(ErrorCode.BUDGET_EXCEEDED, 'Pending activation limit exceeded');
     const effectiveGrants = Object.freeze(grants.filter(grant => manifest.permissions.includes(grant)));
     const state = {active: true, ready: false, manifest, grants: effectiveGrants, commands: new Map(), registrations: new Set(), controller: new AbortController(), disposable: undefined};
     plugins.set(manifest.id, state);
@@ -252,7 +256,8 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
       onAbort = () => reject(signal.reason);
       signal.addEventListener('abort', onAbort, {once: true});
     });
-    const timer = setTimeout(() => state.controller.abort(error(ErrorCode.BUDGET_EXCEEDED, 'Plugin activation timed out')), LIMITS.defaultTimeoutMs);
+    const timer = runtime.setTimeout(() => state.controller.abort(error(ErrorCode.BUDGET_EXCEEDED, 'Plugin activation timed out')), LIMITS.defaultTimeoutMs);
+    activations.add(state);
     const operation = Promise.resolve().then(() => {
       if (signal.aborted) throw signal.reason;
       return plugin.activate(context);
@@ -262,16 +267,17 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
         if (result) { try { result.dispose(); } catch { /* host already closed */ } }
         throw signal.reason ?? error(ErrorCode.DISPOSED, 'Plugin deactivated during activation');
       }
+      // Own the result before another microtask can dispose the host. The
+      // activation race may reject before its success continuation runs.
+      state.disposable = result;
       return result;
-    });
+    }).finally(()=>activations.delete(state));
     try {
       const result = await Promise.race([operation, aborted]);
       // Disposal can run between the operation's resolution and this continuation.
       if (!state.active || disposed || signal.aborted) {
-        if (result) { try { result.dispose(); } catch { /* host already closed */ } }
         throw signal.reason ?? error(ErrorCode.DISPOSED, 'Plugin deactivated during activation');
       }
-      state.disposable = result;
       state.ready = true;
       return Object.freeze({dispose() {
         cleanup(state);
@@ -283,7 +289,7 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
       if (hostFailures.has(failure)) throw failure;
       throw error(ErrorCode.PROVIDER_FAILED, 'Plugin activation failed');
     } finally {
-      clearTimeout(timer);
+      runtime.clearTimeout(timer);
       signal.removeEventListener('abort', onAbort);
     }
   }
@@ -301,7 +307,7 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
     try {
       if (refs.length) {
         permit(state, 'secrets.resolve');
-        execution = createSecretExecution(secrets, {pluginId: state.manifest.id, workspaceId: scope.projectId, commandId: entry.command.id, executionId: globalThis.crypto.randomUUID()}, refs, {signal: options.signal});
+        execution = createSecretExecution(secrets, {pluginId: state.manifest.id, workspaceId: scope.projectId, commandId: entry.command.id, executionId: runtime.randomUUID()}, refs, {signal: options.signal});
       }
       const api = execution && Object.freeze({async withSecret(...args) {
         try {return await execution.secrets.withSecret(...args);}
@@ -513,6 +519,15 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
     readJobBinaryArtifactChunk(jobId, artifactId, revision, offset, length, options = {}) {
       assertOpen(); const {signal, timeoutMs} = checkedOptions(options);
       return jobRegistry.readBinaryArtifact(jobId, artifactId, revision, offset, length, signal, timeoutMs);
+    },
+    replaceGrants(next) {
+      assertOpen();next=parseGrants(next);
+      for(const [id,state]of plugins)if(state.grants.some(grant=>!next.includes(grant))){cleanup(state);plugins.delete(id);}
+      grants=next;
+    },
+    inspect() {
+      const diagnostics=registry.inspect(),language=[...languages.values()].map(item=>item.inspect()),job=jobRegistry.inspect();
+      return Object.freeze({disposed,plugins:plugins.size,commands:commandCount,registrations:[...plugins.values()].reduce((sum,state)=>sum+state.registrations.size,0),pendingActivations:activations.size,pendingOperations:pending.size,providerOperations:diagnostics.pending+language.reduce((sum,item)=>sum+item.pending,0),pendingJobs:job.pending,binaryOperations:job.binaryOperations,pendingCheckpoints:job.pendingCheckpoints,retainedJobs:job.retained,resolveTokens:language.reduce((sum,item)=>sum+item.tokens,0),semanticEntries:language.reduce((sum,item)=>sum+item.semanticEntries,0),timers:runtime.inspect().timers});
     },
     deactivate(pluginId) {
       assertOpen();

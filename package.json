@@ -1,6 +1,6 @@
 {
   "name": "@altifigence/dds-plugin-sdk",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "description": "Plugin, theme and user-owned workspace tools for Digital Design Studio",
   "type": "module",
   "license": "Apache-2.0",
@@ -152,6 +152,10 @@
     "./transfer-queue": {
       "types": "./src/transfer-queue.d.mts",
       "import": "./src/transfer-queue.mjs"
+    },
+    "./diagnostics": {
+      "import": "./src/diagnostics.mjs",
+      "types": "./src/diagnostics.d.mts"
     }
   },
   "bin": {
@@ -215,7 +219,9 @@
     "example:workspace-edits": "node examples/workspace-edits/run.mjs",
     "example:language-editing": "node examples/language-editing/run.mjs",
     "example:language-display": "node examples/language-display/run.mjs",
-    "example:language-display-browser": "node examples/language-display/serve.mjs"
+    "example:language-display-browser": "node examples/language-display/serve.mjs",
+    "example:devtools": "node examples/development-tools/run.mjs",
+    "benchmark:devtools": "node scripts/benchmark-devtools.mjs"
   },
   "devDependencies": {
     "typescript": "5.9.3"
