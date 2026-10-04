@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.11.0/schemas/manifest.schema.json",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.12.0/schemas/manifest.schema.json",
   "title": "manifest",
   "properties": {
     "id": {
@@ -181,6 +181,7 @@
             "enum": [
               "diagnostics",
               "commands",
+              "settings",
               "completion",
               "hover",
               "definition",
@@ -203,7 +204,7 @@
             ]
           },
           "minItems": 1,
-          "maxItems": 21,
+          "maxItems": 22,
           "uniqueItems": true
         },
         "permissions": {
@@ -215,11 +216,13 @@
               "workspace.read",
               "workspace.write",
               "backend.invoke",
-              "language.provide"
+              "language.provide",
+              "settings.read",
+              "secrets.resolve"
             ]
           },
           "minItems": 0,
-          "maxItems": 6,
+          "maxItems": 8,
           "uniqueItems": true
         },
         "supportedHosts": {
@@ -271,6 +274,74 @@
             "licenseFile"
           ],
           "additionalProperties": false
+        },
+        "display": {
+          "type": "object",
+          "properties": {
+            "label": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "help": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048
+            },
+            "order": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10000
+            },
+            "labelKey": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^(?!constructor$|prototype$|__proto__$)[A-Za-z][A-Za-z0-9_.-]{0,127}$"
+            },
+            "helpKey": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^(?!constructor$|prototype$|__proto__$)[A-Za-z][A-Za-z0-9_.-]{0,127}$"
+            },
+            "accessibility": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2048
+                },
+                "nameKey": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128,
+                  "pattern": "^(?!constructor$|prototype$|__proto__$)[A-Za-z][A-Za-z0-9_.-]{0,127}$"
+                },
+                "descriptionKey": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128,
+                  "pattern": "^(?!constructor$|prototype$|__proto__$)[A-Za-z][A-Za-z0-9_.-]{0,127}$"
+                },
+                "shortcut": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            }
+          },
+          "required": [],
+          "additionalProperties": false
         }
       },
       "required": [
@@ -305,7 +376,8 @@
                   "enum": [
                     "document.read",
                     "diagnostics.publish",
-                    "language.provide"
+                    "language.provide",
+                    "settings.read"
                   ]
                 }
               }

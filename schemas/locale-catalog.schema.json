@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.12.0/schemas/locale-catalog.schema.json",
+  "title": "locale-catalog",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "defaultLocale": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 64,
+      "$comment": "Runtime requires a canonical BCP 47 base tag supported by Intl.getCanonicalLocales; extensions/private-use are rejected."
+    },
+    "messages": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 32,
+      "propertyNames": {
+        "type": "string",
+        "minLength": 2,
+        "maxLength": 64,
+        "$comment": "Runtime requires a canonical BCP 47 base tag supported by Intl.getCanonicalLocales; extensions/private-use are rejected."
+      },
+      "additionalProperties": {
+        "type": "object",
+        "maxProperties": 256,
+        "propertyNames": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^(?!constructor$|prototype$|__proto__$)[A-Za-z][A-Za-z0-9_.-]{0,127}$"
+        },
+        "additionalProperties": {
+          "type": "string",
+          "maxLength": 4096
+        }
+      }
+    },
+    "fallbacks": {
+      "type": "object",
+      "maxProperties": 32,
+      "propertyNames": {
+        "type": "string",
+        "minLength": 2,
+        "maxLength": 64,
+        "$comment": "Runtime requires a canonical BCP 47 base tag supported by Intl.getCanonicalLocales; extensions/private-use are rejected."
+      },
+      "additionalProperties": {
+        "type": "array",
+        "maxItems": 32,
+        "uniqueItems": true,
+        "items": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 64,
+          "$comment": "Runtime requires a canonical BCP 47 base tag supported by Intl.getCanonicalLocales; extensions/private-use are rejected."
+        }
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "defaultLocale",
+    "messages"
+  ],
+  "additionalProperties": false,
+  "x-maxUtf8Bytes": 262144,
+  "$comment": "Runtime requires a nonempty default catalog and matching placeholder sets for every translation. Other locales may omit keys; unknown keys, noncanonical locales, undefined fallback targets, cycles and fallback edges from the default locale are rejected. Display cross-checks validate locale keys independently. Values are literal text; no HTML, ICU expression or remote loading."
+}

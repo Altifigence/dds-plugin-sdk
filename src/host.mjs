@@ -6,11 +6,16 @@ import { LANGUAGE_FEATURES, parseLanguageRequest } from './contracts.mjs';
 import {LANGUAGE_LIMITS} from './language-assistance.mjs';
 import {LANGUAGE_DISPLAY_LIMITS} from './language-display.mjs';
 import {SDK_VERSION} from './version.mjs';
+import {settingsPorts, createSettingsApi} from './settings-host.mjs';
 import { ErrorCode, LIMITS, PluginSdkError } from './limits.mjs';
 import {createJobRegistry} from './job-registry.mjs';
 import {parseBinaryArtifactSource, parseBinaryChunk,parseBinaryArtifactRange,decodeBinaryArtifactData} from './artifacts.mjs';
 import {parseStoredArtifact,parseStoredArtifactReference,parseStoredArtifactChunk} from './artifact-storage.mjs';
 import {parseJobId, parseJobOptions} from './jobs.mjs';
+import {parseCommandOutput} from './contracts.mjs';
+import {collectSecretReferences} from './data-schema.mjs';
+import {createSecretExecution} from './secrets.mjs';
+import {configurationMethod} from './configuration-values.mjs';
 
 const hostFailures = new WeakSet();
 const error = (code, message) => {
@@ -20,10 +25,15 @@ const error = (code, message) => {
 };
 
 /** Executes trusted local plugins in this process. This developer host is not a sandbox. */
-export function createPluginHost({hostId = 'test-host', scope = {projectId: 'example-project', sessionId: 'example-session'}, grants = [], workspace, backends = {}, jobs = false, binaryArtifacts = false, jobStorage} = {}) {
+export function createPluginHost({hostId = 'test-host', scope = {projectId: 'example-project', sessionId: 'example-session'}, grants = [], workspace, backends = {}, jobs = false, binaryArtifacts = false, jobStorage, settings = {}, secrets} = {}) {
   if (!['test-host', 'workspace-host'].includes(hostId)) throw error(ErrorCode.UNSUPPORTED_HOST, 'Unknown plugin host');
   scope = parseScope(scope);
   grants = parseGrants(grants);
+  const settingPorts = settingsPorts(settings);
+  if (secrets !== undefined) {
+    if (!secrets || typeof secrets !== 'object') throw error(ErrorCode.INVALID_CONTRACT, 'Expected a secret resolver port');
+    secrets = Object.freeze({withSecret: configurationMethod(secrets, 'withSecret', true)});
+  }
   if (workspace !== undefined && (!workspace || typeof workspace !== 'object')) throw error(ErrorCode.INVALID_CONTRACT, 'Expected a workspace port');
   if (!backends || typeof backends !== 'object' || Array.isArray(backends) || ![Object.prototype, null].includes(Object.getPrototypeOf(backends))) throw error(ErrorCode.INVALID_CONTRACT, 'Expected named backend handlers');
   const backendMap = new Map();
@@ -105,7 +115,7 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
           }
         }
         throw error(ErrorCode.PROVIDER_FAILED, 'Plugin operation failed');
-      });
+      }).finally(() => {pending.delete(controller); entry?.pending.delete(controller);});
       const result = await Promise.race([operationPromise, aborted]);
       assertActive(state);
       if (controller.signal.aborted) throw controller.signal.reason;
@@ -114,7 +124,6 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
       clearTimeout(timer); signal?.removeEventListener('abort', abortCaller);
       state.controller.signal.removeEventListener('abort', abortPlugin);
       controller.signal.removeEventListener('abort', onAbort);
-      pending.delete(controller); entry?.pending.delete(controller);
     }
   }
 
@@ -148,6 +157,10 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
       scope,
       grants: effectiveGrants,
       signal: state.controller.signal,
+      settings: createSettingsApi({pluginId: manifest.id, workspaceId: scope.projectId, port: settingPorts.get(manifest.id), registrations: state.registrations,
+        permit() {permit(state, 'settings.read'); if (!manifest.capabilities.includes('settings')) throw error(ErrorCode.PERMISSION_DENIED, 'Settings capability was not declared');},
+        run: (operation, options, validate) => run(state, operation, options, {validate, trusted: true}),
+      }),
       registerDiagnosticsProvider(selector, provider) {
         assertOpen();
         if (!state.active) throw error(ErrorCode.DISPOSED, 'Plugin is deactivated');
@@ -275,6 +288,28 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
     }
   }
 
+  function commandReferences(state, entry, value) {
+    const refs = entry.command.inputSchema ? collectSecretReferences(entry.command.inputSchema, value).map(item => item.reference) : [];
+    if (refs.length) {
+      permit(state, 'secrets.resolve');
+      if (!secrets) throw error(ErrorCode.CAPABILITY_UNAVAILABLE, 'Secret resolver is unavailable');
+    }
+    return refs;
+  }
+  async function executeHandler(state, entry, value, options, refs) {
+    let execution;
+    try {
+      if (refs.length) {
+        permit(state, 'secrets.resolve');
+        execution = createSecretExecution(secrets, {pluginId: state.manifest.id, workspaceId: scope.projectId, commandId: entry.command.id, executionId: globalThis.crypto.randomUUID()}, refs, {signal: options.signal});
+      }
+      const api = execution && Object.freeze({async withSecret(...args) {
+        try {return await execution.secrets.withSecret(...args);}
+        catch (failure) {throw error(failure.code, 'Secret access failed');}
+      }});
+      return await entry.handler(value, Object.freeze({...options, ...(api ? {secrets: api} : {})}));
+    } finally {execution?.dispose();}
+  }
   function startCommandJob(pluginId, commandId, input, options, attemptOf) {
     assertOpen();
     const state = plugins.get(pluginId);
@@ -282,10 +317,12 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
     const entry = state.commands.get(commandId);
     if (!entry) throw error(ErrorCode.CAPABILITY_UNAVAILABLE, 'Command is unavailable');
     const value = parseCommandInput(input, entry.command);
+    const refs = commandReferences(state, entry, value);
     return jobRegistry.start({pluginId, commandId, input: value, options, attemptOf, grants: state.grants, signal: state.controller.signal,
       assertActive: () => {assertActive(state); if (state.commands.get(commandId) !== entry) throw error(ErrorCode.DISPOSED, 'Command is disposed');},
       assertRead: () => permit(state, 'workspace.read'),
-      execute: (input, options) => entry.handler(input, Object.freeze(options)),
+      execute: (input, options) => executeHandler(state, entry, input, options, refs),
+      validateOutput: output => parseCommandOutput(output, entry.command),
       registerController: controller => {entry.pending.add(controller); return () => entry.pending.delete(controller);},
       readFile: (path, signal, timeoutMs = LIMITS.defaultTimeoutMs) => {
         permit(state, 'workspace.read');
@@ -417,7 +454,8 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
       const entry = state.commands.get(commandId);
       if (!entry) throw error(ErrorCode.CAPABILITY_UNAVAILABLE, 'Command is unavailable');
       const value = parseCommandInput(input, entry.command);
-      return run(state, signal => entry.handler(value, Object.freeze({signal})), options, {entry});
+      const refs = commandReferences(state, entry, value);
+      return run(state, signal => executeHandler(state, entry, value, {signal}, refs), options, {entry, validate: output => parseCommandOutput(output, entry.command)});
     },
     jobCapabilities() {assertOpen(); return jobRegistry.capabilities();},
     binaryArtifactCapabilities() {assertOpen(); return jobRegistry.binaryCapabilities();},

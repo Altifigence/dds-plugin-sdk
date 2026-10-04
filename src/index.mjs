@@ -3,7 +3,7 @@ import { ErrorCode, PluginSdkError } from './limits.mjs';
 
 export { ErrorCode, LIMITS, PluginSdkError, PROTOCOL_VERSION } from './limits.mjs';
 export { parseManifest, parseDocumentSnapshot, parseDiagnosticsRequest, parseDiagnosticsResult, createDiagnosticsResult } from './contracts.mjs';
-export { parseCommandDefinition, parseJsonValue, parseLicenseExpression, parseWorkspacePath } from './contracts.mjs';
+export { parseCommandDefinition, parseCommandInput, parseCommandOutput, parseJsonValue, parseLicenseExpression, parseWorkspacePath } from './contracts.mjs';
 export { createDiagnosticsRegistry } from './lifecycle.mjs';
 export { createLanguageRegistry } from './lifecycle.mjs';
 export { LANGUAGE_FEATURES, LANGUAGE_CAPABILITIES, parseLanguageRequest, parseLanguageResult, createLanguageResult } from './contracts.mjs';

@@ -100,7 +100,7 @@ function validatePlugins(plugins) {
     if (!Array.isArray(plugin.commands) || plugin.commands.length > 64) invalid();
     const commandIds = new Set();
     for (const command of plugin.commands) {
-      exactObject(command, ['pluginId', 'id', 'title'], ['description', 'parameters']);
+      exactObject(command, ['pluginId', 'id', 'title'], ['description', 'parameters', 'inputSchema', 'outputSchema', 'display']);
       if (command.pluginId !== id || commandIds.has(command.id)) invalid();
       const {pluginId: _, ...definition} = command;
       try { parseCommandDefinition(definition); } catch { invalid(); }

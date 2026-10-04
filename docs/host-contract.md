@@ -12,6 +12,12 @@ no Node filesystem, process or network APIs. It also supplies no OS sandbox:
 loop or remove a module's ambient access. Choose the OS user, container, WSL
 environment or other execution boundary independently.
 
+SDK 0.12 adds explicitly mounted [read-only plugin settings](SETTINGS.md) and
+[execution-scoped secret references](SECRETS.md), plus [command schemas](DATA_SCHEMAS.md).
+The operator retains write and provider authority. Cancelled normal commands and
+port calls keep their pending slot until the actual provider settles, so ignored
+cancellation cannot create unbounded background operations.
+
 ## Portable host
 
 ```js

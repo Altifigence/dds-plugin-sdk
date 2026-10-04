@@ -221,17 +221,25 @@ for (const action of ['dispose', 'deactivate', 'registration']) test(`command ${
   await rejected; finish.resolve(); host.dispose();
 });
 
-test('command bounds and pending slots remain reusable after cancellation', async () => {
-  let context;
-  const host = createPluginHost(); await host.activate(plugin(value => {context = value; value.registerCommand({id: 'wait', title: 'Wait'}, () => new Promise(() => {}));}));
+test('command bounds retain cancelled pending slots until the provider actually settles', async () => {
+  let context; const gates = [];
+  const host = createPluginHost(); await host.activate(plugin(value => {context = value; value.registerCommand({id: 'wait', title: 'Wait'}, () => {const gate = deferred(); gates.push(gate); return gate.promise;});}));
   for (let index = 1; index < LIMITS.maxCommands; index++) context.registerCommand({id: `command-${index}`, title: 'Command'}, () => null);
   assert.throws(() => context.registerCommand({id: 'extra', title: 'Extra'}, () => null), hasCode(ErrorCode.BUDGET_EXCEEDED));
   const controllers = Array.from({length: LIMITS.maxPendingRequests}, () => new AbortController());
   const outcomes = controllers.map(controller => assert.rejects(host.executeCommand(manifest.id, 'wait', null, {signal: controller.signal}), hasCode(ErrorCode.CANCELLED)));
   await assert.rejects(host.executeCommand(manifest.id, 'wait', null), hasCode(ErrorCode.BUDGET_EXCEEDED));
+  assert.equal(gates.length, LIMITS.maxPendingRequests);
   controllers[0].abort(); await outcomes[0];
+  await assert.rejects(host.executeCommand(manifest.id, 'wait', null), hasCode(ErrorCode.BUDGET_EXCEEDED));
+  gates[0].resolve(null); await new Promise(resolve => setImmediate(resolve));
   const replacement = new AbortController(); const replacementOutcome = assert.rejects(host.executeCommand(manifest.id, 'wait', null, {signal: replacement.signal}), hasCode(ErrorCode.CANCELLED));
-  replacement.abort(); controllers.forEach(controller => controller.abort()); await Promise.all([...outcomes, replacementOutcome]); host.dispose();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(gates.length, LIMITS.maxPendingRequests + 1);
+  replacement.abort(); controllers.forEach(controller => controller.abort()); await Promise.all([...outcomes, replacementOutcome]);
+  gates.forEach(gate => gate.resolve(null)); await new Promise(resolve => setImmediate(resolve));
+  assert.equal(await host.executeCommand(manifest.id, 'command-1', null), null);
+  host.dispose();
 });
 
 test('schemas include both manifest versions, command metadata, bounded JSON and exact theme schema', () => {

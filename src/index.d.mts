@@ -18,7 +18,7 @@ export class PluginSdkError extends Error {
   readonly code: PluginErrorCode;
   constructor(code: PluginErrorCode, message: string);
 }
-export type Permission = 'document.read' | 'diagnostics.publish' | 'workspace.read' | 'workspace.write' | 'backend.invoke' | 'language.provide';
+export type Permission = 'document.read' | 'diagnostics.publish' | 'workspace.read' | 'workspace.write' | 'backend.invoke' | 'language.provide' | 'settings.read' | 'secrets.resolve';
 export interface PluginManifestV1 {
   readonly manifestVersion: 1;
   readonly id: string;
@@ -33,9 +33,10 @@ export interface PluginManifestV1 {
   readonly license: string;
 }
 export interface PluginManifestV2 extends Omit<PluginManifestV1, 'manifestVersion' | 'capabilities' | 'permissions' | 'supportedHosts'> {
+  readonly display?: DisplayMetadata;
   readonly manifestVersion: 2;
   readonly runtime: 'ui' | 'workspace';
-  readonly capabilities: readonly ('diagnostics' | 'commands' | LanguageCapability)[];
+  readonly capabilities: readonly ('diagnostics' | 'commands' | 'settings' | LanguageCapability)[];
   readonly permissions: readonly Permission[];
   readonly supportedHosts: readonly HostId[];
   readonly source: {
@@ -54,6 +55,10 @@ export interface CommandParameter {
 export interface CommandDefinition {
   readonly id: string; readonly title: string; readonly description?: string;
   readonly parameters?: readonly CommandParameter[];
+  /** Mutually exclusive with parameters. Inputs apply defaults; outputs do not. */
+  readonly inputSchema?: DataSchema;
+  readonly outputSchema?: DataSchema;
+  readonly display?: DisplayMetadata;
 }
 export interface RegisteredCommand extends CommandDefinition {readonly pluginId: string;}
 import type {JobReporter, JobOptions, JobSnapshot, JobEvents, JobArtifactContent, JobCapabilities} from './jobs.mjs';
@@ -61,8 +66,11 @@ import type {BinaryArtifactSource, BinaryArtifactCapabilities, BinaryArtifactLis
 import type {JobStorageOptions, JobStorageCapabilities, JobRecovery} from './job-storage.mjs';
 import type {JobHistoryQuery, JobHistoryPage} from './job-history.mjs';
 import type {ArtifactStorageCapabilities,StoredArtifactList,StoredArtifactReference,StoredArtifactChunk} from './artifact-storage.mjs';
+import type {SettingsApi, SettingsReadPort} from './settings.mjs';
+import type {DataSchema, DisplayMetadata} from './data-schema.mjs';
+import type {SecretResolverPort, SecretExecutionApi} from './secrets.mjs';
 export type {JobReporter, JobOptions, JobSnapshot, JobEvents, JobArtifactContent, JobCapabilities} from './jobs.mjs';
-export type CommandHandler = (input: JsonValue, options: {readonly signal: AbortSignal; readonly job?: JobReporter}) => JsonValue | Promise<JsonValue>;
+export type CommandHandler = (input: JsonValue, options: {readonly signal: AbortSignal; readonly job?: JobReporter; readonly secrets?: SecretExecutionApi}) => JsonValue | Promise<JsonValue>;
 export interface WorkspaceFile {readonly path: string; readonly content: string; readonly revision: string;}
 export interface WorkspaceWriteResult {readonly path: string; readonly revision: string;}
 export interface WorkspaceEntry {readonly path: string; readonly kind: 'file' | 'directory'; readonly revision?: string; readonly name?: string; readonly size?: number;}
@@ -121,6 +129,7 @@ export interface PluginContext {
   readonly scope: Scope;
   readonly grants: readonly Permission[];
   readonly signal: AbortSignal;
+  readonly settings: SettingsApi;
   registerDiagnosticsProvider(selector: ProviderSelector, provider: DiagnosticsProvider): Disposable;
   registerLanguageProvider<K extends LanguageFeature>(kind: K, selector: ProviderSelector, provider: LanguageProvider<K>): Disposable;
   registerCommand(command: CommandDefinition, handler: CommandHandler): Disposable;
@@ -139,6 +148,8 @@ export interface DiagnosticsRegistry extends Disposable {
 }
 export function parseManifest(value: unknown): PluginManifest;
 export function parseCommandDefinition(value: unknown): CommandDefinition;
+export function parseCommandInput(value: unknown, command: CommandDefinition): JsonValue;
+export function parseCommandOutput(value: unknown, command: CommandDefinition): JsonValue;
 export function parseJsonValue(value: unknown): JsonValue;
 export function parseLicenseExpression(value: unknown): string;
 export function parseWorkspacePath(value: unknown, options?: {readonly allowRoot?: boolean}): string;
@@ -150,6 +161,8 @@ export function definePlugin(manifest: PluginManifest, activate: Plugin['activat
 /** For trusted host implementers. Authorization and isolation belong to the host. */
 export function createDiagnosticsRegistry(options?: {readonly isCurrent?: (request: DiagnosticsRequest) => boolean}): DiagnosticsRegistry;
 export interface PluginHostOptions {
+  readonly secrets?: SecretResolverPort;
+  readonly settings?: Readonly<Record<string, SettingsReadPort>>;
   readonly jobStorage?: JobStorageOptions;
   readonly jobs?: boolean;
   readonly binaryArtifacts?: boolean;

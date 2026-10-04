@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.12.0 — 2026-10-05
+
+- Add bounded versioned settings, default/user/workspace precedence, atomic CAS,
+  subscriptions and explicit migrations that preserve prior state on failure.
+- Add operator-owned secret references with scoped leases, expiry/revocation,
+  current authorization, redacted failures and deterministic owned-buffer cleanup.
+- Validate structured command inputs/defaults and outputs in normal and job paths;
+  keep legacy parameters and reject ambiguous declarations. Add form metadata,
+  stable local field errors and explicit per-execution secret access.
+- Add locale catalogs, deterministic fallback, literal placeholders, Intl helpers,
+  display cross-checks, accessibility names/keyboard hints and contrast reports.
+  Include independent HTTP and EN/KO/RTL/long-label browser examples.
+- Retain actual normal-command/port request slots when cancellation is ignored.
+  Add types and schemas for the public contracts; keep exact published plugin
+  metadata verification through 0.11 and target new packages at `>=0.12.0 <0.13.0`.
+
 ## 0.11.0 — 2026-10-04
 
 - Add semantic full/delta tokens with bounded provider-bound caches and one full

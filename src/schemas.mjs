@@ -19,6 +19,8 @@ import {SDK_VERSION} from './version.mjs';
 import {WORKSPACE_EDIT_SCHEMA, WORKSPACE_EDIT_SCHEMAS} from './workspace-edit-schemas.mjs';
 import {FORMATTING_OPTIONS_SCHEMA, CODE_ACTION_SCHEMA, CODE_ACTION_CONTEXT_SCHEMA, LANGUAGE_EDITING_SCHEMAS} from './language-editing-schemas.mjs';
 import {LANGUAGE_DISPLAY_SCHEMAS, SEMANTIC_TOKENS_SCHEMA, FOLDING_SCHEMA, INLAY_SCHEMA} from './language-display-schemas.mjs';
+import {CONFIGURATION_SCHEMAS, DATA_SCHEMA_CONTRACT, DATA_SCHEMA_DEFINITIONS, DISPLAY_METADATA_SCHEMA} from './data-schema-schemas.mjs';
+import {LOCALIZATION_SCHEMAS} from './localization-schemas.mjs';
 
 const schema = 'https://json-schema.org/draft/2020-12/schema';
 const base = `https://github.com/Altifigence/dds-plugin-sdk/blob/v${SDK_VERSION}/schemas/`;
@@ -53,8 +55,8 @@ const manifestV1 = object({
 });
 const manifestV2 = object({
   manifestVersion: {const: 2}, ...commonManifest, runtime: {enum: ['ui', 'workspace']},
-  capabilities: list({enum: ['diagnostics', 'commands', ...LANGUAGE_CAPABILITIES]}, LANGUAGE_CAPABILITIES.length + 2, 1, true),
-  permissions: list({enum: ['document.read', 'diagnostics.publish', 'workspace.read', 'workspace.write', 'backend.invoke', 'language.provide']}, 6, 0, true),
+  capabilities: list({enum: ['diagnostics', 'commands', 'settings', ...LANGUAGE_CAPABILITIES]}, LANGUAGE_CAPABILITIES.length + 3, 1, true),
+  permissions: list({enum: ['document.read', 'diagnostics.publish', 'workspace.read', 'workspace.write', 'backend.invoke', 'language.provide', 'settings.read', 'secrets.resolve']}, 8, 0, true),
   supportedHosts: list({enum: ['test-host', 'workspace-host']}, 2, 1, true),
   license: {...text(512), pattern: '^[A-Za-z0-9.+:()\\s-]+$', 'x-licenseExpression': true, $comment: 'Runtime validates bounded SPDX-style expression grammar; this is not legal permission.'},
   source: object({
@@ -63,7 +65,8 @@ const manifestV2 = object({
     repository: {...text(2048), pattern: '^https://[^\\s?#]+$', format: 'uri', $comment: 'Runtime also rejects credentials.'},
   }, ['visibility', 'licenseFile']),
 });
-manifestV2.allOf = [{if: {properties: {runtime: {const: 'ui'}}}, then: {properties: {permissions: {items: {enum: ['document.read', 'diagnostics.publish', 'language.provide']}}}}}];
+manifestV2.properties.display = DISPLAY_METADATA_SCHEMA;
+manifestV2.allOf = [{if: {properties: {runtime: {const: 'ui'}}}, then: {properties: {permissions: {items: {enum: ['document.read', 'diagnostics.publish', 'language.provide', 'settings.read']}}}}}];
 manifestV2.allOf.push({if: {properties: {capabilities: {contains: {enum: ['completion-resolve', 'completion-snippets']}}}}, then: {properties: {capabilities: {contains: {const: 'completion'}}}}});
 manifestV2.allOf.push({if: {properties: {capabilities: {contains: {const: 'code-action-resolve'}}}}, then: {properties: {capabilities: {contains: {const: 'code-actions'}}}}});
 manifestV2.allOf.push({if: {properties: {capabilities: {contains: {const: 'semantic-tokens-delta'}}}}, then: {properties: {capabilities: {contains: {const: 'semantic-tokens'}}}}});
@@ -117,6 +120,8 @@ const historyDisposition = {enum:['live','completed','interrupted','expired']};
 const historyCursor = {...text(40),pattern:'^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}:(?:0|[1-9][0-9]{0,2})$'};
 const historyItem = object({jobId,commandId:text(128),state:{enum:JOB_STATES},disposition:historyDisposition,startedAt:integer(Number.MAX_SAFE_INTEGER),updatedAt:integer(Number.MAX_SAFE_INTEGER),expiresAt:integer(Number.MAX_SAFE_INTEGER,1),revision:integer(Number.MAX_SAFE_INTEGER,1),attemptOf:{oneOf:[jobId,{type:'null'}]},contentPolicy:{enum:['metadata-only','host-redacted']},artifactCount:integer(JOB_LIMITS.artifacts),snapshotCount:integer(JOB_LIMITS.artifacts),resultAvailability:{enum:['none','source-references','snapshot-references','mixed-references','expired']}});
 export const SCHEMAS = Object.freeze({
+  ...Object.fromEntries(Object.entries(CONFIGURATION_SCHEMAS).map(([name, body]) => [name, define(name, body)])),
+  ...Object.fromEntries(Object.entries(LOCALIZATION_SCHEMAS).map(([name, body]) => [name, define(name, body)])),
   ...Object.fromEntries(Object.entries(LANGUAGE_DISPLAY_SCHEMAS).map(([name, body]) => [name, define(name, body)])),
   ...Object.fromEntries(Object.entries(LANGUAGE_EDITING_SCHEMAS).map(([name, body]) => [name, define(name, body)])),
   ...Object.fromEntries(Object.entries(WORKSPACE_EDIT_SCHEMAS).map(([name, body]) => [name, define(name, body)])),
@@ -152,9 +157,10 @@ export const SCHEMAS = Object.freeze({
   'job-capabilities': define('job-capabilities', object({protocolVersion: {const: 1}, enabled: {type: 'boolean'}, limits: object(Object.fromEntries(Object.entries(JOB_LIMITS).map(([key, value]) => [key, integer(value, 1)])))})),
   theme: THEME_SCHEMA,
   manifest: define('manifest', {properties: commonManifest, oneOf: [manifestV1, manifestV2]}),
-  command: define('command', object({
+  command: define('command', {...object({
     id: identifier(128), title: text(128), description: text(2048), parameters: list(commandParameter, 32),
-  }, ['id', 'title'])),
+    inputSchema: DATA_SCHEMA_CONTRACT, outputSchema: DATA_SCHEMA_CONTRACT, display: DISPLAY_METADATA_SCHEMA,
+  }, ['id', 'title']), not: {required: ['parameters', 'inputSchema']}, $defs: DATA_SCHEMA_DEFINITIONS, 'x-maxUtf8Bytes': LIMITS.commandBytes}),
   'json-value': define('json-value', {
     $ref: '#/$defs/value', 'x-maxUtf8Bytes': LIMITS.jsonBytes, 'x-maxDepth': LIMITS.jsonDepth, 'x-maxNodes': LIMITS.jsonNodes,
     $defs: {value: {anyOf: [

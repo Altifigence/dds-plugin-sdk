@@ -1,4 +1,4 @@
-# API reference — 0.11.0
+# API reference — 0.12.0
 
 SDK 0.8 adds optional [job storage](JOB_STORAGE.md), [history and retry](JOB_HISTORY.md)
 and [stored result files](ARTIFACT_STORAGE.md). Existing v1 response shapes remain valid.
@@ -80,7 +80,7 @@ license eligibility or agreement acceptance. See [LICENSING](LICENSING.md).
 
 | Activation context member | Behavior |
 | --- | --- |
-| `host` | `{id: 'test-host' \| 'workspace-host', version: '0.11.0', protocolVersion: 1}` |
+| `host` | `{id: 'test-host' \| 'workspace-host', version: '0.12.0', protocolVersion: 1}` |
 | `pluginId`, `scope` | Manifest ID and opaque host `{projectId, sessionId}` |
 | `grants` | Frozen intersection of host grants and manifest permissions |
 | `signal` | Aborted on deactivation, host disposal or activation timeout |
@@ -89,6 +89,7 @@ license eligibility or agreement acceptance. See [LICENSING](LICENSING.md).
 | `registerCommand(definition, handler)` | Require declared commands capability; return a registration `Disposable` |
 | `workspace` | Permission-checked saved-file read, list and CAS write APIs |
 | `backends` | Permission-checked invocation of named, host-configured handlers |
+| `settings` | Plugin/project-scoped effective reads and subscriptions; requires declared capability and grant |
 
 `createPluginHost()` defaults to **no grants**. `createTestHost()` from
 `@altifigence/dds-plugin-sdk/testing` preserves its v1 compatibility defaults:
@@ -98,15 +99,18 @@ themselves access. A missing optional port returns `capability_unavailable`.
 ## Commands and parameters
 
 `context.registerCommand(definition, handler)` takes `{id, title,
-description?, parameters?}`. Each parameter is `{name, label, type, required,
+description?, parameters?, inputSchema?, outputSchema?, display?}`. Each legacy parameter is `{name, label, type, required,
 choices?}`; types are `string`, `number` or `boolean`. `choices` is a nonempty
 unique array available only for string parameters. A command supports at most
 32 parameters and each string choice has at most 256 code points.
 
-If `parameters` is omitted, the input may be any bounded `JsonValue`. If present,
+If both `parameters` and `inputSchema` are omitted, the input may be any bounded `JsonValue`. If `parameters` is present,
 including an empty array, input must be an object containing only the named
 parameters. Required values must be supplied, types must match and choices must
-match exactly. The SDK provides no parameter defaults or coercion.
+match exactly. Legacy parameters have no defaults or coercion. New schemas and
+parameters are mutually exclusive; schemas support validated defaults and output
+validation. See [structured data](DATA_SCHEMAS.md), [settings](SETTINGS.md),
+[secret leases](SECRETS.md) and [localized display](LOCALIZATION.md).
 
 ```js
 const registration = context.registerCommand({

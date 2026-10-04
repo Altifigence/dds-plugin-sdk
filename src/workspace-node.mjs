@@ -290,7 +290,7 @@ function safeOperationFailure(failure) {
 }
 
 /** HTTP server for explicitly configured trusted plugins in the user environment. */
-export async function createWorkspaceServer({workspace,root,workspaceId,name='User workspace',token,plugins=[],pluginHost,grants=[],backends={},jobs=false,binaryArtifacts=false,jobStorage,projects,uploads,notice,host='127.0.0.1',port=0,writable=true,manage=writable,allowedOrigins=[],timeoutMs=WORKSPACE_LIMITS.defaultTimeoutMs}={}) {
+export async function createWorkspaceServer({workspace,root,workspaceId,name='User workspace',token,plugins=[],pluginHost,grants=[],backends={},jobs=false,binaryArtifacts=false,jobStorage,settings,secrets,projects,uploads,notice,host='127.0.0.1',port=0,writable=true,manage=writable,allowedOrigins=[],timeoutMs=WORKSPACE_LIMITS.defaultTimeoutMs}={}) {
   requireUuid(workspaceId);requireText(name,128);requireText(host,253);token=requireToken(token);
   if(typeof jobs!=='boolean'||typeof binaryArtifacts!=='boolean')throw workspaceFailure('invalid_request','Invalid job capability');
   const ownsPluginHost=pluginHost===undefined;
@@ -316,7 +316,7 @@ export async function createWorkspaceServer({workspace,root,workspaceId,name='Us
   workspace??=await createNodeWorkspace({root,writable,manage,binaryArtifacts});
   const generation=randomUUID(),scope=Object.freeze({projectId:workspaceId,sessionId:generation});
   let projectTransport;
-  try{projectTransport=await createWorkspaceProjectTransport(workspace,projects,scope);pluginHost??=createPluginHost({hostId:'workspace-host',scope,grants,workspace,backends,jobs,binaryArtifacts,jobStorage:storageOptions});}
+  try{projectTransport=await createWorkspaceProjectTransport(workspace,projects,scope);pluginHost??=createPluginHost({hostId:'workspace-host',scope,grants,workspace,backends,jobs,binaryArtifacts,jobStorage:storageOptions,settings,secrets});}
   catch(failure){await projectTransport?.close();workspace.dispose?.();throw safeOperationFailure(failure);}
   const pins=new Map();
   try{

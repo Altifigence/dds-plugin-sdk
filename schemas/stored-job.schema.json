@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.11.0/schemas/stored-job.schema.json",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.12.0/schemas/stored-job.schema.json",
   "title": "stored-job",
   "type": "object",
   "properties": {
@@ -69,15 +69,17 @@
           "workspace.read",
           "workspace.write",
           "backend.invoke",
-          "language.provide"
+          "language.provide",
+          "settings.read",
+          "secrets.resolve"
         ]
       },
       "minItems": 0,
-      "maxItems": 6,
+      "maxItems": 8,
       "uniqueItems": true
     },
     "snapshot": {
-      "$ref": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.11.0/schemas/job-snapshot.schema.json"
+      "$ref": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.12.0/schemas/job-snapshot.schema.json"
     },
     "events": {
       "type": "array",

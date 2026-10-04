@@ -10,6 +10,12 @@ a small ESM package, TypeScript declarations and versioned contracts. Connect
 your own workspace and tools with the Node.js host and HTTP client. The SDK has
 **zero runtime dependencies**.
 
+Version 0.12 adds [versioned settings](docs/SETTINGS.md), [execution-scoped secret
+references](docs/SECRETS.md), [structured command schemas](docs/DATA_SCHEMAS.md)
+and [localization/accessibility helpers](docs/LOCALIZATION.md). Run
+`npm run example:configuration` for the independent HTTP example or
+`npm run example:configuration-browser` for EN/KO, RTL and long-label forms.
+
 Version 0.11 adds [signature help and completion assistance](docs/LANGUAGE_ASSISTANCE.md),
 including lazy item resolution, limited snippets and pure insertion previews.
 Run `npm run example:assistance` for the nested-call and Unicode example.
@@ -34,7 +40,7 @@ application, private engines/services and production signing systems are outside
 this repository. Read the [public scope](docs/PUBLIC_SCOPE.md) and
 [compatibility table](docs/COMPATIBILITY.md) for exact boundaries.
 
-Version **0.11.0** supports Node 22 and 24. Manifest v1 diagnostic plugins remain
+Version **0.12.0** supports Node 22 and 24. Manifest v1 diagnostic plugins remain
 compatible. Manifest v2 adds commands, permission-scoped workspace and backend
 APIs, and open-source or proprietary distribution metadata. Themes export to
 the XML format already supported by DDS. The workspace host runs trusted plugins
@@ -94,7 +100,7 @@ mkdir my-dds-plugin
 cd my-dds-plugin
 npm init -y
 npm pkg set type=module
-npm install --ignore-scripts --save-exact https://github.com/Altifigence/dds-plugin-sdk/releases/download/v0.11.0/altifigence-dds-plugin-sdk-0.11.0.tgz
+npm install --ignore-scripts --save-exact https://github.com/Altifigence/dds-plugin-sdk/releases/download/v0.12.0/altifigence-dds-plugin-sdk-0.12.0.tgz
 ```
 
 Copy the example's `plugin.mjs` and `run.mjs` into this directory, then run:

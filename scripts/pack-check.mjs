@@ -195,6 +195,10 @@ try {
 `);
   run(process.execPath, ['workspace-smoke.mjs'], consumer);
   await cp(join(root, 'tests', 'types', 'consumer.mts'), join(consumer, 'consumer.mts'));
+  await cp(join(root, 'tests', 'types', 'configuration.mts'), join(consumer, 'configuration.mts'));
+  await cp(join(root, 'tests', 'types', 'localization.mts'), join(consumer, 'localization.mts'));
+  await cp(join(installed, 'examples', 'configuration'), join(consumer, 'configuration-example'), {recursive: true});
+  assert.match(run(process.execPath, ['configuration-example/run.mjs'], consumer), /scoped CAS settings, migration rollback, structured HTTP commands\/jobs, isolated secret references and revocation verified/);
   await cp(join(root, 'tests', 'types', 'uploads.mts'), join(consumer, 'uploads.mts'));
   await cp(join(root, 'tests', 'types', 'transfer-queue.mts'), join(consumer, 'transfer-queue.mts'));
   await cp(join(root, 'tests', 'types', 'public-apis.mts'), join(consumer, 'public-apis.mts'));
