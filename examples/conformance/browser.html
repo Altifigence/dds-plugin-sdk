@@ -1,0 +1,8 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SDK host conformance</title><link rel="stylesheet" href="/browser.css">
+<main><p class="eyebrow">DIGITAL DESIGN STUDIO · PLUGIN SDK</p><h1>Check your host contract</h1><p>Run the synthetic browser profile. Each feature reports its own support and cleanup result.</p>
+<div class="controls"><button id="run" type="button">Run checks</button><label><input id="theme" type="checkbox"> Dark theme</label></div>
+<p id="status" role="status" aria-live="polite">Ready. Fixtures run locally in this page.</p>
+<dl id="identity" hidden></dl><div class="table-wrap" hidden><table><caption>Feature results</caption><thead><tr><th scope="col">Feature</th><th scope="col">Status</th><th scope="col">Cleanup</th></tr></thead><tbody id="results"></tbody></table></div>
+<p class="note">Node workspace and development-tool fixtures are unavailable in this browser profile. Memory storage probes do not establish filesystem durability or OPFS support. These checks run trusted code; they do not provide OS isolation.</p>
+</main><script type="module" src="/browser.mjs"></script></html>

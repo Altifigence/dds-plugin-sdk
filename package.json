@@ -1,6 +1,6 @@
 {
   "name": "@altifigence/dds-plugin-sdk",
-  "version": "0.13.0",
+  "version": "1.0.0-rc.1",
   "description": "Plugin, theme and user-owned workspace tools for Digital Design Studio",
   "type": "module",
   "license": "Apache-2.0",
@@ -156,6 +156,14 @@
     "./diagnostics": {
       "import": "./src/diagnostics.mjs",
       "types": "./src/diagnostics.d.mts"
+    },
+    "./conformance": {
+      "types": "./src/conformance.d.mts",
+      "import": "./src/conformance.mjs"
+    },
+    "./conformance-node": {
+      "types": "./src/conformance-node.d.mts",
+      "import": "./src/conformance-node.mjs"
     }
   },
   "bin": {
@@ -174,7 +182,8 @@
     "SECURITY.md",
     "LICENSE",
     "NOTICE",
-    "PUBLIC_SURFACE.json"
+    "PUBLIC_SURFACE.json",
+    "API_SUPPORT.json"
   ],
   "scripts": {
     "example:configuration": "node examples/configuration/run.mjs",
@@ -188,7 +197,7 @@
     "pack:check": "node scripts/pack-check.mjs",
     "public:check": "node scripts/check-public-surface.mjs",
     "benchmark": "node scripts/benchmark.mjs",
-    "check": "npm run public:check && npm run schemas:check && npm test && npm run test:types && npm run example && npm run pack:check",
+    "check": "npm run public:check && npm run api:check && npm run schemas:check && npm test && npm run test:types && npm run example && npm run pack:check",
     "example:language": "node examples/hello-language/run.mjs",
     "example:project": "node examples/project-session/run.mjs",
     "example:verify": "node examples/release-verification/run.mjs",
@@ -221,7 +230,13 @@
     "example:language-display": "node examples/language-display/run.mjs",
     "example:language-display-browser": "node examples/language-display/serve.mjs",
     "example:devtools": "node examples/development-tools/run.mjs",
-    "benchmark:devtools": "node scripts/benchmark-devtools.mjs"
+    "benchmark:devtools": "node scripts/benchmark-devtools.mjs",
+    "api:write": "node scripts/api-support.mjs --write",
+    "api:check": "node scripts/api-support.mjs --check",
+    "example:conformance": "node examples/conformance/run.mjs",
+    "example:conformance-browser": "node examples/conformance/serve.mjs",
+    "example:combined": "node examples/combined-workload/run.mjs",
+    "benchmark:combined": "node scripts/benchmark-combined.mjs"
   },
   "devDependencies": {
     "typescript": "5.9.3"

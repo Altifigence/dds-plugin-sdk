@@ -80,6 +80,12 @@ try {
   assert.match(run(process.execPath, ['project-watch-example/run.mjs'], consumer), /initial snapshot, atomic save and resource cleanup verified/);
   await cp(join(installed, 'examples', 'workspace-observation'), join(consumer, 'observation-example'), {recursive:true});
   assert.match(run(process.execPath, ['observation-example/run.mjs'], consumer), /file changes, retained draft and resumed job verified/);
+  await cp(join(installed,'examples','conformance'),join(consumer,'conformance-example'),{recursive:true});
+  const conformance=JSON.parse(run(process.execPath,['conformance-example/run.mjs','--json'],consumer));
+  assert.equal(conformance.ok,true);assert.equal(conformance.summary.supported,18);
+  await cp(join(installed,'examples','combined-workload'),join(consumer,'combined-example'),{recursive:true});
+  const combined=JSON.parse(run(process.execPath,['combined-example/run.mjs','--faults'],consumer));
+  assert.equal(combined.verifiedTransfers,6);assert.deepEqual(combined.remainingResources,{});
   for (const entry of Object.values(metadata.exports)) {
     for (const file of typeof entry === 'string' ? [entry] : Object.values(entry)) {
       assert.ok(paths.includes(file.replace(/^\.\//, '')), `Export ${file} is absent from the archive`);

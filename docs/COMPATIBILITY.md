@@ -1,5 +1,18 @@
 # Compatibility and availability
 
+## 1.0 release candidate
+
+`1.0.0-rc.1` retains the 0.13 public runtime and protocol contracts and adds
+[host conformance](CONFORMANCE.md), a complete [API inventory](../API_SUPPORT.json)
+and an explicit [support/migration policy](SUPPORT_POLICY.md). New RC plugin archives
+pin the exact `1.0.0-rc.1` peer. Verification still accepts exact 0.3.x–0.13.x
+metadata without widening any archive's original range. Revalidate and repack to
+change a plugin's installation range. Actual old-archive wire interoperability
+tests do not make those SDK lines maintained or prove every optional feature exists.
+
+Stable 1.x policy is a GA commitment; RC acceptance and known limits are recorded
+in [the acceptance report](RC_ACCEPTANCE.md). DDS product releases remain separate.
+
 ## 0.13 development and diagnostics
 
 Six feature templates, guarded contract generation, synthetic scenario ports,

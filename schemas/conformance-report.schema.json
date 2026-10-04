@@ -1,0 +1,226 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v1.0.0-rc.1/schemas/conformance-report.schema.json",
+  "title": "conformance-report",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "suiteVersion": {
+      "const": 1
+    },
+    "sdkVersion": {
+      "type": "string",
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9 ._+()-]*$"
+    },
+    "identity": {
+      "type": "object",
+      "properties": {
+        "host": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9 ._+()-]*$"
+        },
+        "version": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9 ._+()-]*$"
+        },
+        "runtime": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9 ._+()-]*$"
+        },
+        "platform": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9 ._+()-]*$"
+        }
+      },
+      "required": [
+        "host",
+        "version",
+        "runtime",
+        "platform"
+      ],
+      "additionalProperties": false
+    },
+    "declaredFeatures": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 128,
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9 ._+()-]*$"
+      },
+      "maxItems": 64,
+      "uniqueItems": true
+    },
+    "unknownFeatures": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 128,
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9 ._+()-]*$"
+      },
+      "maxItems": 64,
+      "uniqueItems": true
+    },
+    "requiredFeatures": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "commands",
+          "permissions",
+          "cancellation",
+          "language",
+          "language-editing",
+          "language-display",
+          "settings",
+          "jobs",
+          "storage-history",
+          "files",
+          "projects",
+          "artifacts",
+          "uploads-transfers",
+          "workspace-edits",
+          "localization",
+          "testing-replay",
+          "diagnostics",
+          "development-tools"
+        ]
+      },
+      "maxItems": 64,
+      "uniqueItems": true
+    },
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "enum": [
+              "commands",
+              "permissions",
+              "cancellation",
+              "language",
+              "language-editing",
+              "language-display",
+              "settings",
+              "jobs",
+              "storage-history",
+              "files",
+              "projects",
+              "artifacts",
+              "uploads-transfers",
+              "workspace-edits",
+              "localization",
+              "testing-replay",
+              "diagnostics",
+              "development-tools"
+            ]
+          },
+          "status": {
+            "enum": [
+              "supported",
+              "unsupported",
+              "failed"
+            ]
+          },
+          "reason": {
+            "enum": [
+              "passed",
+              "not_declared",
+              "missing_adapter",
+              "assertion",
+              "provider_error",
+              "timed_out",
+              "cancelled",
+              "cleanup_failed",
+              "aborted_after_timeout"
+            ]
+          },
+          "check": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128,
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9 ._+()-]*$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "durationMs": {
+            "type": "number",
+            "minimum": 0
+          },
+          "cleanup": {
+            "enum": [
+              "complete",
+              "pending",
+              "failed",
+              "not-run"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "reason",
+          "check",
+          "durationMs",
+          "cleanup"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 18,
+      "maxItems": 18
+    },
+    "summary": {
+      "type": "object",
+      "properties": {
+        "supported": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 18
+        },
+        "unsupported": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 18
+        },
+        "failed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 18
+        }
+      },
+      "required": [
+        "supported",
+        "unsupported",
+        "failed"
+      ],
+      "additionalProperties": false
+    },
+    "ok": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "suiteVersion",
+    "sdkVersion",
+    "identity",
+    "declaredFeatures",
+    "unknownFeatures",
+    "requiredFeatures",
+    "results",
+    "summary",
+    "ok"
+  ],
+  "additionalProperties": false,
+  "$comment": "Runtime also validates exact case order, counts, unknown/required declarations and status/cleanup/ok consistency."
+}
