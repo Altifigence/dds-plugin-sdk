@@ -45,3 +45,4 @@ jobs:
           npm run benchmark:project-query
           npm run benchmark:browser-artifacts
           npm run benchmark:uploads
+          npm run benchmark:transfer-queue

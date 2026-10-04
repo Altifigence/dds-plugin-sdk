@@ -9,6 +9,7 @@ import {PROJECT_QUERY_SCHEMAS} from './project-query-schemas.mjs';
 import {WORKSPACE_PROJECT_SCHEMAS} from './workspace-project-schemas.mjs';
 import {ARTIFACT_TRANSFER_SCHEMAS} from './artifact-transfer-schemas.mjs';
 import {UPLOAD_SCHEMAS} from './upload-schemas.mjs';
+import {TRANSFER_QUEUE_SCHEMAS} from './transfer-queue-schemas.mjs';
 import { SEMVER_PATTERN } from './patterns.mjs';
 import { THEME_SCHEMA } from './themes.mjs';
 import {WORKSPACE_LIMITS} from './workspace-protocol.mjs';
@@ -100,7 +101,7 @@ const historyDisposition = {enum:['live','completed','interrupted','expired']};
 const historyCursor = {...text(40),pattern:'^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}:(?:0|[1-9][0-9]{0,2})$'};
 const historyItem = object({jobId,commandId:text(128),state:{enum:JOB_STATES},disposition:historyDisposition,startedAt:integer(Number.MAX_SAFE_INTEGER),updatedAt:integer(Number.MAX_SAFE_INTEGER),expiresAt:integer(Number.MAX_SAFE_INTEGER,1),revision:integer(Number.MAX_SAFE_INTEGER,1),attemptOf:{oneOf:[jobId,{type:'null'}]},contentPolicy:{enum:['metadata-only','host-redacted']},artifactCount:integer(JOB_LIMITS.artifacts),snapshotCount:integer(JOB_LIMITS.artifacts),resultAvailability:{enum:['none','source-references','snapshot-references','mixed-references','expired']}});
 export const SCHEMAS = Object.freeze({
-  ...Object.fromEntries(Object.entries({...PROJECT_WATCH_SCHEMAS,...PROJECT_QUERY_SCHEMAS,...WORKSPACE_PROJECT_SCHEMAS,...ARTIFACT_TRANSFER_SCHEMAS,...UPLOAD_SCHEMAS}).map(([name,body])=>[name,define(name,body)])),
+  ...Object.fromEntries(Object.entries({...PROJECT_WATCH_SCHEMAS,...PROJECT_QUERY_SCHEMAS,...WORKSPACE_PROJECT_SCHEMAS,...ARTIFACT_TRANSFER_SCHEMAS,...UPLOAD_SCHEMAS,...TRANSFER_QUEUE_SCHEMAS}).map(([name,body])=>[name,define(name,body)])),
   'stored-artifact':define('stored-artifact',{...storedArtifact,$comment:'Runtime checks identity, labels are excluded, and capturedAt/expiresAt ordering and maximum retention.'}),
   'stored-artifact-reference':define('stored-artifact-reference',{...storedReference,$comment:'Current response scope binds the workspace but does not reuse an old session.'}),
   'stored-artifact-chunk':define('stored-artifact-chunk',{...object({reference:storedReference,...binaryChunk}),$comment:'Runtime validates exact offsets/EOF, canonical base64 and content size. Hosts and clients verify chunk SHA-256; download publication verifies the whole file.'}),

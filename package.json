@@ -116,6 +116,10 @@
     "./uploads-browser": {
       "types": "./src/uploads-browser.d.mts",
       "import": "./src/uploads-browser.mjs"
+    },
+    "./transfer-queue": {
+      "types": "./src/transfer-queue.d.mts",
+      "import": "./src/transfer-queue.mjs"
     }
   },
   "bin": {
@@ -168,7 +172,10 @@
     "benchmark:browser-artifacts": "node scripts/benchmark-browser-artifacts.mjs",
     "example:uploads": "node examples/uploads/run.mjs",
     "benchmark:uploads": "node scripts/benchmark-uploads.mjs",
-    "example:uploads-browser": "node examples/uploads/serve.mjs"
+    "example:uploads-browser": "node examples/uploads/serve.mjs",
+    "example:transfer-queue": "node examples/transfer-queue/run.mjs",
+    "example:transfer-queue-browser": "node examples/transfer-queue/serve.mjs",
+    "benchmark:transfer-queue": "node scripts/benchmark-transfer-queue.mjs"
   },
   "devDependencies": {
     "typescript": "5.9.3"

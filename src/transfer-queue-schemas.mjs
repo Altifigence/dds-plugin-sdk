@@ -1,0 +1,9 @@
+import {TRANSFER_STATES,TRANSFER_PHASES} from './transfer-queue-contracts.mjs';
+import {WORKSPACE_ERROR_CODES} from './workspace-values.mjs';
+const integer=(maximum=Number.MAX_SAFE_INTEGER,minimum=0)=>({type:'integer',minimum,maximum});
+const object=(properties,required=Object.keys(properties))=>({type:'object',properties,required,additionalProperties:false});
+const uuid={type:'string',format:'uuid'},file=integer(1_073_741_824),boolean={type:'boolean'};
+export const TRANSFER_QUEUE_SCHEMAS=Object.freeze({
+  'transfer-queue-options':{...object({maxTransfers:integer(32,1),concurrency:integer(4,1),perConnection:integer(4,1),bufferBytes:{...integer(262_144,65_536),multipleOf:65_536},bytesPerSecond:integer(1_073_741_824),attempts:integer(5,1),baseDelayMs:integer(1_000,1),maxDelayMs:integer(10_000,1)},[]),$comment:'Runtime checks perConnection <= concurrency and maxDelayMs >= baseDelayMs, with documented defaults.'},
+  'transfer-snapshot':{...object({protocolVersion:{const:1},id:uuid,connectionId:uuid,sequence:integer(),kind:{enum:['upload','download','stored-download']},state:{enum:TRANSFER_STATES},phase:{enum:TRANSFER_PHASES},priority:integer(3),active:boolean,pauseRequested:boolean,totalBytes:file,acknowledgedBytes:file,transferredBytes:file,attemptedBytes:integer(5_368_709_120),retriedBytes:integer(5_368_709_120),resumedBytes:file,remainingBytes:file,retries:integer(4_294_967_300),verified:boolean,verification:{enum:['pending','received','stored','upload-commit']},commit:{enum:['not-committed','unknown','committed']},partialDisposition:{enum:['discarded','retained','unknown']},error:{oneOf:[{type:'null'},object({code:{enum:WORKSPACE_ERROR_CODES},message:{type:'string',maxLength:2_048}})]}}),$comment:'Runtime enforces byte totals, verified iff completed with matching final receipt, active/state and error/state consistency. attemptedBytes counts scheduled raw-payload attempts, not measured HTTP wire bytes.'},
+});

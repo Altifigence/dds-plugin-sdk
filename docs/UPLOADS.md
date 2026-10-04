@@ -52,10 +52,13 @@ single-link file's inode, size and timestamps and rejects later changes.
 most 64 KiB at a time, awaiting each saved reply. It allows four concurrent helper
 calls and a maximum 30-minute deadline; each request is at most 30 seconds. It
 does not load the whole file, retry, select a different source, or infer rollback.
-Progress phases distinguish hashing, saved-prefix verification, uploading and
+Progress phases distinguish hashing, saved-prefix verification, uploading, committing and
 committed state. Cancellation leaves any acknowledged private prefix available
 for explicit recovery. A cancelled/failed commit can already have published the
 file: query the upload to learn its actual result.
+
+Use the [transfer queue](TRANSFER_QUEUE.md) to schedule multiple selected uploads
+and downloads with bounded retry, rate limits and pause at chunk boundaries.
 
 ## Low-level protocol and recovery
 

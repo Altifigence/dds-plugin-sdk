@@ -6,6 +6,8 @@
   received versus stored verification.
 - Opt-in selected-file uploads with bounded private staging, current plugin/write
   authority, chunk/full hashes, explicit restart recovery and conditional commit.
+- Caller-owned mixed transfer queue with chunk scheduling, connection/resource/rate
+  limits, pause/resume, bounded transient chunk retries and distinct verified progress.
 - Keep project, text-file, job and artifact v1 contracts and released 0.3–0.9
   plugin package metadata verification. See [uploads](docs/UPLOADS.md).
 
