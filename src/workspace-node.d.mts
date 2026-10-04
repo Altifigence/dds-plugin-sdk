@@ -1,6 +1,7 @@
 import type {Plugin,PluginHost,Permission,BackendHandler,JsonValue,WorkspaceFile,WorkspaceWriteResult} from './index.mjs';
 import type {WorkspaceEntry,WorkspaceHello} from './workspace-protocol.mjs';
 import type {BinaryArtifactSource} from './artifacts.mjs';
+import type {JobStore,JobStorageOptions} from './job-storage.mjs';
 export {downloadJobBinaryArtifact} from './artifact-download-node.mjs';
 export type {ArtifactDownloadOptions,ArtifactDownloadProgress,ArtifactDownloadReceipt} from './artifact-download-node.mjs';
 export interface NodeWorkspace {
@@ -21,6 +22,8 @@ export type ProcessBackend=(input:JsonValue,options?:{readonly signal?:AbortSign
 export function createProcessBackend(options:{readonly executable:string;readonly args?:readonly string[];readonly cwd:string;readonly env?:Readonly<Record<string,string>>;readonly timeoutMs?:number;readonly maxOutputBytes?:number}):ProcessBackend;
 export interface ConfiguredWorkspacePlugin {readonly plugin:Plugin;readonly artifactSha256:string;readonly licenseText?:string;}
 export interface WorkspaceServerOptions {
+  /** Server-owned Node workspace only; the operator closes the store after server.close(). */
+  readonly jobStorage?:{readonly store:JobStore;readonly redact?:JobStorageOptions['redact']};
   readonly jobs?:boolean;
   readonly binaryArtifacts?:boolean;
   readonly root?:string;readonly workspace?:NodeWorkspace;readonly workspaceId:string;readonly name?:string;

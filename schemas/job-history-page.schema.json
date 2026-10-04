@@ -1,0 +1,188 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.7.0/schemas/job-history-page.schema.json",
+  "title": "job-history-page",
+  "type": "object",
+  "properties": {
+    "protocolVersion": {
+      "const": 1
+    },
+    "scope": {
+      "type": "object",
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "sessionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      "required": [
+        "projectId",
+        "sessionId"
+      ],
+      "additionalProperties": false
+    },
+    "storeId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 36,
+      "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+    },
+    "pluginId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "pluginArtifactSha256": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "asOf": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "expiresAt": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 36,
+            "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+          },
+          "commandId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "state": {
+            "enum": [
+              "running",
+              "succeeded",
+              "failed",
+              "cancelled",
+              "timed_out"
+            ]
+          },
+          "disposition": {
+            "enum": [
+              "live",
+              "completed",
+              "interrupted",
+              "expired"
+            ]
+          },
+          "startedAt": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "updatedAt": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "expiresAt": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "attemptOf": {
+            "oneOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 36,
+                "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "contentPolicy": {
+            "enum": [
+              "metadata-only",
+              "host-redacted"
+            ]
+          },
+          "artifactCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 16
+          },
+          "resultAvailability": {
+            "enum": [
+              "none",
+              "source-references",
+              "expired"
+            ]
+          }
+        },
+        "required": [
+          "jobId",
+          "commandId",
+          "state",
+          "disposition",
+          "startedAt",
+          "updatedAt",
+          "expiresAt",
+          "revision",
+          "attemptOf",
+          "contentPolicy",
+          "artifactCount",
+          "resultAvailability"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "maxItems": 32
+    },
+    "nextCursor": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40,
+          "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}:(?:0|[1-9][0-9]{0,2})$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "protocolVersion",
+    "scope",
+    "storeId",
+    "pluginId",
+    "pluginArtifactSha256",
+    "asOf",
+    "expiresAt",
+    "items",
+    "nextCursor"
+  ],
+  "additionalProperties": false,
+  "$comment": "Runtime additionally checks chronological bounds, descending startedAt and ascending jobId, unique IDs, retention states and a 60-second cursor lease."
+}

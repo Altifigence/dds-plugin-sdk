@@ -5,6 +5,7 @@ import { LANGUAGE_FEATURES, parseLanguageRequest } from './contracts.mjs';
 import { ErrorCode, LIMITS, PluginSdkError } from './limits.mjs';
 import {createJobRegistry} from './job-registry.mjs';
 import {parseBinaryArtifactSource, parseBinaryChunk} from './artifacts.mjs';
+import {parseJobId, parseJobOptions} from './jobs.mjs';
 
 const hostFailures = new WeakSet();
 const error = (code, message) => {
@@ -252,6 +253,51 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
     }
   }
 
+  function startCommandJob(pluginId, commandId, input, options, attemptOf) {
+    assertOpen();
+    const state = plugins.get(pluginId);
+    if (!state || !state.active || !state.ready) throw error(ErrorCode.DISPOSED, 'Plugin is not active');
+    const entry = state.commands.get(commandId);
+    if (!entry) throw error(ErrorCode.CAPABILITY_UNAVAILABLE, 'Command is unavailable');
+    const value = parseCommandInput(input, entry.command);
+    return jobRegistry.start({pluginId, commandId, input: value, options, attemptOf, grants: state.grants, signal: state.controller.signal,
+      assertActive: () => {assertActive(state); if (state.commands.get(commandId) !== entry) throw error(ErrorCode.DISPOSED, 'Command is disposed');},
+      assertRead: () => permit(state, 'workspace.read'),
+      execute: (input, options) => entry.handler(input, Object.freeze(options)),
+      registerController: controller => {entry.pending.add(controller); return () => entry.pending.delete(controller);},
+      readFile: (path, signal, timeoutMs = LIMITS.defaultTimeoutMs) => {
+        permit(state, 'workspace.read');
+        if (!workspace || typeof workspace.readFile !== 'function') throw error(ErrorCode.CAPABILITY_UNAVAILABLE, 'Workspace read port is unavailable');
+        return run(state, signal => workspace.readFile(path, Object.freeze({signal})), {signal, timeoutMs}, {validate: value => parseWorkspaceRead(value, path), trusted: true});
+      },
+      captureBinaryFile: (path, signal) => {
+        permit(state, 'workspace.read');
+        if (!binaryArtifacts || typeof workspace?.captureBinaryFile !== 'function') throw error(ErrorCode.CAPABILITY_UNAVAILABLE, 'Binary artifact port is unavailable');
+        return run(state, signal => workspace.captureBinaryFile(path, Object.freeze({signal})), {signal, timeoutMs: LIMITS.maxTimeoutMs}, {validate: value => parseBinaryArtifactSource(value, path), trusted: true});
+      },
+      readBinaryChunk: (source, offset, length, signal, timeoutMs = LIMITS.defaultTimeoutMs) => {
+        permit(state, 'workspace.read');
+        return run(state, signal => source.readChunk(offset, length, Object.freeze({signal})), {signal, timeoutMs}, {validate: value => parseBinaryChunk(value, source.byteLength), trusted: true});
+      },
+      invokeBackend: async (id, input, options) => {
+        permit(state, 'backend.invoke');
+        if (typeof id !== 'string' || !backendMap.has(id)) throw error(ErrorCode.CAPABILITY_UNAVAILABLE, 'Named backend is unavailable');
+        try {return await backendMap.get(id)(input, Object.freeze({...options, pluginId, scope}));}
+        catch {throw error(ErrorCode.PROVIDER_FAILED, 'Backend job failed');}
+      },
+    });
+  }
+
+  function historyState(pluginId) {
+    assertOpen(); const state = plugins.get(pluginId);
+    if (!state || !state.active || !state.ready) throw error(ErrorCode.DISPOSED, 'Plugin is not active');
+    permit(state, 'workspace.read'); return state;
+  }
+  function recoverJob(pluginId, jobId) {
+    const state = historyState(pluginId), recovered = jobRegistry.recover(pluginId, jobId, state.grants);
+    if (recovered.record && !state.commands.has(recovered.record.snapshot.commandId)) throw error(ErrorCode.CAPABILITY_UNAVAILABLE, 'Recorded command is unavailable');
+    return recovered;
+  }
   return Object.freeze({
     activate,
     setDocument(value) {
@@ -308,48 +354,27 @@ export function createPluginHost({hostId = 'test-host', scope = {projectId: 'exa
     // The owner can flush cancellation checkpoints after dispose(). The store
     // itself remains owner-managed and must be closed after this promise settles.
     flushJobStore() {return jobRegistry.flushStorage();},
-    recoverJob(pluginId, jobId) {
-      assertOpen(); const state = plugins.get(pluginId);
-      if (!state || !state.active || !state.ready) throw error(ErrorCode.DISPOSED, 'Plugin is not active');
-      permit(state, 'workspace.read');
-      const recovered = jobRegistry.recover(pluginId, jobId, state.grants);
-      if (recovered.record && !state.commands.has(recovered.record.snapshot.commandId)) throw error(ErrorCode.CAPABILITY_UNAVAILABLE, 'Recorded command is unavailable');
-      return recovered;
+    recoverJob,
+    listJobHistory(pluginId, query) {
+      const state = historyState(pluginId);
+      return jobRegistry.history(pluginId, query, state.grants, state.commands);
     },
-    startCommandJob(pluginId, commandId, input, options) {
-      assertOpen();
-      const state = plugins.get(pluginId);
-      if (!state || !state.active || !state.ready) throw error(ErrorCode.DISPOSED, 'Plugin is not active');
-      const entry = state.commands.get(commandId);
-      if (!entry) throw error(ErrorCode.CAPABILITY_UNAVAILABLE, 'Command is unavailable');
+    async retryCommandJob(pluginId, previousJobId, input, options) {
+      parseJobId(previousJobId); options = parseJobOptions(options);
+      const original = recoverJob(pluginId, previousJobId);
+      if (!['completed','interrupted'].includes(original.disposition)) throw error(ErrorCode.CONFLICT, 'A retained completed or interrupted job is required');
+      const commandId = original.record.snapshot.commandId, state = historyState(pluginId), entry = state.commands.get(commandId);
       const value = parseCommandInput(input, entry.command);
-      return jobRegistry.start({pluginId, commandId, input: value, options, grants: state.grants, signal: state.controller.signal,
-        assertActive: () => {assertActive(state); if (state.commands.get(commandId) !== entry) throw error(ErrorCode.DISPOSED, 'Command is disposed');},
-        assertRead: () => permit(state, 'workspace.read'),
-        execute: (input, options) => entry.handler(input, Object.freeze(options)),
-        registerController: controller => {entry.pending.add(controller); return () => entry.pending.delete(controller);},
-        readFile: (path, signal, timeoutMs = LIMITS.defaultTimeoutMs) => {
-          permit(state, 'workspace.read');
-          if (!workspace || typeof workspace.readFile !== 'function') throw error(ErrorCode.CAPABILITY_UNAVAILABLE, 'Workspace read port is unavailable');
-          return run(state, signal => workspace.readFile(path, Object.freeze({signal})), {signal, timeoutMs}, {validate: value => parseWorkspaceRead(value, path), trusted: true});
-        },
-        captureBinaryFile: (path, signal) => {
-          permit(state, 'workspace.read');
-          if (!binaryArtifacts || typeof workspace?.captureBinaryFile !== 'function') throw error(ErrorCode.CAPABILITY_UNAVAILABLE, 'Binary artifact port is unavailable');
-          return run(state, signal => workspace.captureBinaryFile(path, Object.freeze({signal})), {signal, timeoutMs: LIMITS.maxTimeoutMs}, {validate: value => parseBinaryArtifactSource(value, path), trusted: true});
-        },
-        readBinaryChunk: (source, offset, length, signal, timeoutMs = LIMITS.defaultTimeoutMs) => {
-          permit(state, 'workspace.read');
-          return run(state, signal => source.readChunk(offset, length, Object.freeze({signal})), {signal, timeoutMs}, {validate: value => parseBinaryChunk(value, source.byteLength), trusted: true});
-        },
-        invokeBackend: async (id, input, options) => {
-          permit(state, 'backend.invoke');
-          if (typeof id !== 'string' || !backendMap.has(id)) throw error(ErrorCode.CAPABILITY_UNAVAILABLE, 'Named backend is unavailable');
-          try {return await backendMap.get(id)(input, Object.freeze({...options, pluginId, scope}));}
-          catch {throw error(ErrorCode.PROVIDER_FAILED, 'Backend job failed');}
-        },
-      });
+      const replay = await jobRegistry.retryResult(pluginId, commandId, previousJobId, value, options, state.grants);
+      historyState(pluginId);
+      if (replay) return recoverJob(pluginId, options.jobId);
+      const currentOriginal = recoverJob(pluginId, previousJobId);
+      if (!['completed','interrupted'].includes(currentOriginal.disposition)) throw error(ErrorCode.CONFLICT, 'Original job is no longer retained');
+      startCommandJob(pluginId, commandId, value, options, previousJobId);
+      await jobRegistry.flushStorage();
+      return recoverJob(pluginId, options.jobId);
     },
+    startCommandJob: (pluginId, commandId, input, options) => startCommandJob(pluginId, commandId, input, options),
     getJob(jobId) {assertOpen(); return jobRegistry.get(jobId);},
     getJobEvents(jobId, after) {assertOpen(); return jobRegistry.events(jobId, after);},
     cancelJob(jobId) {assertOpen(); return jobRegistry.cancel(jobId);},

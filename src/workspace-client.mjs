@@ -1,6 +1,8 @@
-import {WORKSPACE_PATH, WORKSPACE_LIMITS, WorkspaceError, workspaceFailure, exactObject, requireText, requireToken, requireWorkspacePath, requireSha256, parseWorkspaceRequest, parseWorkspaceReply, parseWorkspaceHello, parseWorkspaceMethodResult} from './workspace-protocol.mjs';
+import {WORKSPACE_PATH, WORKSPACE_LIMITS, WorkspaceError, workspaceFailure, exactObject, requireText, requireToken, requireWorkspacePath, requireSha256, copyWorkspaceJson, parseWorkspaceRequest, parseWorkspaceReply, parseWorkspaceHello, parseWorkspaceMethodResult} from './workspace-protocol.mjs';
 import {parseJobId, parseJobOptions} from './jobs.mjs';
 import {BINARY_ARTIFACT_LIMITS, parseBinaryArtifactReference, parseBinaryArtifactRange, decodeBinaryArtifactData} from './artifacts.mjs';
+import {JOB_STORE_LIMITS} from './job-storage.mjs';
+import {parseJobHistoryQuery} from './job-history.mjs';
 import {registerObservationClient, watchWorkspaceJob, waitForWorkspaceJob} from './workspace-observation.mjs';
 export {createWorkspaceProject, applyTextEdits} from './workspace-project.mjs';
 export {WORKSPACE_OBSERVATION_LIMITS} from './workspace-observation.mjs';
@@ -50,7 +52,7 @@ export function createWorkspaceClient({url, token, fetch: transport = globalThis
   const endpoint = normalizeWorkspaceUrl(url);
   token = requireToken(token);
   if (typeof transport !== 'function') throw workspaceFailure('invalid_request', 'A fetch transport is required');
-  let binding, fileCapabilities, binaryCapabilities, closed = false, sequence = 0, bindingSequence = 0;
+  let binding, fileCapabilities, binaryCapabilities, storageCapabilities, closed = false, sequence = 0, bindingSequence = 0;
   let connectionController = new AbortController();
   const pending = new Set();
   const instance = globalThis.crypto.randomUUID();
@@ -60,7 +62,7 @@ export function createWorkspaceClient({url, token, fetch: transport = globalThis
   };
   budget(timeoutMs);
   const revoke = (reason = workspaceFailure('disposed', 'Workspace connection changed')) => {
-    binding = undefined; fileCapabilities = undefined; binaryCapabilities = undefined; bindingSequence++;
+    binding = undefined; fileCapabilities = undefined; binaryCapabilities = undefined; storageCapabilities = undefined; bindingSequence++;
     connectionController.abort(reason);
     connectionController = new AbortController();
     for (const controller of pending) controller.abort(workspaceFailure('disposed', 'Workspace connection changed'));
@@ -141,6 +143,19 @@ export function createWorkspaceClient({url, token, fetch: transport = globalThis
           if (digest !== result.artifact.revision) throw workspaceFailure('invalid_request', 'Job artifact digest mismatch');
         }
       }
+      if (method === 'history.capabilities' && result.enabled && result.identity.workspaceId !== captured.workspace.id) throw workspaceFailure('invalid_request','Storage workspace identity mismatch');
+      if (method.startsWith('history.') && method !== 'history.capabilities') {
+        if (result.scope.projectId !== captured.workspace.id || result.scope.sessionId !== captured.workspace.generation || storageCapabilities?.enabled && result.storeId !== storageCapabilities.identity.storeId) throw workspaceFailure('invalid_request','History reply identity mismatch');
+        if (method === 'history.list') {
+          if (result.pluginId !== params.pluginId || result.pluginArtifactSha256 !== params.artifactSha256 || result.items.length > params.query.limit) throw workspaceFailure('invalid_request','History query reply mismatch');
+          const q=params.query;
+          if(result.items.some(item=>q.state!==undefined&&item.state!==q.state||q.commandId!==undefined&&item.commandId!==q.commandId||q.attemptOf!==undefined&&item.attemptOf!==q.attemptOf||q.from!==undefined&&item.startedAt<q.from||q.to!==undefined&&item.startedAt>q.to||q.disposition!==undefined&&item.disposition!==q.disposition&&!(q.cursor&&item.disposition==='expired')))throw workspaceFailure('invalid_request','History filter mismatch');
+        } else {
+          if (result.jobId !== params.jobId || result.record && (result.record.snapshot.pluginId !== params.pluginId || result.record.pluginArtifactSha256 !== params.artifactSha256)) throw workspaceFailure('invalid_request','History job reply mismatch');
+          if(result.record&&storageCapabilities?.enabled&&result.record.workspaceIdentity!==storageCapabilities.identity.workspaceIdentity)throw workspaceFailure('invalid_request','Recorded workspace identity mismatch');
+          if (method === 'history.retry' && (!result.record || result.record.attemptOf !== params.previousJobId)) throw workspaceFailure('invalid_request','Retry relation mismatch');
+        }
+      }
       return result;
     } catch (failure) {
       if (controller.signal.aborted) { if (method !== 'hello' && method !== 'request.cancel') void cancelRemote(requestId, captured); throw controller.signal.reason; }
@@ -205,6 +220,24 @@ export function createWorkspaceClient({url, token, fetch: transport = globalThis
     const capabilities = await getBinaryArtifactCapabilities(options); checkFileConnection(captured, options);
     if (!capabilities.enabled) throw workspaceFailure('unsupported', 'This host has not enabled binary artifacts'); return capabilities;
   }
+  async function getJobStorageCapabilities(options) {
+    const captured=binding;checkFileConnection(captured,options);
+    if(storageCapabilities)return storageCapabilities;
+    const unavailable=Object.freeze({protocolVersion:1,enabled:false,identity:null,limits:JOB_STORE_LIMITS});
+    if(captured.hostId==='workspace-host'&&/^0\.[0-7]\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(captured.hostVersion))return storageCapabilities=unavailable;
+    let result;
+    try{result=await request('history.capabilities',{},options);}
+    catch(error){if(!(error instanceof WorkspaceError)||error.code!=='unsupported')throw error;result=unavailable;}
+    checkFileConnection(captured,options);return storageCapabilities=result;
+  }
+  async function historyRequest(method, pluginId, artifactSha256, params, options) {
+    requireText(pluginId);requireSha256(artifactSha256);
+    params=copyWorkspaceJson(params);
+    const captured=binding,capabilities=await getJobStorageCapabilities(options);checkFileConnection(captured,options);
+    if(!capabilities.enabled)throw workspaceFailure('unsupported','This host has not enabled job storage');
+    if(captured.plugins.find(p=>p.manifest.id===pluginId)?.artifactSha256!==artifactSha256)throw workspaceFailure('plugin_mismatch','Plugin artifact identity changed');
+    return request(method,{pluginId,artifactSha256,...params},options);
+  }
   async function listJobBinaryArtifacts(jobId, options) {
     parseJobId(jobId); const captured = binding; await requireBinaryConnection(captured, options);
     return request('artifacts.list', {jobId}, options);
@@ -255,6 +288,10 @@ export function createWorkspaceClient({url, token, fetch: transport = globalThis
     listPlugins: options => request('plugins.list', {}, options),
     runCommand: (pluginId, commandId, input, artifactSha256, options) => request('commands.run', {pluginId, commandId, input, artifactSha256}, options),
     getJobCapabilities: options => request('jobs.capabilities', {}, options),
+    getJobStorageCapabilities,
+    listJobHistory: (pluginId,artifactSha256,query={},options) => historyRequest('history.list',pluginId,artifactSha256,{query:parseJobHistoryQuery(query)},options),
+    recoverJob: (pluginId,jobId,artifactSha256,options) => historyRequest('history.recover',pluginId,artifactSha256,{jobId:parseJobId(jobId)},options),
+    retryCommandJob: (pluginId,previousJobId,input,artifactSha256,job,options) => historyRequest('history.retry',pluginId,artifactSha256,{previousJobId:parseJobId(previousJobId),input,...parseJobOptions(job)},options),
     startCommandJob: async (pluginId, commandId, input, artifactSha256, job, options) => request('jobs.start', {pluginId, commandId, input, artifactSha256, ...parseJobOptions(job)}, options),
     getJob: (jobId, options) => request('jobs.get', {jobId}, options),
     getJobEvents: (jobId, after = 0, options) => request('jobs.events', {jobId, after}, options),

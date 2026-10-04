@@ -60,6 +60,10 @@
       "types": "./src/job-storage.d.mts",
       "import": "./src/job-storage.mjs"
     },
+    "./job-history": {
+      "types": "./src/job-history.d.mts",
+      "import": "./src/job-history.mjs"
+    },
     "./job-storage-node": {
       "types": "./src/job-storage-node.d.mts",
       "import": "./src/job-storage-node.mjs"

@@ -6,6 +6,9 @@ is the first part of 0.8 development; tagged 0.7 archives do not contain it.
 Existing v1 jobs, snapshots, hello and artifact responses keep their shapes.
 Hosts without storage retain their in-memory behavior.
 
+[History and explicit retry](JOB_HISTORY.md) add bounded queries and current
+authorization over HTTP, including a server-owned Node workspace setup.
+
 ```js
 import {createPluginHost} from '@altifigence/dds-plugin-sdk';
 import {createNodeJobStore} from '@altifigence/dds-plugin-sdk/job-storage-node';
