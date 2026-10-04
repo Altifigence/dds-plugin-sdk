@@ -93,4 +93,3 @@ export function copyWorkspaceJson(value, {maxBytes = WORKSPACE_LIMITS.jsonBytes,
   };
   return visit(value, 0);
 }
-
