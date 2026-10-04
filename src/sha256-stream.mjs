@@ -12,6 +12,13 @@ const K = new Uint32Array([
   0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2,
 ]);
 const rotate = (x,n) => (x>>>n)|(x<<(32-n));
+const checkpoints = new WeakMap();
+// Private checkpoint support for persistent sinks; the public digest() remains finalizing.
+export function snapshotSha256(hash) {
+  const checkpoint=checkpoints.get(hash);
+  if(!checkpoint)throw workspaceFailure('invalid_request','Unknown incremental hash');
+  return checkpoint();
+}
 export function createIncrementalSha256() {
   const state = new Uint32Array([0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19]);
   const block = new Uint8Array(64), words = new Uint32Array(64);
@@ -47,6 +54,11 @@ export function createIncrementalSha256() {
       const view=new DataView(block.buffer);view.setUint32(56,Math.floor(total/0x20000000),false);view.setUint32(60,(total*8)>>>0,false);compress(block);
       const result=Array.from(state,value=>value.toString(16).padStart(8,'0')).join('');block.fill(0);words.fill(0);state.fill(0);return result;
     },
+  });
+  checkpoints.set(api,()=>{
+    if(finished)throw workspaceFailure('disposed','SHA-256 has already been finalized');
+    const savedState=state.slice(),savedBlock=block.slice(),savedUsed=used;
+    try{return api.digest();}finally{state.set(savedState);block.set(savedBlock);used=savedUsed;finished=false;}
   });
   return api;
 }

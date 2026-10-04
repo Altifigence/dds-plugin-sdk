@@ -12,6 +12,7 @@ async function visit(url){
   assert.ok(!/\b(?:require\s*\(|import\s*\(\s*['"]node:)/.test(source),'No Node runtime bridge in browser modules');
 }
 await visit(new URL('../src/artifact-transfer.mjs',import.meta.url));await visit(new URL('../src/artifact-transfer-browser.mjs',import.meta.url));
+await visit(new URL('../src/artifact-resume-browser.mjs',import.meta.url));
 const transferSource=[...visited.values()].join('\n'),rawBytes=Buffer.byteLength(transferSource),gzipBytes=gzipSync(transferSource).length;
 assert.ok(rawBytes<250_000&&gzipBytes<60_000,'Browser transfer graph exceeded its initial regression budget');
 const small=await runStreamingArtifactExample({fileBytes:2_097_169});

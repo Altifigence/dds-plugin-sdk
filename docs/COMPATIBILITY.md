@@ -11,14 +11,15 @@
 | Browser-only DDS host | Native workspace transport is unavailable |
 | Language providers | Diagnostics plus completion, hover, definition, references and document symbols in SDK hosts since 0.3.0; no released DDS editor bridge is implied |
 | Project edit sessions | Client helpers in 0.3.0 over unchanged workspace protocol v1, including 0.2.x servers |
-| Download verification | Node API/CLI since 0.3.1; 0.9.0 accepts exact 0.3.x, 0.4.x, 0.5.x, 0.6.x, 0.7.x, 0.8.x and 0.9.x package metadata; no extraction, code execution or publisher authentication |
+| Download verification | Node API/CLI since 0.3.1; 0.10.0 accepts exact 0.3.x–0.10.x package metadata; no extraction, code execution or publisher authentication |
 | Development tools | `init`, `doctor`, `dev` since 0.4.0; local Node tools, explicit trusted-code execution |
 | Command jobs | Opt-in SDK host/client extension since 0.4.0; progress/logs/UTF-8 artifacts; v1 hello unchanged |
 | File and job observation | Client helpers since 0.5.0; 0.6 uses revision reads when supported; job reads need enabled 0.4+ hosts |
 | Binary job results | Optional 0.7.0 extension; explicit host opt-in; 1 GiB files and 64 KiB chunks; Node resume/full-file verification |
 | Durable jobs, history and results | Optional 0.8.0 host stores; current authorization after restart; explicit retry and verified snapshot downloads |
 | File revision / conditional read | Optional methods since 0.6.0; bounded full-read fallback on old hosts; v1 hello unchanged |
-| Browser streaming and selected-file uploads | In the 0.10 development checkout; explicit file/OPFS sinks and optional server upload store; not in the published 0.9 archive |
+| Browser streaming and selected-file uploads | Since 0.10.0; explicit file/OPFS sinks and optional server upload store; independent current authority and full hashes |
+| Browser checkpoint recovery | Since 0.10.0; dedicated Worker + OPFS sync access + Web Locks, currently approved stored references and explicit partial selection; Chromium 154 on Windows exercised |
 
 This is a developer preview. Pin the exact package release and read the changelog
 before updating. SDK, protocol, plugin and DDS product versions are distinct.
@@ -110,3 +111,16 @@ See [project tools](PROJECT_TOOLS.md) for leases, resync and preserved drafts.
 New 0.9 plugin archives declare `>=0.9.0 <0.10.0`. Verification also preserves
 exact 0.8 and earlier metadata; installation still requires publisher validation
 and a newly packed plugin version for the selected SDK line.
+
+0.10.0 adds opt-in `uploads.*` methods and browser-safe bounded streaming,
+mixed transfer scheduling and explicit Worker OPFS recovery. Existing file,
+project, command, job and stored-artifact v1 contracts retain their wire shapes.
+Known 0.3–0.9 hosts report uploads disabled without a new-method probe. Browser
+live-result streaming needs a 0.7+ binary host; stored recovery needs a 0.8+
+snapshot host with current grants. Feature presence alone is not browser
+qualification. See [streaming](BROWSER_ARTIFACTS.md), [uploads](UPLOADS.md),
+[queue](TRANSFER_QUEUE.md) and [checkpoints](BROWSER_RESUME.md).
+
+New 0.10 plugin archives declare `>=0.10.0 <0.11.0`. Exact previous metadata is
+accepted for verification without changing peer ranges. Validate and repack a new
+plugin version for this SDK; none of these APIs deploys or changes a DDS product.

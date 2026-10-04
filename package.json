@@ -117,6 +117,10 @@
       "types": "./src/uploads-browser.d.mts",
       "import": "./src/uploads-browser.mjs"
     },
+    "./artifact-resume-browser": {
+      "types": "./src/artifact-resume-browser.d.mts",
+      "import": "./src/artifact-resume-browser.mjs"
+    },
     "./transfer-queue": {
       "types": "./src/transfer-queue.d.mts",
       "import": "./src/transfer-queue.mjs"
@@ -175,7 +179,8 @@
     "example:uploads-browser": "node examples/uploads/serve.mjs",
     "example:transfer-queue": "node examples/transfer-queue/run.mjs",
     "example:transfer-queue-browser": "node examples/transfer-queue/serve.mjs",
-    "benchmark:transfer-queue": "node scripts/benchmark-transfer-queue.mjs"
+    "benchmark:transfer-queue": "node scripts/benchmark-transfer-queue.mjs",
+    "example:browser-resume": "node examples/browser-resume/serve.mjs"
   },
   "devDependencies": {
     "typescript": "5.9.3"

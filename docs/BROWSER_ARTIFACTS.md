@@ -1,7 +1,7 @@
-# Browser artifact streaming (0.10 development)
+# Browser artifact streaming (0.10)
 
-The public 0.9 archive does not contain these APIs yet. This foundation is part of
-the next 0.10 release. Existing Node file downloads remain available unchanged.
+These APIs are included in 0.10. Existing Node file downloads remain available.
+For reload-safe downloads, use the [Worker checkpoint sink](BROWSER_RESUME.md).
 
 `/artifact-transfer` imports no Node built-ins. `streamJobBinaryArtifact()` uses
 the existing 0.7 binary protocol; `streamStoredJobArtifact()` uses the 0.8 snapshot
@@ -54,8 +54,9 @@ event and returned receipt set `verified: true`. Callback exceptions fail the
 operation, even if commit has already happened.
 
 The trusted caller sink contract advertises `seek`, `readback`, `persistence`
-(`none`, `on-commit`, `per-checkpoint`) and abort behavior. The current core writes
-sequentially from zero; advertising seek or checkpoints does not enable resume.
+(`none`, `on-commit`, `per-checkpoint`) and abort behavior. Explicit `resume: true`
+requires seek, readback and per-checkpoint persistence plus a session `recovery`
+reader. The core independently verifies its prefix before requesting remaining bytes.
 Implementations must bound retained data and cooperate with cancellation. The
 helper waits for in-flight writes before cleanup so late writes are not detached.
 
@@ -72,8 +73,8 @@ staging stream on pre-commit failure. They do not provide a persistent partial
 download after a reload. Normal intervening file changes are checked using size
 and last-modified values; browser APIs provide no atomic compare-and-swap against
 external programs. Reservations prevent concurrent use of the same entry only
-within this module instance/realm. Cross-tab persistent recovery is a separate
-0.10 integration step and is not claimed by this foundation.
+within this module instance/realm. Use the separate [checkpoint adapter](BROWSER_RESUME.md)
+for persistent recovery and cross-tab exclusion.
 
 ## Examples, support and resource evidence
 
@@ -124,10 +125,10 @@ Semantics follow the [File System Standard](https://fs.spec.whatwg.org/) and the
 
 ## 한국어 요약
 
-0.10 개발 단계 기능이다. 호출자가 선택한 파일/OPFS 디렉터리에만 저장하며
+0.10에 포함된 기능이다. 호출자가 선택한 파일/OPFS 디렉터리에만 저장하며
 권한을 자동 요청하거나 다른 위치로 우회하지 않는다. 청크별 검증·저장을
 기다린 뒤 다음 청크를 읽고, 수신 전체 해시와 저장 파일 재읽기 해시를 구분한다.
 재읽기 없는 sink는 디스크 검증을 주장하지 않는다. 전체 바이트를 받았다는
 진행률만으로 완료 처리하지 않는다. 취소·용량 초과·권한 철회·해시 오류에는
-부분 상태와 확정 여부를 반환한다. 이 foundation의 비동기 저장은 새로고침 후
-부분 파일 재개를 제공하지 않으며 영속 복구·탭 간 독점은 뒤의 0.10 통합 범위다.
+부분 상태와 확정 여부를 반환한다. 비동기 저장은 확정 전에 중단되면 staging을
+버리며, 새로고침 후 재개·탭 간 독점에는 별도 Worker checkpoint adapter를 쓴다.

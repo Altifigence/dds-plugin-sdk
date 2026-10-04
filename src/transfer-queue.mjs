@@ -88,7 +88,7 @@ export function createTransferQueue(configuration={}){
       if(!input||typeof input.read!=='function')throw workspaceFailure('invalid_request','Select an upload source');totalBytes=queueInteger(input.byteLength,1_073_741_824);
       parseUploadSpec({uploadId:options.uploadId,pluginId:options.pluginId,artifactSha256:options.artifactSha256,path:options.path,expectedRevision:options.expectedRevision,byteLength:totalBytes,sha256:EMPTY_UPLOAD_SHA256});
     }else{
-      exactObject(options,['sink'],['signal','timeoutMs','requestTimeoutMs','onProgress']);
+      exactObject(options,['sink'],['resume','signal','timeoutMs','requestTimeoutMs','onProgress']);
       reference=kind==='download'?parseBinaryArtifactReference(input):parseStoredArtifactReference(input);totalBytes=kind==='download'?reference.artifact.byteLength:reference.snapshot.artifact.byteLength;
     }
     if(options.signal!==undefined&&!(options.signal instanceof AbortSignal)||options.onProgress!==undefined&&typeof options.onProgress!=='function')throw workspaceFailure('invalid_request','Invalid transfer callbacks');
@@ -103,7 +103,7 @@ export function createTransferQueue(configuration={}){
         if(p.status&&!job.prefixKnown){job.view.resumedBytes=p.status.offset;job.prefixKnown=true;}
         if(p.status){job.view.acknowledgedBytes=p.status.offset;job.view.transferredBytes=p.status.offset-job.view.resumedBytes;job.view.partialDisposition='retained';}
         if(p.phase==='committed')job.view.commit='committed';
-      }else{job.view.acknowledgedBytes=p.writtenBytes;job.view.transferredBytes=p.writtenBytes;if(['verifying-storage','completed'].includes(p.phase))job.view.commit='committed';}
+      }else{job.view.acknowledgedBytes=p.writtenBytes;job.view.resumedBytes=p.resumedBytes;job.view.transferredBytes=p.writtenBytes-p.resumedBytes;if(['verifying-storage','completed'].includes(p.phase))job.view.commit='committed';}
       job.view.remainingBytes=totalBytes-job.view.acknowledgedBytes;
       if(p.phase!=='completed'&&p.phase!=='committed')job.view.phase=p.phase;
       emit(job);invoke(options.onProgress,p);

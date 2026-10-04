@@ -1,4 +1,4 @@
-# API reference — 0.9.0
+# API reference — 0.10.0
 
 SDK 0.8 adds optional [job storage](JOB_STORAGE.md), [history and retry](JOB_HISTORY.md)
 and [stored result files](ARTIFACT_STORAGE.md). Existing v1 response shapes remain valid.
@@ -80,7 +80,7 @@ license eligibility or agreement acceptance. See [LICENSING](LICENSING.md).
 
 | Activation context member | Behavior |
 | --- | --- |
-| `host` | `{id: 'test-host' \| 'workspace-host', version: '0.9.0', protocolVersion: 1}` |
+| `host` | `{id: 'test-host' \| 'workspace-host', version: '0.10.0', protocolVersion: 1}` |
 | `pluginId`, `scope` | Manifest ID and opaque host `{projectId, sessionId}` |
 | `grants` | Frozen intersection of host grants and manifest permissions |
 | `signal` | Aborted on deactivation, host disposal or activation timeout |
@@ -295,3 +295,19 @@ capability/poll validators. The server's `revokeProjects()` closes project resou
 and requires a new generation to re-enable them. Edit sessions retain their own
 snapshots. See [project tools](PROJECT_TOOLS.md), [observation](PROJECT_WATCH.md)
 and [tree/search](PROJECT_QUERIES.md).
+
+## Bidirectional transfers (SDK 0.10.0)
+
+`/artifact-transfer` exports browser-safe `streamJobBinaryArtifact` and
+`streamStoredJobArtifact`, incremental SHA-256 and typed sink/verification contracts.
+`/artifact-transfer-browser` supplies selected-file and OPFS writable sinks;
+`/artifact-resume-browser` adds `createOpfsArtifactSink`, explicit partial names,
+checkpoint validation and Worker capability detection. Recovery requires
+`resume: true` and independently rehashed local prefix bytes.
+
+`/uploads` provides contracts and `uploadFile`; `/uploads-node` provides the
+private Node upload store and selected-file source; `/uploads-browser` adapts an
+explicit `File`. The HTTP client adds capability/begin/query/write/commit/abort
+methods. `/transfer-queue` exports `createTransferQueue`, options/snapshot validators,
+limits, states and phases. See [uploads](UPLOADS.md), [streaming](BROWSER_ARTIFACTS.md),
+[queue](TRANSFER_QUEUE.md) and [persistent recovery](BROWSER_RESUME.md).

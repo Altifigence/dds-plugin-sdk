@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.10.0 — in development (not yet released)
+## 0.10.0 — 2026-10-04
 
 - Browser artifact streaming with caller-owned file/OPFS sinks and distinct
   received versus stored verification.
@@ -8,6 +8,10 @@
   authority, chunk/full hashes, explicit restart recovery and conditional commit.
 - Caller-owned mixed transfer queue with chunk scheduling, connection/resource/rate
   limits, pause/resume, bounded transient chunk retries and distinct verified progress.
+- Worker OPFS checkpoints with full stored identity, fresh host authority, independent
+  prefix rehash, metadata crash recovery and exclusive ownership across tabs.
+- Native browser examples cover reload, host restart, cross-tab conflict and recovery
+  after owner-tab termination. Other browser/storage environments require qualification.
 - Keep project, text-file, job and artifact v1 contracts and released 0.3–0.9
   plugin package metadata verification. See [uploads](docs/UPLOADS.md).
 
