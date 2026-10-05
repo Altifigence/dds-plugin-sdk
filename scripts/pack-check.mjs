@@ -239,6 +239,14 @@ try {
   const releaseTools=JSON.parse(run(process.execPath,[join(installed,'examples','release-tools','run.mjs')],consumer));
   assert.equal(releaseTools.offlineInstall,true);assert.equal(releaseTools.oldJobPinned,true);assert.equal(releaseTools.rollback,true);assert.equal(releaseTools.upstreamCandidate,true);
   await cp(join(root,'tests','types','release-tools.mts'),join(consumer,'release-tools.mts'));
+  for(const name of ['workflows','workflow-tools','lsp'])await cp(join(installed,'examples',name),join(consumer,name+'-example'),{recursive:true});
+  const workflows=JSON.parse(run(process.execPath,['workflows-example/run.mjs'],consumer));
+  assert.equal(workflows.killedChildRecovery,true);assert.equal(workflows.incrementalSteps,2);assert.equal(workflows.failedDependencyBlocked,true);
+  const workflowTools=JSON.parse(run(process.execPath,['workflow-tools-example/run.mjs','--typescript-root',join(root,'node_modules','typescript')],consumer));
+  assert.equal(workflowTools.actualCompiler.diagnostic,'TS2322');assert.equal(workflowTools.ownedProcessesClosed,true);
+  const lsp=JSON.parse(run(process.execPath,['lsp-example/run.mjs','--typescript-root',join(root,'node_modules','typescript'),'--language-server-root',join(root,'node_modules','typescript-language-server')],consumer));
+  assert.equal(lsp.syntheticFeatures,15);assert.equal(lsp.actualServer.verifiedFeatures,8);assert.equal(lsp.filesUnchanged,true);assert.equal(lsp.ownedProcessesClosed,true);
+  await cp(join(root,'tests','types','workflows.mts'),join(consumer,'workflows.mts'));
   await cp(join(root, 'tests', 'types', 'tsconfig.json'), join(consumer, 'tsconfig.json'));
   const typescript = join(root, 'node_modules', 'typescript', 'bin', 'tsc');
   run(process.execPath, [typescript, '--noEmit', '-p', 'tsconfig.json'], consumer);

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sdkVersion": "1.1.0",
+  "sdkVersion": "1.2.0",
   "releaseStatus": "stable",
   "pluginPeerRange": ">=1.0.0 <2.0.0",
   "policy": "docs/SUPPORT_POLICY.md",
@@ -815,6 +815,36 @@
       "declarationsSha256": "8a18db17f11049dcaace7bd98aae453b572ed126689f1f88fd4b8c8bd57582c6"
     },
     {
+      "entry": "./lsp-node",
+      "stability": "stable",
+      "availability": "optional",
+      "environments": [
+        "node"
+      ],
+      "runtimeNames": [
+        "LSP_LIMITS",
+        "createLspBridge",
+        "createLspFrameDecoder",
+        "encodeLspMessage",
+        "lspCapabilityMatrix",
+        "parseLspCapabilityMatrix"
+      ],
+      "declarationNames": [
+        "LSP_LIMITS",
+        "LspBridge",
+        "LspCapabilityMatrix",
+        "LspCloseReceipt",
+        "LspFrameDecoder",
+        "LspInspection",
+        "createLspBridge",
+        "createLspFrameDecoder",
+        "encodeLspMessage",
+        "lspCapabilityMatrix",
+        "parseLspCapabilityMatrix"
+      ],
+      "declarationsSha256": "396e9316a0d718964dbd3ae158e328b5da0320098f1ffc171d1710ea86650e69"
+    },
+    {
       "entry": "./package.json",
       "stability": "metadata",
       "availability": "data",
@@ -1002,7 +1032,7 @@
       "declarationNames": [
         "SCHEMAS"
       ],
-      "declarationsSha256": "259961a4a30f11c661bafd71e3e8314012c13d8a179294af09558df5606e580a"
+      "declarationsSha256": "5d1672a66f8d8d5ba8c6acd49e89cbaf13c12585dcedb81f5ec402567d949f65"
     },
     {
       "entry": "./secrets",
@@ -1160,6 +1190,59 @@
         "serializeThemeXml"
       ],
       "declarationsSha256": "3d67f76fc0f5003d57b931d8104079d17e31cf5c30c8369085357377e734440b"
+    },
+    {
+      "entry": "./tool-streams",
+      "stability": "stable",
+      "availability": "optional",
+      "environments": [
+        "node",
+        "browser"
+      ],
+      "runtimeNames": [
+        "TOOL_STREAM_LIMITS",
+        "createJobToolEventSink",
+        "createToolStreamParser",
+        "parseToolStreamEvent",
+        "parseTypeScriptDiagnosticLine"
+      ],
+      "declarationNames": [
+        "TOOL_STREAM_LIMITS",
+        "ToolStreamData",
+        "ToolStreamEvent",
+        "ToolStreamParser",
+        "ToolStreamStats",
+        "createJobToolEventSink",
+        "createToolStreamParser",
+        "parseToolStreamEvent",
+        "parseTypeScriptDiagnosticLine"
+      ],
+      "declarationsSha256": "9ae25b6f223e610f183fdeaf7c592d6d6f75d08065fe19ab37c90f227a5b7cb2"
+    },
+    {
+      "entry": "./tool-streams-node",
+      "stability": "stable",
+      "availability": "optional",
+      "environments": [
+        "node"
+      ],
+      "runtimeNames": [
+        "TOOL_RUNNER_LIMITS",
+        "createToolRunner",
+        "hashToolFile",
+        "parseToolRegistration"
+      ],
+      "declarationNames": [
+        "TOOL_RUNNER_LIMITS",
+        "ToolRegistration",
+        "ToolRunReceipt",
+        "ToolRunner",
+        "TrustedProcessDefinition",
+        "createToolRunner",
+        "hashToolFile",
+        "parseToolRegistration"
+      ],
+      "declarationsSha256": "1d605181a25a7dce2b2e667038601cdfeb7a1ae40a5b476ba2de7a8cdb3a6bfb"
     },
     {
       "entry": "./transfer-queue",
@@ -1367,6 +1450,117 @@
         "inspectUpstreamManifest"
       ],
       "declarationsSha256": "7027bd158d8e2e105f3999f1137930468dde63d729c999eb6712c2bd69bc40fe"
+    },
+    {
+      "entry": "./workflow-cache",
+      "stability": "stable",
+      "availability": "optional",
+      "environments": [
+        "node"
+      ],
+      "runtimeNames": [
+        "WORKFLOW_CACHE_LIMITS",
+        "createMemoryWorkflowCacheStore",
+        "createWorkflowCache",
+        "fingerprintWorkflowInputs",
+        "parseWorkflowCacheEntry",
+        "parseWorkflowFingerprint"
+      ],
+      "declarationNames": [
+        "WORKFLOW_CACHE_LIMITS",
+        "WorkflowCache",
+        "WorkflowCacheEntry",
+        "WorkflowCachePolicy",
+        "WorkflowCacheResult",
+        "WorkflowCacheStore",
+        "WorkflowFingerprint",
+        "WorkflowFingerprintInput",
+        "createMemoryWorkflowCacheStore",
+        "createWorkflowCache",
+        "fingerprintWorkflowInputs",
+        "parseWorkflowCacheEntry",
+        "parseWorkflowFingerprint"
+      ],
+      "declarationsSha256": "32415b84477e4e33fefd80a549a5880b2f508558932045b0bae8c16ed8839ac4"
+    },
+    {
+      "entry": "./workflow-cache-node",
+      "stability": "stable",
+      "availability": "optional",
+      "environments": [
+        "node"
+      ],
+      "runtimeNames": [
+        "createNodeWorkflowCacheStore"
+      ],
+      "declarationNames": [
+        "NodeWorkflowCacheStore",
+        "createNodeWorkflowCacheStore"
+      ],
+      "declarationsSha256": "84dc99a6019529e6462c2006c9b096affb9837ab7876ce502280a15fd61b5c0e"
+    },
+    {
+      "entry": "./workflows",
+      "stability": "stable",
+      "availability": "optional",
+      "environments": [
+        "node"
+      ],
+      "runtimeNames": [
+        "WORKFLOW_LIMITS",
+        "createCommandJobExecutor",
+        "createMemoryWorkflowStore",
+        "createWorkflowRunner",
+        "parseWorkflowDefinition",
+        "parseWorkflowRecord",
+        "prepareWorkflowPlan",
+        "recoverWorkflowRecord"
+      ],
+      "declarationNames": [
+        "WORKFLOW_LIMITS",
+        "WorkflowApproval",
+        "WorkflowAuthorization",
+        "WorkflowBinding",
+        "WorkflowCacheEvidence",
+        "WorkflowCommand",
+        "WorkflowDefinition",
+        "WorkflowExecutor",
+        "WorkflowPlan",
+        "WorkflowRecord",
+        "WorkflowRunner",
+        "WorkflowScope",
+        "WorkflowState",
+        "WorkflowStep",
+        "WorkflowStepRecord",
+        "WorkflowStore",
+        "createCommandJobExecutor",
+        "createMemoryWorkflowStore",
+        "createWorkflowRunner",
+        "parseWorkflowDefinition",
+        "parseWorkflowRecord",
+        "prepareWorkflowPlan",
+        "recoverWorkflowRecord"
+      ],
+      "declarationsSha256": "869ff4713bf1351d08feb14816160e2a0636b88662eebc01fe8b5f2126aabf96"
+    },
+    {
+      "entry": "./workflows-node",
+      "stability": "stable",
+      "availability": "optional",
+      "environments": [
+        "node"
+      ],
+      "runtimeNames": [
+        "createNodeWorkflowStore"
+      ],
+      "declarationNames": [
+        "NodeWorkflowStore",
+        "OwnedStoreCleanup",
+        "OwnedWorkflowStoreInspection",
+        "OwnedWorkflowStoreOptions",
+        "createNodeWorkflowStore"
+      ],
+      "declarationsSha256": "354890d8ee31bca7833f1e422975ffc4e257ac9e990908418ca2bfb0544c6bfc"
     },
     {
       "entry": "./workspace-client",

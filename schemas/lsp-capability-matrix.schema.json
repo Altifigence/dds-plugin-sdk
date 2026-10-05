@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v1.2.0/schemas/lsp-capability-matrix.schema.json",
+  "title": "lsp-capability-matrix",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "protocol": {
+      "const": "3.17"
+    },
+    "transport": {
+      "const": "stdio"
+    },
+    "positionEncoding": {
+      "const": "utf-16"
+    },
+    "features": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "sdkFeature": {
+            "enum": [
+              "completion",
+              "hover",
+              "definition",
+              "references",
+              "document-symbols",
+              "signature-help",
+              "prepare-rename",
+              "rename",
+              "format-document",
+              "format-range",
+              "code-actions",
+              "semantic-tokens",
+              "folding-ranges",
+              "inlay-hints",
+              "document-symbol-tree"
+            ]
+          },
+          "method": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "supported": {
+            "type": "boolean"
+          },
+          "reason": {
+            "enum": [
+              "advertised",
+              "not-advertised"
+            ]
+          }
+        },
+        "required": [
+          "sdkFeature",
+          "method",
+          "supported",
+          "reason"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 15,
+      "minItems": 15
+    },
+    "unsupported": {
+      "const": [
+        "completion-resolve",
+        "completion-snippets",
+        "code-action-resolve",
+        "semantic-tokens-delta",
+        "server-commands",
+        "dynamic-capabilities",
+        "resource-operations",
+        "sockets",
+        "unversioned-diagnostics"
+      ]
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "protocol",
+    "transport",
+    "positionEncoding",
+    "features",
+    "unsupported"
+  ],
+  "additionalProperties": false,
+  "$comment": "Runtime verifies the exact ordered feature/method pairs and reason consistent with support. Matrix support reports negotiation, not successful execution of every server feature."
+}

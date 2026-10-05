@@ -1,6 +1,6 @@
 {
   "name": "@altifigence/dds-plugin-sdk",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Plugin, theme and user-owned workspace tools for Digital Design Studio",
   "type": "module",
   "license": "Apache-2.0",
@@ -184,6 +184,34 @@
     "./upstream": {
       "types": "./src/upstream.d.mts",
       "import": "./src/upstream.mjs"
+    },
+    "./workflows": {
+      "types": "./src/workflows.d.mts",
+      "import": "./src/workflows.mjs"
+    },
+    "./workflows-node": {
+      "types": "./src/workflows-node.d.mts",
+      "import": "./src/workflows-node.mjs"
+    },
+    "./workflow-cache": {
+      "types": "./src/workflow-cache.d.mts",
+      "import": "./src/workflow-cache.mjs"
+    },
+    "./workflow-cache-node": {
+      "types": "./src/workflow-cache-node.d.mts",
+      "import": "./src/workflow-cache-node.mjs"
+    },
+    "./tool-streams": {
+      "types": "./src/tool-streams.d.mts",
+      "import": "./src/tool-streams.mjs"
+    },
+    "./tool-streams-node": {
+      "types": "./src/tool-streams-node.d.mts",
+      "import": "./src/tool-streams-node.mjs"
+    },
+    "./lsp-node": {
+      "types": "./src/lsp-node.d.mts",
+      "import": "./src/lsp-node.mjs"
     }
   },
   "bin": {
@@ -257,9 +285,14 @@
     "example:conformance-browser": "node examples/conformance/serve.mjs",
     "example:combined": "node examples/combined-workload/run.mjs",
     "benchmark:combined": "node scripts/benchmark-combined.mjs",
-    "example:release-tools": "node examples/release-tools/run.mjs"
+    "example:release-tools": "node examples/release-tools/run.mjs",
+    "example:workflows": "node examples/workflows/run.mjs",
+    "example:workflow-tools": "node examples/workflow-tools/run.mjs",
+    "example:lsp": "node examples/lsp/run.mjs",
+    "example:tool-streams-browser": "node examples/tool-streams-browser/serve.mjs"
   },
   "devDependencies": {
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "typescript-language-server": "5.3.0"
   }
 }

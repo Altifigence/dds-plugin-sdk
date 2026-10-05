@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v1.2.0/schemas/trusted-process-definition.schema.json",
+  "title": "trusted-process-definition",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 96
+    },
+    "approved": {
+      "const": true
+    },
+    "executable": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "executableSha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "required": [
+          "path",
+          "sha256"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 64,
+      "minItems": 0
+    },
+    "args": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          {
+            "type": "object",
+            "properties": {
+              "input": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+              }
+            },
+            "required": [
+              "input"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "maxItems": 64,
+      "minItems": 0
+    },
+    "versionArgs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 4096
+      },
+      "maxItems": 64,
+      "minItems": 0
+    },
+    "expectedVersionOutput": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "environment": {
+      "type": "object",
+      "maxProperties": 32,
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[a-zA-Z_][a-zA-Z0-9_]{0,127}$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 0,
+        "maxLength": 4096
+      }
+    }
+  },
+  "required": [
+    "id",
+    "version",
+    "approved",
+    "executable",
+    "executableSha256",
+    "files",
+    "args",
+    "versionArgs",
+    "expectedVersionOutput",
+    "environment"
+  ],
+  "additionalProperties": false,
+  "$comment": "Operator-only configuration. Runtime requires absolute local executable/artifact paths, fixed version arguments, approved true, digest verification and exact bounded version-probe output. The process is trusted code, not sandboxed."
+}

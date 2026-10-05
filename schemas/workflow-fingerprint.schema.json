@@ -1,0 +1,193 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v1.2.0/schemas/workflow-fingerprint.schema.json",
+  "title": "workflow-fingerprint",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "key": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "eligible": {
+      "type": "boolean"
+    },
+    "reasons": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128,
+        "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+      },
+      "maxItems": 8,
+      "minItems": 0,
+      "uniqueItems": true
+    },
+    "descriptor": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "sdkVersion": {
+          "const": "1.2.0"
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "workspaceId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+            },
+            "securityScope": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+            }
+          },
+          "required": [
+            "workspaceId",
+            "securityScope"
+          ],
+          "additionalProperties": false
+        },
+        "commandId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+        },
+        "pluginSha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "toolSha256": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          ]
+        },
+        "schemaSha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "settingsSha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "inputSha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "environmentSha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024,
+                "$comment": "Runtime requires a relative workspace file path without traversal or links."
+              },
+              "byteLength": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 4194304
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              }
+            },
+            "required": [
+              "path",
+              "byteLength",
+              "sha256"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 64,
+          "minItems": 0
+        },
+        "grants": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+          },
+          "maxItems": 64,
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "policy": {
+          "type": "object",
+          "properties": {
+            "optIn": {
+              "type": "boolean"
+            },
+            "deterministic": {
+              "type": "boolean"
+            },
+            "declaredInputsComplete": {
+              "type": "boolean"
+            },
+            "secretDependent": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "optIn",
+            "deterministic",
+            "declaredInputsComplete",
+            "secretDependent"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "sdkVersion",
+        "scope",
+        "commandId",
+        "pluginSha256",
+        "toolSha256",
+        "schemaSha256",
+        "settingsSha256",
+        "inputSha256",
+        "environmentSha256",
+        "files",
+        "grants",
+        "policy"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "key",
+    "eligible",
+    "reasons",
+    "descriptor"
+  ],
+  "additionalProperties": false,
+  "x-maxUtf8Bytes": 65536,
+  "$comment": "Fingerprint generation hashes actual supplied file bytes, all declared inputs and SDK/plugin/tool/schema/settings/environment/scope/grants. Runtime verifies the descriptor digest; completeness and determinism are operator attestations."
+}

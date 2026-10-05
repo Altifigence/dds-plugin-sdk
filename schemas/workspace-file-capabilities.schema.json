@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v1.1.0/schemas/workspace-file-capabilities.schema.json",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v1.2.0/schemas/workspace-file-capabilities.schema.json",
   "title": "workspace-file-capabilities",
   "type": "object",
   "properties": {

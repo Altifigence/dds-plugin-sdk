@@ -1,0 +1,237 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v1.2.0/schemas/tool-stream-event.schema.json",
+  "title": "tool-stream-event",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4096
+    },
+    "jobId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+    },
+    "commandId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+    },
+    "toolId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+    },
+    "toolVersion": {
+      "type": "string",
+      "minLength": 0,
+      "maxLength": 96
+    },
+    "stream": {
+      "enum": [
+        "stdout",
+        "stderr"
+      ]
+    },
+    "data": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "log"
+            },
+            "level": {
+              "enum": [
+                "debug",
+                "info",
+                "warning",
+                "error"
+              ]
+            },
+            "message": {
+              "type": "string",
+              "minLength": 0,
+              "maxLength": 16384
+            }
+          },
+          "required": [
+            "kind",
+            "level",
+            "message"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "progress"
+            },
+            "completed": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "total": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "message": {
+              "type": "string",
+              "minLength": 0,
+              "maxLength": 2048
+            }
+          },
+          "required": [
+            "kind",
+            "completed",
+            "total"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "diagnostic"
+            },
+            "path": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024,
+              "$comment": "Runtime requires a relative workspace file path without traversal or links."
+            },
+            "range": {
+              "type": "object",
+              "properties": {
+                "start": {
+                  "type": "object",
+                  "properties": {
+                    "line": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 10000000
+                    },
+                    "character": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 10000000
+                    }
+                  },
+                  "required": [
+                    "line",
+                    "character"
+                  ],
+                  "additionalProperties": false
+                },
+                "end": {
+                  "type": "object",
+                  "properties": {
+                    "line": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 10000000
+                    },
+                    "character": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 10000000
+                    }
+                  },
+                  "required": [
+                    "line",
+                    "character"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "start",
+                "end"
+              ],
+              "additionalProperties": false
+            },
+            "severity": {
+              "enum": [
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            "message": {
+              "type": "string",
+              "minLength": 0,
+              "maxLength": 16384
+            },
+            "code": {
+              "type": "string",
+              "minLength": 0,
+              "maxLength": 128
+            },
+            "source": {
+              "type": "string",
+              "minLength": 0,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "kind",
+            "path",
+            "range",
+            "severity",
+            "message"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "unknown"
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+            },
+            "message": {
+              "type": "string",
+              "minLength": 0,
+              "maxLength": 1024
+            }
+          },
+          "required": [
+            "kind",
+            "reason",
+            "message"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "sequence",
+    "jobId",
+    "commandId",
+    "toolId",
+    "toolVersion",
+    "stream",
+    "data"
+  ],
+  "additionalProperties": false,
+  "$comment": "Runtime checks ordered ranges, progress <= total and bounded well-formed text; the parser bounds UTF-8 bytes, events, queued writes and callback time."
+}
