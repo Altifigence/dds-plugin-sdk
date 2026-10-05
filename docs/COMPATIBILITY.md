@@ -1,5 +1,26 @@
 # Compatibility and availability
 
+## 1.2 workflows and external tools
+
+The seven additional exports are optional. Workflows, cache, their durable Node
+stores, registered process execution and LSP require Node. `tool-streams` is also
+portable to browsers. None changes the existing workspace protocol or implicitly
+grants process access. Plugins importing new APIs must declare a minimum of 1.2.0;
+the packer does not infer that minimum from their source code.
+
+Existing 1.0/1.1 exports remain compatible. Workflow/cache schemas are new v1
+contracts with exact scope, digest and bounded data requirements. Restart does not
+automatically replay commands. The LSP capability matrix reports explicit supported
+and unsupported subsets, with synthetic and actual-server evidence kept separate.
+See [workflows](WORKFLOWS.md), [tool streams](TOOL_STREAMS.md) and [LSP](LSP.md).
+
+## 1.1 release tools
+
+Offline bundles, detached provenance, reviewed updates and upstream candidates are
+optional Node APIs. Existing archive verification preserves historical metadata;
+provenance and current host permissions remain independent checks. See
+[release tools](RELEASE_TOOLS.md) for operator trust, rollback and recovery limits.
+
 ## 1.0 stable API
 
 `1.0.0` retains the RC runtime/protocol API. Newly packed plugins use

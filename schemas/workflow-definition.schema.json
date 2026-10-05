@@ -1,0 +1,186 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v1.2.0/schemas/workflow-definition.schema.json",
+  "title": "workflow-definition",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+    },
+    "scope": {
+      "type": "object",
+      "properties": {
+        "workspaceId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+        },
+        "securityScope": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+        }
+      },
+      "required": [
+        "workspaceId",
+        "securityScope"
+      ],
+      "additionalProperties": false
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+          },
+          "commandId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+          },
+          "needs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+            },
+            "maxItems": 64,
+            "minItems": 0,
+            "uniqueItems": true
+          },
+          "input": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+            },
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "$ref": "https://github.com/Altifigence/dds-plugin-sdk/blob/v1.2.0/schemas/json-value.schema.json"
+                    }
+                  },
+                  "required": [
+                    "value"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "step": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128,
+                      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+                    },
+                    "path": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 128,
+                        "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+                      },
+                      "maxItems": 8,
+                      "minItems": 0
+                    }
+                  },
+                  "required": [
+                    "step",
+                    "path"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            },
+            "maxProperties": 128
+          },
+          "grants": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+            },
+            "maxItems": 64,
+            "minItems": 0,
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "id",
+          "commandId",
+          "needs",
+          "input",
+          "grants"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 64,
+      "minItems": 1
+    },
+    "policy": {
+      "enum": [
+        "fail-fast",
+        "continue"
+      ]
+    },
+    "concurrency": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 8
+    },
+    "timeoutMs": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 600000
+    },
+    "stepTimeoutMs": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 600000
+    },
+    "retentionMs": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 86400000
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "id",
+    "scope",
+    "steps",
+    "policy",
+    "concurrency",
+    "timeoutMs",
+    "stepTimeoutMs",
+    "retentionMs"
+  ],
+  "additionalProperties": false,
+  "x-maxUtf8Bytes": 1048576,
+  "$comment": "Runtime checks acyclic unique steps, existing dependencies, input bindings and stepTimeoutMs <= timeoutMs."
+}

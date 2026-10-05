@@ -24,6 +24,7 @@ import {LOCALIZATION_SCHEMAS} from './localization-schemas.mjs';
 import {DEVELOPMENT_SCHEMAS} from './development-schemas.mjs';
 import {CONFORMANCE_SCHEMAS} from './conformance-schemas.mjs';
 import {RELEASE_SCHEMAS} from './release-schemas.mjs';
+import {WORKFLOW_SCHEMAS} from './workflow-schemas.mjs';
 
 const schema = 'https://json-schema.org/draft/2020-12/schema';
 const base = `https://github.com/Altifigence/dds-plugin-sdk/blob/v${SDK_VERSION}/schemas/`;
@@ -123,6 +124,7 @@ const historyDisposition = {enum:['live','completed','interrupted','expired']};
 const historyCursor = {...text(40),pattern:'^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}:(?:0|[1-9][0-9]{0,2})$'};
 const historyItem = object({jobId,commandId:text(128),state:{enum:JOB_STATES},disposition:historyDisposition,startedAt:integer(Number.MAX_SAFE_INTEGER),updatedAt:integer(Number.MAX_SAFE_INTEGER),expiresAt:integer(Number.MAX_SAFE_INTEGER,1),revision:integer(Number.MAX_SAFE_INTEGER,1),attemptOf:{oneOf:[jobId,{type:'null'}]},contentPolicy:{enum:['metadata-only','host-redacted']},artifactCount:integer(JOB_LIMITS.artifacts),snapshotCount:integer(JOB_LIMITS.artifacts),resultAvailability:{enum:['none','source-references','snapshot-references','mixed-references','expired']}});
 export const SCHEMAS = Object.freeze({
+  ...Object.fromEntries(Object.entries(WORKFLOW_SCHEMAS).map(([name,body])=>[name,define(name,body)])),
   ...Object.fromEntries(Object.entries(CONFORMANCE_SCHEMAS).map(([name,body])=>[name,define(name,body)])),
   ...Object.fromEntries(Object.entries(RELEASE_SCHEMAS).map(([name,body])=>[name,define(name,body)])),
   ...Object.fromEntries(Object.entries(DEVELOPMENT_SCHEMAS).map(([name,body])=>[name,define(name,body)])),

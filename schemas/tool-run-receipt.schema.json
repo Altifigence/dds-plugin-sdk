@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v1.2.0/schemas/tool-run-receipt.schema.json",
+  "title": "tool-run-receipt",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "toolId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+    },
+    "toolVersion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 96
+    },
+    "jobId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+    },
+    "commandId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+    },
+    "state": {
+      "enum": [
+        "succeeded",
+        "failed",
+        "cancelled",
+        "timed_out"
+      ]
+    },
+    "reason": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      ]
+    },
+    "exitCode": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "integer"
+        }
+      ]
+    },
+    "terminationSignal": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      ]
+    },
+    "stream": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "bytes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2097152
+            },
+            "events": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4096
+            },
+            "unknown": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4096
+            },
+            "peakQueued": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 8
+            },
+            "queued": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 8
+            },
+            "closed": {
+              "type": "boolean"
+            },
+            "failed": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "bytes",
+            "events",
+            "unknown",
+            "peakQueued"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "toolId",
+    "toolVersion",
+    "jobId",
+    "commandId",
+    "state",
+    "reason",
+    "exitCode",
+    "terminationSignal",
+    "stream"
+  ],
+  "additionalProperties": false
+}

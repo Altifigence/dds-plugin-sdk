@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.2.0 — 2026-10-05
+
+- Add bounded command DAGs with typed output bindings, exact plan approval, per-step grants, existing command-job integration and durable CAS checkpoints. Explicit restart recovery and retries create new attempts without automatic replay.
+- Add opt-in deterministic content fingerprints, scoped TTL/LRU caches, single-flight fills, current authorization, hash verification and owned-store recovery. Cache reuse has distinct evidence and no fresh job ID.
+- Add portable JSONL/text stream parsing with fragmented UTF-8, diagnostics/progress/log correlation, backpressure, literal masking and bounded output. The optional Node runner uses fixed operator-pinned tools and direct-child cleanup.
+- Add an optional stdio LSP 3.17 subset: 15 mapped language features, UTF-16 snapshots, cancellation/stale results, versioned diagnostics, conditional edit proposals and explicit unsupported capabilities.
+- Include independent installed workflow/tool/LSP examples, browser stream examples, actual TypeScript 5.9.3 and language-server 5.3.0 checks, seven public exports and eleven schemas. The actual server's unversioned diagnostics remain unsupported.
+- Preserve existing 1.x API/protocol behavior and historical archives. Security audit and vulnerability validation remain deferred; this release does not claim DDS product integration or an execution sandbox.
+
 ## 1.1.0 — 2026-10-05
 
 - Add exact dependency tree locks, deterministic offline bundles, LICENSE/NOTICE inventories and CycloneDX 1.6 SBOMs. Install only into a new directory, without scripts, downloads or permission inheritance.

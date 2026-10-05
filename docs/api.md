@@ -349,3 +349,12 @@ for complete contracts, limits and independent examples.
 ## Release tools (1.1, Node only)
 
 See [release tools](RELEASE_TOOLS.md) for the complete bundle, Ed25519 provenance, approval/activation journal and upstream candidate APIs. The five entry points provide declarations and versioned schemas without adding SDK runtime dependencies.
+
+## Workflows, cache and tools (1.2)
+
+See [workflows and cache](WORKFLOWS.md) for DAG plans, per-step command jobs,
+durable checkpoints, explicit resume and deterministic incremental reuse.
+[Tool streams](TOOL_STREAMS.md) covers the portable parser and optional Node
+process runner. [LSP](LSP.md) maps the public stdio bridge's negotiated subset to
+existing language contracts. Seven additional exports have declarations and
+eleven schemas; only the tool-output parser is portable to a browser.

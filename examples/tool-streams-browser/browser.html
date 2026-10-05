@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DDS tool streams</title>
+<style>
+  :root{color-scheme:light dark;font:16px/1.55 system-ui,sans-serif;background:light-dark(#f5f7fa,#12151a);color:light-dark(#152435,#e9eef5)}
+  body{max-width:900px;margin:auto;padding:40px 20px}h1{line-height:1.2;margin:.5rem 0}p{max-width:70ch}.eyebrow{letter-spacing:.1em;font-size:12px;font-weight:700;color:light-dark(#326087,#83baf0)}
+  section{padding:24px;margin:24px 0;border:1px solid light-dark(#d3dce7,#3b4756);border-radius:14px;background:light-dark(white,#1c232c)}
+  button{font:inherit;padding:10px 16px;border:1px solid light-dark(#7393b5,#728ca6);border-radius:8px;background:light-dark(#e6effa,#283d54);color:inherit;cursor:pointer;margin:4px 10px 4px 0}button:disabled{opacity:.5;cursor:wait}button:focus-visible{outline:3px solid #5496ff;outline-offset:3px}
+  output{display:block;margin-top:16px;font-weight:600}li{padding:8px 0;border-bottom:1px solid light-dark(#e4eaf1,#34404e);overflow-wrap:anywhere}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px}small{color:light-dark(#526476,#b7c8da)}
+</style></head><body>
+<div class="eyebrow">DIGITAL DESIGN STUDIO · PLUGIN SDK</div><h1>Tool output, one event at a time</h1>
+<p>Decode fragmented UTF-8 output into logs, progress and diagnostics. This example runs the parser in your browser. Starting external tools requires a Node host.</p>
+<section aria-label="Stream controls"><button id="run">Run fragmented output</button><button id="cancel">Verify cancellation</button><output id="status" aria-live="polite" data-state="ready">Ready</output><small>Input includes Korean text, a masked sample value, an invalid line and a final line without a newline.</small></section>
+<section aria-label="Parsed events"><h2>Events</h2><ol id="events"></ol><pre id="receipt" aria-label="Verification receipt"></pre></section>
+<script type="module" src="/browser.mjs"></script></body></html>

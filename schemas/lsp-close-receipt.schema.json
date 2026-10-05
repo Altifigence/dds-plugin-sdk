@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v1.2.0/schemas/lsp-close-receipt.schema.json",
+  "title": "lsp-close-receipt",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "graceful": {
+      "type": "boolean"
+    },
+    "reason": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      ]
+    },
+    "ownedProcessClosed": {
+      "type": "boolean"
+    },
+    "pendingRequests": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 16
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "graceful",
+    "reason",
+    "ownedProcessClosed",
+    "pendingRequests"
+  ],
+  "additionalProperties": false
+}

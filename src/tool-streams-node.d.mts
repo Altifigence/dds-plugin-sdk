@@ -1,0 +1,12 @@
+import type {JsonValue} from './index.mjs';
+import type {DataSchema} from './data-schema.mjs';
+import type {ToolStreamEvent,ToolStreamStats,ToolStreamParser} from './tool-streams.mjs';
+export const TOOL_RUNNER_LIMITS:Readonly<{tools:number;concurrency:number;timeoutMs:number}>;
+/** Operator-owned process configuration; never derive it from plugin input. */
+export interface TrustedProcessDefinition {readonly id:string;readonly version:string;readonly approved:true;readonly executable:string;readonly executableSha256:string;readonly files:readonly {readonly path:string;readonly sha256:string}[];readonly args:readonly (string|{readonly input:string})[];readonly versionArgs:readonly string[];readonly expectedVersionOutput:string;readonly environment:Readonly<Record<string,string>>;}
+export interface ToolRegistration {readonly process:TrustedProcessDefinition;readonly backendId:string;readonly inputSchema:DataSchema;readonly pathInputs:readonly string[];readonly format:'jsonl'|'text';readonly parser:'plain'|'typescript';}
+export interface ToolRunReceipt {readonly schemaVersion:1;readonly toolId:string;readonly toolVersion:string;readonly jobId:string;readonly commandId:string;readonly state:'succeeded'|'failed'|'cancelled'|'timed_out';readonly reason:string|null;readonly exitCode:number|null;readonly terminationSignal:string|null;readonly stream:ToolStreamStats|ReturnType<ToolStreamParser['inspect']>|null;}
+export interface ToolRunner {inspect():Readonly<{active:number;pending:number;closed:boolean}>;run(options:{readonly toolId:string;readonly version:string;readonly input:JsonValue;readonly jobId:string;readonly commandId:string;readonly onEvent:(event:ToolStreamEvent)=>void|Promise<void>;readonly signal?:AbortSignal;readonly timeoutMs?:number}):Promise<ToolRunReceipt>;close():Promise<void>;}
+export function hashToolFile(file:string):Promise<string>;
+export function parseToolRegistration(input:unknown):ToolRegistration;
+export function createToolRunner(options:{readonly tools:readonly ToolRegistration[];readonly workspaceRoot:string;readonly authorize:(context:{readonly toolId:string;readonly version:string;readonly backendId:string;readonly jobId:string;readonly commandId:string;readonly input:JsonValue;readonly phase:'before'|'start'|'event'|'after'})=>boolean|Promise<boolean>;readonly maxConcurrent?:number;readonly secrets?:readonly string[];readonly sensitivePaths?:readonly string[]}):ToolRunner;
