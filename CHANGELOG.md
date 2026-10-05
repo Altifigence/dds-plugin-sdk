@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.0 — 2026-10-05
+
+- Publish the RC API as the stable 1.x line with an exact SDK archive and new plugin
+  peer `>=1.0.0 <2.0.0`; preserve verified historical and exact RC1 archive metadata.
+- Activate the documented support/deprecation policy and publish release contents,
+  migration/rollback guidance and measured Windows/Linux × Node 22/24 guards.
+- Security audit and vulnerability validation remain pending under the owner
+  deferral. Functional acceptance and stable API status do not imply audit passage.
+
 ## 1.0.0-rc.1
 
 - Add a versioned public host/port conformance suite with machine and human reports,

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v1.0.0-rc.1/schemas/stored-job.schema.json",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v1.0.0/schemas/stored-job.schema.json",
   "title": "stored-job",
   "type": "object",
   "properties": {
@@ -79,7 +79,7 @@
       "uniqueItems": true
     },
     "snapshot": {
-      "$ref": "https://github.com/Altifigence/dds-plugin-sdk/blob/v1.0.0-rc.1/schemas/job-snapshot.schema.json"
+      "$ref": "https://github.com/Altifigence/dds-plugin-sdk/blob/v1.0.0/schemas/job-snapshot.schema.json"
     },
     "events": {
       "type": "array",

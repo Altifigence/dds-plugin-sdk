@@ -1,8 +1,9 @@
 # SDK 1.x support and migration
 
-`1.0.0-rc.1` is a release candidate. Install the exact archive and use the exact
-plugin peer `1.0.0-rc.1` during RC testing. It does not assert GA acceptance or a
-DDS product release. The policy below becomes the stable-line policy at 1.0 GA.
+`1.0.0` is the stable SDK line. Pin the installed archive; newly packed plugins
+use `>=1.0.0 <2.0.0`. The policy below applies to this line. Security audit and
+vulnerability validation remain pending under the owner's 2026-10-05 deferral;
+stable API status does not constitute security or DDS product acceptance.
 
 ## Public API and optional features
 
@@ -26,14 +27,14 @@ experimental changes are announced in minor-release notes and require fresh
 acceptance. Its presence is not a cross-browser compatibility claim. Other browser
 ports also require their documented capability and permission checks.
 
-No stable API is deprecated at RC1. Future deprecations appear in declarations,
+No stable API is deprecated in 1.0.0. Future deprecations appear in declarations,
 the changelog and migration guide for at least two minor releases and six months
 before removal in a new major. Runtime execution does not emit unsolicited warning
 logs or change grants. A security emergency is documented explicitly.
 
 ## Versions and maintenance
 
-GA plugin packages use `>=1.0.0 <2.0.0`; a plugin using a later minor's new API must
+Stable 1.0 plugin packages use `>=1.0.0 <2.0.0`; a plugin using a later minor's new API must
 declare that higher minimum. The packer records its release's supported range;
 it does not infer compatible source or widen an existing archive. RC packages
 require an explicit prerelease peer. Old archives retain their original peer

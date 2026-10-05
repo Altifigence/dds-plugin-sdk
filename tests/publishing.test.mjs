@@ -72,7 +72,7 @@ test('open and proprietary packages use explicit files, never execute code, and 
     const npmMetadata = JSON.parse(archive.get('package/package.json'));
     assert.equal(npmMetadata.name, '@example/hello');
     assert.equal(npmMetadata.exports, './plugin.mjs');
-    assert.equal(npmMetadata.peerDependencies['@altifigence/dds-plugin-sdk'], '1.0.0-rc.1');
+    assert.equal(npmMetadata.peerDependencies['@altifigence/dds-plugin-sdk'], '>=1.0.0 <2.0.0');
     assert.equal(npmMetadata.scripts, undefined);
     assert.equal(JSON.parse(await readFile(packed.metadataPath, 'utf8')).artifact.sha256, packed.artifact.sha256);
   }

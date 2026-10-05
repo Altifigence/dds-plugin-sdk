@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v1.0.0-rc.1/schemas/language-capabilities.schema.json",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v1.0.0/schemas/language-capabilities.schema.json",
   "title": "language-capabilities",
   "type": "object",
   "properties": {
