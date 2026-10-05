@@ -10,7 +10,12 @@ a small ESM package, TypeScript declarations and versioned contracts. Connect
 your own workspace and tools with the Node.js host and HTTP client. The SDK has
 **zero runtime dependencies**.
 
-Version **1.0.0** is the stable API release. The
+Version **1.1.0** adds [offline bundles, detached provenance, reviewed updates and upstream candidates](docs/RELEASE_TOOLS.md).
+Run `npm run example:release-tools` for a complete independent installation, signature,
+approval, active-job version switch, rollback and durable readback example.
+These Node-only tools use operator-owned trust and explicit execution grants.
+
+Version 1.0 established the stable API release. The
 [API inventory](API_SUPPORT.json), [support and migration policy](docs/SUPPORT_POLICY.md)
 and [host conformance suite](docs/CONFORMANCE.md) make its scope reviewable.
 Run `npm run example:conformance`, `npm run example:conformance-browser` or
@@ -57,7 +62,7 @@ application, private engines/services and production signing systems are outside
 this repository. Read the [public scope](docs/PUBLIC_SCOPE.md) and
 [compatibility table](docs/COMPATIBILITY.md) for exact boundaries.
 
-Version **1.0.0** supports Node 22 and 24. Manifest v1 diagnostic plugins remain
+Version **1.1.0** supports Node 22 and 24. Manifest v1 diagnostic plugins remain
 compatible. Manifest v2 adds commands, permission-scoped workspace and backend
 APIs, and open-source or proprietary distribution metadata. Themes export to
 the XML format already supported by DDS. The workspace host runs trusted plugins
@@ -117,7 +122,7 @@ mkdir my-dds-plugin
 cd my-dds-plugin
 npm init -y
 npm pkg set type=module
-npm install --ignore-scripts --save-exact https://github.com/Altifigence/dds-plugin-sdk/releases/download/v1.0.0/altifigence-dds-plugin-sdk-1.0.0.tgz
+npm install --ignore-scripts --save-exact https://github.com/Altifigence/dds-plugin-sdk/releases/download/v1.1.0/altifigence-dds-plugin-sdk-1.1.0.tgz
 ```
 
 Copy the example's `plugin.mjs` and `run.mjs` into this directory, then run:

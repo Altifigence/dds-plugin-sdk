@@ -1,4 +1,9 @@
-# API reference — 0.13.0
+# API reference — 1.1.0
+
+SDK 1.1 adds Node-only [release tools](RELEASE_TOOLS.md): deterministic offline
+bundles, detached provenance, reviewed updates and upstream comparison. Existing
+1.0 stable APIs remain compatible. The complete export/type list is generated in
+[API_SUPPORT.json](../API_SUPPORT.json).
 
 SDK 0.13 adds `/testing` scenario/clock/fault/trace helpers, `/diagnostics` local
 sessions and adapters, and `/devtools` feature templates plus `planPlugin()` and
@@ -340,3 +345,7 @@ authorization, with no automatic rollback or retry.
 See [assistance](LANGUAGE_ASSISTANCE.md), [workspace edits](WORKSPACE_EDITS.md),
 [formatting/actions](LANGUAGE_EDITING.md) and [language display](LANGUAGE_DISPLAY.md)
 for complete contracts, limits and independent examples.
+
+## Release tools (1.1, Node only)
+
+See [release tools](RELEASE_TOOLS.md) for the complete bundle, Ed25519 provenance, approval/activation journal and upstream candidate APIs. The five entry points provide declarations and versioned schemas without adding SDK runtime dependencies.

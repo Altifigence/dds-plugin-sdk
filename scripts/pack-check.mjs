@@ -236,6 +236,9 @@ try {
   await cp(join(root, 'tests', 'types', 'artifacts.mts'), join(consumer, 'artifacts.mts'));
   for(const name of ['job-storage.mts','job-history.mts','artifact-storage.mts','project-watch.mts','project-query.mts','workspace-project-tools.mts','artifact-transfer.mts','artifact-resume-browser.mts']) await cp(join(root,'tests','types',name),join(consumer,name));
   run(process.execPath, [join(installed, 'examples', 'binary-artifacts', 'run.mjs')], consumer);
+  const releaseTools=JSON.parse(run(process.execPath,[join(installed,'examples','release-tools','run.mjs')],consumer));
+  assert.equal(releaseTools.offlineInstall,true);assert.equal(releaseTools.oldJobPinned,true);assert.equal(releaseTools.rollback,true);assert.equal(releaseTools.upstreamCandidate,true);
+  await cp(join(root,'tests','types','release-tools.mts'),join(consumer,'release-tools.mts'));
   await cp(join(root, 'tests', 'types', 'tsconfig.json'), join(consumer, 'tsconfig.json'));
   const typescript = join(root, 'node_modules', 'typescript', 'bin', 'tsc');
   run(process.execPath, [typescript, '--noEmit', '-p', 'tsconfig.json'], consumer);

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v1.0.0/schemas/workspace-edit-preview.schema.json",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v1.1.0/schemas/workspace-edit-preview.schema.json",
   "title": "workspace-edit-preview",
   "type": "object",
   "properties": {

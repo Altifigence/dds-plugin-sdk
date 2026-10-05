@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sdkVersion": "1.0.0",
+  "sdkVersion": "1.1.0",
   "releaseStatus": "stable",
   "pluginPeerRange": ">=1.0.0 <2.0.0",
   "policy": "docs/SUPPORT_POLICY.md",
@@ -398,6 +398,34 @@
         "parseBinaryChunk"
       ],
       "declarationsSha256": "40b8a3d52a39b6654336636ffa4367f5ccf26c0fa273f91cf2a852dc71d1c05b"
+    },
+    {
+      "entry": "./bundles",
+      "stability": "stable",
+      "availability": "optional",
+      "environments": [
+        "node"
+      ],
+      "runtimeNames": [
+        "BUNDLE_LIMITS",
+        "createPluginBundle",
+        "installPluginBundle",
+        "lockBundleDependency",
+        "verifyPluginBundle"
+      ],
+      "declarationNames": [
+        "BUNDLE_LIMITS",
+        "BundleDependencyInput",
+        "BundleFile",
+        "BundleReceipt",
+        "LockedBundleDependency",
+        "PluginBundleInput",
+        "createPluginBundle",
+        "installPluginBundle",
+        "lockBundleDependency",
+        "verifyPluginBundle"
+      ],
+      "declarationsSha256": "6570662411ddce3aa530d826e17afaa64beb5f4a40880baf6dc596926b1548e8"
     },
     {
       "entry": "./conformance",
@@ -908,6 +936,34 @@
       "declarationsSha256": "aa142b1ad12968a67e8bca9881c919841a11b2d9e47bab29b323156eb2511cbf"
     },
     {
+      "entry": "./provenance",
+      "stability": "stable",
+      "availability": "optional",
+      "environments": [
+        "node"
+      ],
+      "runtimeNames": [
+        "canonicalProvenancePayload",
+        "createProvenanceStatement",
+        "signPluginProvenance",
+        "verifyPluginProvenance"
+      ],
+      "declarationNames": [
+        "ProvenanceEnvelope",
+        "ProvenanceKey",
+        "ProvenancePolicy",
+        "ProvenanceReceipt",
+        "ProvenanceStatement",
+        "ProvenanceSubject",
+        "ProvenanceTrustRoot",
+        "canonicalProvenancePayload",
+        "createProvenanceStatement",
+        "signPluginProvenance",
+        "verifyPluginProvenance"
+      ],
+      "declarationsSha256": "92bc8a92565faf44935e0d85c49c602c7c9555e7384c7b0c0a6881cd7f9a138c"
+    },
+    {
       "entry": "./publishing",
       "stability": "stable",
       "availability": "library",
@@ -915,6 +971,7 @@
         "node"
       ],
       "runtimeNames": [
+        "inspectPluginArchiveBytes",
         "packPlugin",
         "validatePluginPackage",
         "verifyPluginArchive"
@@ -924,11 +981,12 @@
         "PackageReport",
         "PackedPlugin",
         "VerifiedPluginArchive",
+        "inspectPluginArchiveBytes",
         "packPlugin",
         "validatePluginPackage",
         "verifyPluginArchive"
       ],
-      "declarationsSha256": "0fbeb14838e64dd879e77c169d8db6f61222b4e6f62b04073089b6aceae0e7c5"
+      "declarationsSha256": "b75f8c11539663dee64f16066feba2e19cc9565e8ac1f2c4ada593c3cdafaaf9"
     },
     {
       "entry": "./schemas",
@@ -944,7 +1002,7 @@
       "declarationNames": [
         "SCHEMAS"
       ],
-      "declarationsSha256": "a25b1a2abe5e8f398cb39f954cedc77927e8a77a035dbafc570818f42ef1be97"
+      "declarationsSha256": "259961a4a30f11c661bafd71e3e8314012c13d8a179294af09558df5606e580a"
     },
     {
       "entry": "./secrets",
@@ -1139,6 +1197,54 @@
       "declarationsSha256": "a501435b8d1b356ee7ec29e145956a90714a442eb9d5f05844276d7264c406a5"
     },
     {
+      "entry": "./updates",
+      "stability": "stable",
+      "availability": "optional",
+      "environments": [
+        "node"
+      ],
+      "runtimeNames": [
+        "createMemoryUpdateJournal",
+        "createPluginUpdateController",
+        "createPluginUpdatePlan",
+        "parsePluginUpdatePlan",
+        "reconcilePluginUpdateJournal"
+      ],
+      "declarationNames": [
+        "PluginUpdateController",
+        "PluginUpdateJournal",
+        "PluginUpdatePlan",
+        "PluginUpdateRecord",
+        "UpdateArtifact",
+        "UpdateDescriptor",
+        "UpdateHost",
+        "UpdateMigration",
+        "createMemoryUpdateJournal",
+        "createPluginUpdateController",
+        "createPluginUpdatePlan",
+        "parsePluginUpdatePlan",
+        "reconcilePluginUpdateJournal"
+      ],
+      "declarationsSha256": "31b45e47fec6ee23f64762b1fe795dbcd684a8beb0b21d4bd3482caf0d9749be"
+    },
+    {
+      "entry": "./updates-node",
+      "stability": "stable",
+      "availability": "optional",
+      "environments": [
+        "node"
+      ],
+      "runtimeNames": [
+        "createNodeUpdateJournal",
+        "inspectNodeUpdateJournal"
+      ],
+      "declarationNames": [
+        "createNodeUpdateJournal",
+        "inspectNodeUpdateJournal"
+      ],
+      "declarationsSha256": "e06d7a3e787f5720687db685facebef42ae490a4ee83e8183c4897294386b7da"
+    },
+    {
       "entry": "./uploads",
       "stability": "stable",
       "availability": "optional",
@@ -1235,6 +1341,32 @@
         "createNodeUploadStore"
       ],
       "declarationsSha256": "a04f718b4464f94d15742b7a7b05c759d0fda551224c847c955d3539d0061d13"
+    },
+    {
+      "entry": "./upstream",
+      "stability": "stable",
+      "availability": "optional",
+      "environments": [
+        "node"
+      ],
+      "runtimeNames": [
+        "createUpstreamCandidate",
+        "createUpstreamManifest",
+        "fetchUpstreamArtifact",
+        "inspectUpstreamManifest"
+      ],
+      "declarationNames": [
+        "UpstreamCandidate",
+        "UpstreamFetch",
+        "UpstreamManifest",
+        "UpstreamSnapshot",
+        "UpstreamSource",
+        "createUpstreamCandidate",
+        "createUpstreamManifest",
+        "fetchUpstreamArtifact",
+        "inspectUpstreamManifest"
+      ],
+      "declarationsSha256": "7027bd158d8e2e105f3999f1137930468dde63d729c999eb6712c2bd69bc40fe"
     },
     {
       "entry": "./workspace-client",

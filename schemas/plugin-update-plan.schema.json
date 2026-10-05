@@ -1,0 +1,432 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v1.1.0/schemas/plugin-update-plan.schema.json",
+  "title": "plugin-update-plan",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "current": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "bundleSha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "publisher": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "pluginId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 96,
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?$"
+        },
+        "api": {
+          "type": "object",
+          "properties": {
+            "protocolVersion": {
+              "const": 1
+            },
+            "capabilities": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "maxItems": 64
+            },
+            "runtime": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "supportedHosts": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "maxItems": 8
+            }
+          },
+          "required": [
+            "protocolVersion",
+            "capabilities",
+            "runtime",
+            "supportedHosts"
+          ],
+          "additionalProperties": false
+        },
+        "grants": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "maxItems": 64
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "version": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 96,
+                "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?$"
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "source": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2048
+              }
+            },
+            "required": [
+              "name",
+              "version",
+              "sha256",
+              "source"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 32
+        },
+        "tools": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "maxItems": 64
+        },
+        "licenses": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "maxItems": 33
+        },
+        "settingsSha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "provenanceSha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "keyId": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "bundleSha256",
+        "name",
+        "publisher",
+        "pluginId",
+        "version",
+        "api",
+        "grants",
+        "dependencies",
+        "tools",
+        "licenses",
+        "settingsSha256",
+        "provenanceSha256",
+        "keyId"
+      ],
+      "additionalProperties": false
+    },
+    "candidate": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "bundleSha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "publisher": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "pluginId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 96,
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?$"
+        },
+        "api": {
+          "type": "object",
+          "properties": {
+            "protocolVersion": {
+              "const": 1
+            },
+            "capabilities": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "maxItems": 64
+            },
+            "runtime": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "supportedHosts": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "maxItems": 8
+            }
+          },
+          "required": [
+            "protocolVersion",
+            "capabilities",
+            "runtime",
+            "supportedHosts"
+          ],
+          "additionalProperties": false
+        },
+        "grants": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "maxItems": 64
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "version": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 96,
+                "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?$"
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "source": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2048
+              }
+            },
+            "required": [
+              "name",
+              "version",
+              "sha256",
+              "source"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 32
+        },
+        "tools": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "maxItems": 64
+        },
+        "licenses": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "maxItems": 33
+        },
+        "settingsSha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "provenanceSha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "keyId": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "bundleSha256",
+        "name",
+        "publisher",
+        "pluginId",
+        "version",
+        "api",
+        "grants",
+        "dependencies",
+        "tools",
+        "licenses",
+        "settingsSha256",
+        "provenanceSha256",
+        "keyId"
+      ],
+      "additionalProperties": false
+    },
+    "migration": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "reversible": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "reversible"
+      ],
+      "additionalProperties": false
+    },
+    "jobPolicy": {
+      "enum": [
+        "wait",
+        "retain-old"
+      ]
+    },
+    "changes": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "boolean"
+        },
+        "api": {
+          "type": "boolean"
+        },
+        "grants": {
+          "type": "boolean"
+        },
+        "dependencies": {
+          "type": "boolean"
+        },
+        "tools": {
+          "type": "boolean"
+        },
+        "licenses": {
+          "type": "boolean"
+        },
+        "settingsSha256": {
+          "type": "boolean"
+        },
+        "provenanceSha256": {
+          "type": "boolean"
+        },
+        "keyId": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "version",
+        "api",
+        "grants",
+        "dependencies",
+        "tools",
+        "licenses",
+        "settingsSha256",
+        "provenanceSha256",
+        "keyId"
+      ],
+      "additionalProperties": false
+    },
+    "externalEffectsUndone": {
+      "const": false
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "current",
+    "candidate",
+    "migration",
+    "jobPolicy",
+    "changes",
+    "externalEffectsUndone",
+    "sha256"
+  ],
+  "additionalProperties": false,
+  "$comment": "Runtime verifies the plan digest, byte-bound descriptors and current policy. Approval is not transferable to another digest/key/grant/settings set."
+}

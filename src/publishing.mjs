@@ -301,11 +301,22 @@ export async function verifyPluginArchive(archivePath, options = {}) {
   if (options.expectedSha256 !== undefined && digest !== options.expectedSha256) fail('archive does not match expectedSha256');
   const metadataPath = options.metadataPath ?? `${archivePath}.release.json`;
   const metadata = json(await readInputFile(metadataPath, MAX_RELEASE_METADATA), 'release metadata');
+  return inspectPluginArchiveBytes(archive, metadata, {expectedSha256: options.expectedSha256}).receipt;
+}
+
+/** Inspect a bounded in-memory snapshot with the same verifier as local archives. */
+export function inspectPluginArchiveBytes(input, metadata, options = {}) {
+  if (!(input instanceof Uint8Array) || input.byteLength > MAX_ARCHIVE) fail('invalid or oversized archive bytes');
+  record(options, [], ['expectedSha256']);
+  const archive = Buffer.from(input);
+  const digest = sha256(archive);
+  if (options.expectedSha256 !== undefined && (!/^[a-f0-9]{64}$/.test(options.expectedSha256) || digest !== options.expectedSha256)) fail('archive does not match expectedSha256');
+  if (JSON.stringify(metadata)?.length > MAX_RELEASE_METADATA) fail('oversized release metadata');
   const fields = ['schemaVersion', 'pluginId', 'pluginVersion', 'publisher', 'license', 'sourceVisibility', 'manifestSha256', 'disclosureSha256', 'unpackedSize', 'files', 'artifact'];
   record(metadata, fields);
   record(metadata.artifact, ['filename', 'size', 'sha256']);
   if (metadata.artifact.size !== archive.length || metadata.artifact.sha256 !== digest) fail('archive does not match release metadata');
-  const {manifest, report} = inspectContents(archiveContents(archive), true);
+  const {manifest, report, contents} = inspectContents(archiveContents(archive), true);
   if (metadata.artifact.filename !== releaseName(manifest)) fail('release filename does not match plugin identity');
   for (const field of fields.filter(field => field !== 'files' && field !== 'artifact')) if (metadata[field] !== report[field]) fail('release metadata does not match packaged content');
   if (!Array.isArray(metadata.files) || metadata.files.length !== report.files.length) fail('release file inventory does not match archive');
@@ -317,5 +328,6 @@ export async function verifyPluginArchive(archivePath, options = {}) {
   const artifact = Object.freeze({filename: releaseName(manifest), size: archive.length, sha256: digest});
   // This receipt describes the bytes read now, not a mutable path's future
   // contents, a trusted publisher, an installation or a malware assessment.
-  return Object.freeze({...report, artifact, checksumPinned: options.expectedSha256 !== undefined});
+  const receipt = Object.freeze({...report, artifact, checksumPinned: options.expectedSha256 !== undefined});
+  return Object.freeze({receipt, manifest, files: Object.freeze([...contents].map(([path, data]) => Object.freeze({path, data: Uint8Array.from(data)})))});
 }

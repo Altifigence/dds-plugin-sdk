@@ -30,3 +30,9 @@ export function verifyPluginArchive(archivePath: string, options?: {
   /** A lowercase SHA-256 obtained independently from a trusted release channel. */
   readonly expectedSha256?: string;
 }): Promise<VerifiedPluginArchive>;
+/** Returns copies of verified bytes. Later mutation does not alter the receipt's subject. */
+export function inspectPluginArchiveBytes(archive: Uint8Array, metadata: unknown, options?: {readonly expectedSha256?: string}): {
+  readonly receipt: VerifiedPluginArchive;
+  readonly manifest: import('./index.mjs').PluginManifest;
+  readonly files: readonly {readonly path: string; readonly data: Uint8Array}[];
+};

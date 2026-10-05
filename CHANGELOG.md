@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.1.0 — 2026-10-05
+
+- Add exact dependency tree locks, deterministic offline bundles, LICENSE/NOTICE inventories and CycloneDX 1.6 SBOMs. Install only into a new directory, without scripts, downloads or permission inheritance.
+- Add detached Ed25519 provenance using operator-owned keys, publisher/subject binding, explicit expiry/revocation freshness and unsigned compatibility policy.
+- Add digest-bound update plans, exact grant/key approval, active-job version leases, settings conflict checks, separate candidate preparation and explicit rollback.
+- Add bounded Node CAS journals with restart inspection and explicit recovery after uncertain activation; external side effects are not rolled back.
+- Add explicit allowlisted upstream fetches, API/license/file comparisons and human-review candidate data; no automatic publication or monitoring.
+- Extend the existing archive verifier with bounded in-memory inspection. Existing unsigned archive and 1.0 APIs remain compatible.
+- Include independent installed examples, declarations and 10 additional schemas. Security audit and vulnerability validation remain deferred.
+
 ## 1.0.0 — 2026-10-05
 
 - Publish the RC API as the stable 1.x line with an exact SDK archive and new plugin
