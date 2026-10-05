@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.0-rc.1
+
+- Add a versioned public host/port conformance suite with machine and human reports,
+  exact runtime identity, unsupported-feature reporting, bounded deadlines and cleanup.
+- Inventory all package exports and declarations, distinguish optional/experimental
+  surfaces, and publish SemVer, runtime maintenance and migration policy.
+- Exercise concurrent language/settings/edits/jobs/watch/transfers through actual
+  HTTP and disk, with interruption, malformed response, revoke and restart fixtures.
+- Measure repeatable resource/performance baselines and retain independent packed
+  Node/browser examples. RC plugin archives pin the exact prerelease peer; prior
+  0.3.x–0.13.x archives retain their original verified metadata.
+
 ## 0.13.0 — 2026-10-05
 
 - Add command/language/theme/job/browser/configuration scaffolds with preview,

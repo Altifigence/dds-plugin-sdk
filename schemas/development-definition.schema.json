@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.13.0/schemas/development-definition.schema.json",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v1.0.0-rc.1/schemas/development-definition.schema.json",
   "title": "development-definition",
   "type": "object",
   "properties": {
@@ -20,18 +20,18 @@
     "commands": {
       "type": "array",
       "items": {
-        "$ref": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.13.0/schemas/command.schema.json"
+        "$ref": "https://github.com/Altifigence/dds-plugin-sdk/blob/v1.0.0-rc.1/schemas/command.schema.json"
       },
       "maxItems": 64
     },
     "settings": {
-      "$ref": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.13.0/schemas/settings-definition.schema.json"
+      "$ref": "https://github.com/Altifigence/dds-plugin-sdk/blob/v1.0.0-rc.1/schemas/settings-definition.schema.json"
     },
     "catalog": {
-      "$ref": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.13.0/schemas/locale-catalog.schema.json"
+      "$ref": "https://github.com/Altifigence/dds-plugin-sdk/blob/v1.0.0-rc.1/schemas/locale-catalog.schema.json"
     },
     "theme": {
-      "$ref": "https://github.com/Altifigence/dds-plugin-sdk/blob/v0.13.0/schemas/theme.schema.json"
+      "$ref": "https://github.com/Altifigence/dds-plugin-sdk/blob/v1.0.0-rc.1/schemas/theme.schema.json"
     }
   },
   "required": [

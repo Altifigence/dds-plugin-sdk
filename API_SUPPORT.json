@@ -1,0 +1,1382 @@
+{
+  "schemaVersion": 1,
+  "sdkVersion": "1.0.0-rc.1",
+  "releaseStatus": "candidate",
+  "pluginPeerRange": "1.0.0-rc.1",
+  "policy": "docs/SUPPORT_POLICY.md",
+  "exports": [
+    {
+      "entry": ".",
+      "stability": "stable",
+      "availability": "library",
+      "environments": [
+        "node",
+        "browser"
+      ],
+      "runtimeNames": [
+        "CODE_ACTION_KINDS",
+        "ErrorCode",
+        "LANGUAGE_CAPABILITIES",
+        "LANGUAGE_DISPLAY_LIMITS",
+        "LANGUAGE_EDIT_LIMITS",
+        "LANGUAGE_FEATURES",
+        "LANGUAGE_LIMITS",
+        "LIMITS",
+        "PROTOCOL_VERSION",
+        "PluginSdkError",
+        "SEMANTIC_STYLE_KEYS",
+        "applySemanticTokensDelta",
+        "createDiagnosticsRegistry",
+        "createDiagnosticsResult",
+        "createLanguageRegistry",
+        "createLanguageResult",
+        "createPluginHost",
+        "decodeSemanticTokens",
+        "definePlugin",
+        "parseCodeAction",
+        "parseCommandDefinition",
+        "parseCommandInput",
+        "parseCommandOutput",
+        "parseCompletionItem",
+        "parseDiagnosticsRequest",
+        "parseDiagnosticsResult",
+        "parseDocumentSnapshot",
+        "parseDocumentSymbolTree",
+        "parseFoldingRanges",
+        "parseFormattingOptions",
+        "parseInlayHints",
+        "parseJsonValue",
+        "parseLanguageRequest",
+        "parseLanguageResult",
+        "parseLicenseExpression",
+        "parseManifest",
+        "parseSemanticLegend",
+        "parseSemanticTokens",
+        "parseSemanticTokensDelta",
+        "parseSignatureHelp",
+        "parseSnippet",
+        "parseWorkspacePath",
+        "validateSemanticTokens"
+      ],
+      "declarationNames": [
+        "BackendHandler",
+        "BackendsApi",
+        "CODE_ACTION_KINDS",
+        "CodeAction",
+        "CodeActionContext",
+        "CodeActionKind",
+        "CommandDefinition",
+        "CommandHandler",
+        "CommandParameter",
+        "CompletionContext",
+        "CompletionInsertion",
+        "CompletionItem",
+        "DecodedSemanticToken",
+        "Diagnostic",
+        "DiagnosticsProvider",
+        "DiagnosticsRegistry",
+        "DiagnosticsRequest",
+        "DiagnosticsResult",
+        "Disposable",
+        "DocumentSnapshot",
+        "DocumentSymbol",
+        "DocumentSymbolTree",
+        "ErrorCode",
+        "FoldingRange",
+        "FormattingFeature",
+        "FormattingOptions",
+        "HostId",
+        "HostInspection",
+        "HostRuntime",
+        "Hover",
+        "InlayHint",
+        "JobArtifactContent",
+        "JobCapabilities",
+        "JobEvents",
+        "JobOptions",
+        "JobReporter",
+        "JobSnapshot",
+        "JsonValue",
+        "LANGUAGE_CAPABILITIES",
+        "LANGUAGE_DISPLAY_LIMITS",
+        "LANGUAGE_EDIT_LIMITS",
+        "LANGUAGE_FEATURES",
+        "LANGUAGE_LIMITS",
+        "LIMITS",
+        "LanguageCapabilities",
+        "LanguageCapability",
+        "LanguageData",
+        "LanguageDisplayFeature",
+        "LanguageFeature",
+        "LanguageInput",
+        "LanguageLocation",
+        "LanguageProvider",
+        "LanguageRegistry",
+        "LanguageRequest",
+        "LanguageResult",
+        "PROTOCOL_VERSION",
+        "ParsedSnippet",
+        "Permission",
+        "Plugin",
+        "PluginContext",
+        "PluginErrorCode",
+        "PluginHost",
+        "PluginHostOptions",
+        "PluginManifest",
+        "PluginManifestV1",
+        "PluginManifestV2",
+        "PluginSdkError",
+        "Position",
+        "PreviousSemanticTokens",
+        "ProviderSelector",
+        "Range",
+        "RegisteredCommand",
+        "RenamePreparation",
+        "RequestOptions",
+        "SEMANTIC_STYLE_KEYS",
+        "Scope",
+        "SemanticLegend",
+        "SemanticStyle",
+        "SemanticTokens",
+        "SemanticTokensDelta",
+        "SignatureHelp",
+        "SignatureHelpContext",
+        "SignatureInformation",
+        "SnapshotIdentity",
+        "WorkspaceApi",
+        "WorkspaceEntry",
+        "WorkspaceFile",
+        "WorkspacePort",
+        "WorkspaceWriteResult",
+        "applySemanticTokensDelta",
+        "createDiagnosticsRegistry",
+        "createDiagnosticsResult",
+        "createLanguageRegistry",
+        "createLanguageResult",
+        "createPluginHost",
+        "decodeSemanticTokens",
+        "definePlugin",
+        "parseCodeAction",
+        "parseCommandDefinition",
+        "parseCommandInput",
+        "parseCommandOutput",
+        "parseCompletionItem",
+        "parseDiagnosticsRequest",
+        "parseDiagnosticsResult",
+        "parseDocumentSnapshot",
+        "parseDocumentSymbolTree",
+        "parseFoldingRanges",
+        "parseFormattingOptions",
+        "parseInlayHints",
+        "parseJsonValue",
+        "parseLanguageRequest",
+        "parseLanguageResult",
+        "parseLicenseExpression",
+        "parseManifest",
+        "parseSemanticLegend",
+        "parseSemanticTokens",
+        "parseSemanticTokensDelta",
+        "parseSignatureHelp",
+        "parseSnippet",
+        "parseWorkspacePath",
+        "validateSemanticTokens"
+      ],
+      "declarationsSha256": "cd22225a003e141ad65cfd131d410732ed0368315d45c7cd601333362f28ff4b"
+    },
+    {
+      "entry": "./accessibility",
+      "stability": "stable",
+      "availability": "library",
+      "environments": [
+        "node",
+        "browser"
+      ],
+      "runtimeNames": [
+        "contrastRatio",
+        "inspectAccessibility",
+        "inspectThemeContrast",
+        "normalizeShortcut"
+      ],
+      "declarationNames": [
+        "ThemeContrastCheck",
+        "contrastRatio",
+        "inspectAccessibility",
+        "inspectThemeContrast",
+        "normalizeShortcut"
+      ],
+      "declarationsSha256": "7dc49297fdf2a992360039f05d3735b4b40af511739085c08a9216f867c7ba35"
+    },
+    {
+      "entry": "./artifact-resume-browser",
+      "stability": "experimental",
+      "availability": "optional",
+      "environments": [
+        "node",
+        "browser"
+      ],
+      "runtimeNames": [
+        "BROWSER_ARTIFACT_RESUME_LIMITS",
+        "DEFAULT_BROWSER_ARTIFACT_RETENTION_MS",
+        "createOpfsArtifactSink",
+        "getBrowserArtifactResumeSupport",
+        "getOpfsArtifactPartialNames",
+        "parseBrowserArtifactCheckpoint"
+      ],
+      "declarationNames": [
+        "BROWSER_ARTIFACT_RESUME_LIMITS",
+        "BrowserArtifactCheckpoint",
+        "BrowserCheckpointLocks",
+        "DEFAULT_BROWSER_ARTIFACT_RETENTION_MS",
+        "OpfsArtifactSink",
+        "OpfsArtifactSinkOptions",
+        "OpfsCheckpointDirectory",
+        "OpfsCheckpointFileHandle",
+        "OpfsSyncAccessHandle",
+        "createOpfsArtifactSink",
+        "getBrowserArtifactResumeSupport",
+        "getOpfsArtifactPartialNames",
+        "parseBrowserArtifactCheckpoint"
+      ],
+      "declarationsSha256": "76441e081e78bfbb391c0e7f12e1288aa3ff8cd2738cb7e4961a8d972a2c374b"
+    },
+    {
+      "entry": "./artifact-storage",
+      "stability": "stable",
+      "availability": "optional",
+      "environments": [
+        "node",
+        "browser"
+      ],
+      "runtimeNames": [
+        "ARTIFACT_STORE_LIMITS",
+        "DEFAULT_ARTIFACT_STORE_BYTES",
+        "parseArtifactStorageCapabilities",
+        "parseArtifactStoreLimits",
+        "parseStoredArtifact",
+        "parseStoredArtifactChunk",
+        "parseStoredArtifactList",
+        "parseStoredArtifactReference"
+      ],
+      "declarationNames": [
+        "ARTIFACT_STORE_LIMITS",
+        "ArtifactStorageCapabilities",
+        "ArtifactStore",
+        "ArtifactStoreLimits",
+        "DEFAULT_ARTIFACT_STORE_BYTES",
+        "StoredArtifact",
+        "StoredArtifactAvailability",
+        "StoredArtifactChunk",
+        "StoredArtifactList",
+        "StoredArtifactListEntry",
+        "StoredArtifactReference",
+        "parseArtifactStorageCapabilities",
+        "parseArtifactStoreLimits",
+        "parseStoredArtifact",
+        "parseStoredArtifactChunk",
+        "parseStoredArtifactList",
+        "parseStoredArtifactReference"
+      ],
+      "declarationsSha256": "baf33f117c97a85a35c3a2ccef98684115ed6792b1e76c555522dab4a9a132b5"
+    },
+    {
+      "entry": "./artifact-storage-node",
+      "stability": "stable",
+      "availability": "optional",
+      "environments": [
+        "node"
+      ],
+      "runtimeNames": [
+        "createNodeArtifactStore"
+      ],
+      "declarationNames": [
+        "NodeArtifactStore",
+        "NodeArtifactStoreOptions",
+        "createNodeArtifactStore"
+      ],
+      "declarationsSha256": "7da5ba978a2078951365d4544670379e3f074ade03f0f80976b81d0d2768efdd"
+    },
+    {
+      "entry": "./artifact-transfer",
+      "stability": "stable",
+      "availability": "optional",
+      "environments": [
+        "node",
+        "browser"
+      ],
+      "runtimeNames": [
+        "ARTIFACT_TRANSFER_LIMITS",
+        "ArtifactTransferError",
+        "createIncrementalSha256",
+        "parseArtifactSinkCapabilities",
+        "parseArtifactTransferReceipt",
+        "streamJobBinaryArtifact",
+        "streamStoredJobArtifact"
+      ],
+      "declarationNames": [
+        "ARTIFACT_TRANSFER_LIMITS",
+        "ArtifactSink",
+        "ArtifactSinkCapabilities",
+        "ArtifactSinkReader",
+        "ArtifactSinkSession",
+        "ArtifactTransferError",
+        "ArtifactTransferMetrics",
+        "ArtifactTransferOptions",
+        "ArtifactTransferPartial",
+        "ArtifactTransferProgress",
+        "ArtifactTransferReceipt",
+        "BinaryArtifactClient",
+        "IncrementalSha256",
+        "StoredArtifactClient",
+        "createIncrementalSha256",
+        "parseArtifactSinkCapabilities",
+        "parseArtifactTransferReceipt",
+        "streamJobBinaryArtifact",
+        "streamStoredJobArtifact"
+      ],
+      "declarationsSha256": "98443ec979f56ab5a4be8e153c4ab9dc425af8d27f251f59439a7a70b8e13c8e"
+    },
+    {
+      "entry": "./artifact-transfer-browser",
+      "stability": "stable",
+      "availability": "optional",
+      "environments": [
+        "node",
+        "browser"
+      ],
+      "runtimeNames": [
+        "createBrowserFileSink",
+        "createOpfsFileSink",
+        "getBrowserArtifactStorageSupport"
+      ],
+      "declarationNames": [
+        "BrowserDirectoryHandle",
+        "BrowserFileHandle",
+        "BrowserSinkOptions",
+        "createBrowserFileSink",
+        "createOpfsFileSink",
+        "getBrowserArtifactStorageSupport"
+      ],
+      "declarationsSha256": "44bae9160b1b8026b0feff25e473b7d74c6b99a0532fa50ca87d18b770a8efa9"
+    },
+    {
+      "entry": "./artifacts",
+      "stability": "stable",
+      "availability": "optional",
+      "environments": [
+        "node",
+        "browser"
+      ],
+      "runtimeNames": [
+        "BINARY_ARTIFACT_LIMITS",
+        "decodeBinaryArtifactData",
+        "parseBinaryArtifact",
+        "parseBinaryArtifactCapabilities",
+        "parseBinaryArtifactChunk",
+        "parseBinaryArtifactList",
+        "parseBinaryArtifactRange",
+        "parseBinaryArtifactReference",
+        "parseBinaryArtifactSource",
+        "parseBinaryChunk"
+      ],
+      "declarationNames": [
+        "BINARY_ARTIFACT_LIMITS",
+        "BinaryArtifact",
+        "BinaryArtifactCapabilities",
+        "BinaryArtifactChunk",
+        "BinaryArtifactList",
+        "BinaryArtifactReference",
+        "BinaryArtifactSource",
+        "BinaryChunk",
+        "decodeBinaryArtifactData",
+        "parseBinaryArtifact",
+        "parseBinaryArtifactCapabilities",
+        "parseBinaryArtifactChunk",
+        "parseBinaryArtifactList",
+        "parseBinaryArtifactRange",
+        "parseBinaryArtifactReference",
+        "parseBinaryArtifactSource",
+        "parseBinaryChunk"
+      ],
+      "declarationsSha256": "40b8a3d52a39b6654336636ffa4367f5ccf26c0fa273f91cf2a852dc71d1c05b"
+    },
+    {
+      "entry": "./conformance",
+      "stability": "stable",
+      "availability": "library",
+      "environments": [
+        "node",
+        "browser"
+      ],
+      "runtimeNames": [
+        "CONFORMANCE_CASES",
+        "CONFORMANCE_FEATURES",
+        "CONFORMANCE_LIMITS",
+        "formatConformanceReport",
+        "parseConformanceReport",
+        "runConformance"
+      ],
+      "declarationNames": [
+        "CONFORMANCE_CASES",
+        "CONFORMANCE_FEATURES",
+        "CONFORMANCE_LIMITS",
+        "ConformanceAdapters",
+        "ConformanceFeature",
+        "ConformanceIdentity",
+        "ConformanceOptions",
+        "ConformanceReason",
+        "ConformanceReport",
+        "ConformanceResult",
+        "ConformanceStatus",
+        "ConformanceWorkspace",
+        "formatConformanceReport",
+        "parseConformanceReport",
+        "runConformance"
+      ],
+      "declarationsSha256": "02f271192b18770aa03985a84d97873f3a806d35759f516382ab8e5678a0a128"
+    },
+    {
+      "entry": "./conformance-node",
+      "stability": "stable",
+      "availability": "library",
+      "environments": [
+        "node"
+      ],
+      "runtimeNames": [
+        "createConformanceWorkspace",
+        "createSdkConformanceOptions"
+      ],
+      "declarationNames": [
+        "NodeConformanceWorkspace",
+        "createConformanceWorkspace",
+        "createSdkConformanceOptions"
+      ],
+      "declarationsSha256": "e9bd0fc921d067af363f75ca688c6a21d6e04f724732292b3d5e44c995b9a2a1"
+    },
+    {
+      "entry": "./consent",
+      "stability": "stable",
+      "availability": "library",
+      "environments": [
+        "node",
+        "browser"
+      ],
+      "runtimeNames": [
+        "CONSENT_SCHEMA_VERSION",
+        "NOTICE_SCHEMA_VERSION",
+        "createConsentReceipt",
+        "createNotice",
+        "createPermissionGrant",
+        "isPermissionGranted",
+        "parseConsentReceipt",
+        "parseNotice",
+        "revokeConsentReceipt"
+      ],
+      "declarationNames": [
+        "CONSENT_SCHEMA_VERSION",
+        "ConsentHost",
+        "ConsentPluginIdentity",
+        "ConsentReceipt",
+        "ConsentReceiptInput",
+        "ConsentRecordBase",
+        "ConsentScope",
+        "CreatePermissionGrantInput",
+        "ExpectedPermissionIdentity",
+        "NOTICE_SCHEMA_VERSION",
+        "Notice",
+        "NoticeAcknowledgementInput",
+        "NoticeInput",
+        "OptionalPersonalDataConsentInput",
+        "PermissionGrantInput",
+        "PermissionGrantReceipt",
+        "PersonalDataProcessing",
+        "PluginLicenseAcceptanceInput",
+        "PublisherAgreementAcceptanceInput",
+        "RevocationAction",
+        "createConsentReceipt",
+        "createNotice",
+        "createPermissionGrant",
+        "isPermissionGranted",
+        "parseConsentReceipt",
+        "parseNotice",
+        "revokeConsentReceipt"
+      ],
+      "declarationsSha256": "f3619110fd7590e96cfe23950e7101489a8d7e1f768d9e3406247b242681560a"
+    },
+    {
+      "entry": "./data-schema",
+      "stability": "stable",
+      "availability": "library",
+      "environments": [
+        "node",
+        "browser"
+      ],
+      "runtimeNames": [
+        "DATA_SCHEMA_LIMITS",
+        "DataValidationError",
+        "collectSecretReferences",
+        "describeDataForm",
+        "parseDataSchema",
+        "parseDisplayMetadata",
+        "parseSecretReference",
+        "validateDataValue"
+      ],
+      "declarationNames": [
+        "AccessibilityMetadata",
+        "DATA_SCHEMA_LIMITS",
+        "DataFormField",
+        "DataSchema",
+        "DataSchemaNode",
+        "DataValidationError",
+        "DisplayMetadata",
+        "SecretReference",
+        "collectSecretReferences",
+        "describeDataForm",
+        "parseDataSchema",
+        "parseDisplayMetadata",
+        "parseSecretReference",
+        "validateDataValue"
+      ],
+      "declarationsSha256": "5768fb4296ce33c61b848094be04dadd3e0c561c174aaa8f61219a326ab44e49"
+    },
+    {
+      "entry": "./devtools",
+      "stability": "stable",
+      "availability": "library",
+      "environments": [
+        "node"
+      ],
+      "runtimeNames": [
+        "DEVTOOLS_LIMITS",
+        "PLUGIN_TEMPLATES",
+        "doctorPlugin",
+        "generatePluginContracts",
+        "initPlugin",
+        "parseDevelopmentDefinition",
+        "planPlugin",
+        "runPluginDev"
+      ],
+      "declarationNames": [
+        "DEVTOOLS_LIMITS",
+        "DevEvent",
+        "DevelopmentDefinition",
+        "DoctorCheck",
+        "DoctorReport",
+        "GeneratedFile",
+        "GenerationReport",
+        "InitPluginOptions",
+        "InitializedPlugin",
+        "PLUGIN_TEMPLATES",
+        "PluginPlan",
+        "PluginTemplate",
+        "doctorPlugin",
+        "generatePluginContracts",
+        "initPlugin",
+        "parseDevelopmentDefinition",
+        "planPlugin",
+        "runPluginDev"
+      ],
+      "declarationsSha256": "301f020f4f2dd5b69f8540b38415aea8d634f32b7210a28ba968dea35a3079ad"
+    },
+    {
+      "entry": "./diagnostics",
+      "stability": "stable",
+      "availability": "library",
+      "environments": [
+        "node",
+        "browser"
+      ],
+      "runtimeNames": [
+        "DIAGNOSTIC_LIMITS",
+        "DIAGNOSTIC_OPERATIONS",
+        "DIAGNOSTIC_RESOURCES",
+        "createDiagnosticSession",
+        "parseDiagnosticReport",
+        "profileHost",
+        "profileTransport"
+      ],
+      "declarationNames": [
+        "DIAGNOSTIC_LIMITS",
+        "DIAGNOSTIC_OPERATIONS",
+        "DIAGNOSTIC_RESOURCES",
+        "DiagnosticEnd",
+        "DiagnosticErrorCode",
+        "DiagnosticEvent",
+        "DiagnosticOperation",
+        "DiagnosticReport",
+        "DiagnosticResource",
+        "DiagnosticSession",
+        "DiagnosticSpan",
+        "DiagnosticStart",
+        "DiagnosticStatus",
+        "createDiagnosticSession",
+        "parseDiagnosticReport",
+        "profileHost",
+        "profileTransport"
+      ],
+      "declarationsSha256": "6a9a233c2b1a13fed34bdf0e1865d371b8c5992da2e9747dd2ee55191ead45c9"
+    },
+    {
+      "entry": "./job-history",
+      "stability": "stable",
+      "availability": "optional",
+      "environments": [
+        "node",
+        "browser"
+      ],
+      "runtimeNames": [
+        "JOB_HISTORY_LIMITS",
+        "parseJobHistoryItem",
+        "parseJobHistoryPage",
+        "parseJobHistoryQuery"
+      ],
+      "declarationNames": [
+        "JOB_HISTORY_LIMITS",
+        "JobHistoryDisposition",
+        "JobHistoryItem",
+        "JobHistoryPage",
+        "JobHistoryQuery",
+        "parseJobHistoryItem",
+        "parseJobHistoryPage",
+        "parseJobHistoryQuery"
+      ],
+      "declarationsSha256": "d6a2f243c00625a3dad2c1ac78e6dcb9940e447322afcf52dd578c42bb06e760"
+    },
+    {
+      "entry": "./job-storage",
+      "stability": "stable",
+      "availability": "optional",
+      "environments": [
+        "node",
+        "browser"
+      ],
+      "runtimeNames": [
+        "DEFAULT_JOB_RETENTION_MS",
+        "JOB_STORAGE_VERSION",
+        "JOB_STORE_LIMITS",
+        "parseJobRecovery",
+        "parseJobStorageCapabilities",
+        "parseJobStoreIdentity",
+        "parseJobStoreLimits",
+        "parseStoredJob"
+      ],
+      "declarationNames": [
+        "DEFAULT_JOB_RETENTION_MS",
+        "JOB_STORAGE_VERSION",
+        "JOB_STORE_LIMITS",
+        "JobRecovery",
+        "JobStorageCapabilities",
+        "JobStorageOptions",
+        "JobStore",
+        "JobStoreIdentity",
+        "JobStoreLimits",
+        "StoredJob",
+        "parseJobRecovery",
+        "parseJobStorageCapabilities",
+        "parseJobStoreIdentity",
+        "parseJobStoreLimits",
+        "parseStoredJob"
+      ],
+      "declarationsSha256": "107b06a0b8feadb4879f9ac0e768221ce9c76750f375ee85333f796c49cc5c38"
+    },
+    {
+      "entry": "./job-storage-node",
+      "stability": "stable",
+      "availability": "optional",
+      "environments": [
+        "node"
+      ],
+      "runtimeNames": [
+        "createNodeJobStore"
+      ],
+      "declarationNames": [
+        "NodeJobStore",
+        "NodeJobStoreOptions",
+        "createNodeJobStore"
+      ],
+      "declarationsSha256": "5e1451a260ef7728a74e332f0c47c4c8d90833d67e52e66451787a50fd5a097f"
+    },
+    {
+      "entry": "./jobs",
+      "stability": "stable",
+      "availability": "optional",
+      "environments": [
+        "node",
+        "browser"
+      ],
+      "runtimeNames": [
+        "JOB_LIMITS",
+        "JOB_PROTOCOL_VERSION",
+        "JOB_STATES",
+        "parseJobArtifact",
+        "parseJobArtifactContent",
+        "parseJobCapabilities",
+        "parseJobEvent",
+        "parseJobEvents",
+        "parseJobId",
+        "parseJobOptions",
+        "parseJobProgress",
+        "parseJobSnapshot"
+      ],
+      "declarationNames": [
+        "JOB_LIMITS",
+        "JOB_PROTOCOL_VERSION",
+        "JOB_STATES",
+        "JobArtifact",
+        "JobArtifactContent",
+        "JobCapabilities",
+        "JobEvent",
+        "JobEvents",
+        "JobOptions",
+        "JobProgress",
+        "JobReporter",
+        "JobSnapshot",
+        "JobState",
+        "parseJobArtifact",
+        "parseJobArtifactContent",
+        "parseJobCapabilities",
+        "parseJobEvent",
+        "parseJobEvents",
+        "parseJobId",
+        "parseJobOptions",
+        "parseJobProgress",
+        "parseJobSnapshot"
+      ],
+      "declarationsSha256": "7484ea8c8687216fc9309a57b43283735694d1189237ad89341f14e1f94a0c97"
+    },
+    {
+      "entry": "./localization",
+      "stability": "stable",
+      "availability": "library",
+      "environments": [
+        "node",
+        "browser"
+      ],
+      "runtimeNames": [
+        "LOCALIZATION_LIMITS",
+        "canonicalLocale",
+        "formatLocaleDate",
+        "formatLocaleNumber",
+        "formatMessage",
+        "localeDirection",
+        "localizeDisplay",
+        "messagePlaceholders",
+        "negotiateLocale",
+        "parseLocaleCatalog",
+        "resolveMessage",
+        "selectLocalePlural",
+        "validateLocalizedSurfaces"
+      ],
+      "declarationNames": [
+        "LOCALIZATION_LIMITS",
+        "LocaleCatalog",
+        "LocalizedMessage",
+        "MessageArguments",
+        "canonicalLocale",
+        "formatLocaleDate",
+        "formatLocaleNumber",
+        "formatMessage",
+        "localeDirection",
+        "localizeDisplay",
+        "messagePlaceholders",
+        "negotiateLocale",
+        "parseLocaleCatalog",
+        "resolveMessage",
+        "selectLocalePlural",
+        "validateLocalizedSurfaces"
+      ],
+      "declarationsSha256": "8a18db17f11049dcaace7bd98aae453b572ed126689f1f88fd4b8c8bd57582c6"
+    },
+    {
+      "entry": "./package.json",
+      "stability": "metadata",
+      "availability": "data",
+      "environments": [
+        "node",
+        "browser"
+      ],
+      "runtimeNames": [],
+      "declarationNames": [],
+      "declarationsSha256": null
+    },
+    {
+      "entry": "./project-query",
+      "stability": "stable",
+      "availability": "optional",
+      "environments": [
+        "node",
+        "browser"
+      ],
+      "runtimeNames": [
+        "PROJECT_QUERY_LIMITS",
+        "PROJECT_QUERY_REASONS",
+        "parseProjectQueryCapabilities",
+        "parseProjectQueryCursor",
+        "parseProjectQueryOptions",
+        "parseProjectQueryPage"
+      ],
+      "declarationNames": [
+        "PROJECT_QUERY_LIMITS",
+        "PROJECT_QUERY_REASONS",
+        "ProjectFileSearchOptions",
+        "ProjectQueryCapabilities",
+        "ProjectQueryItem",
+        "ProjectQueryOptions",
+        "ProjectQueryPage",
+        "ProjectQueryReason",
+        "ProjectTextMatch",
+        "ProjectTextSearchOptions",
+        "ProjectTreeOptions",
+        "parseProjectQueryCapabilities",
+        "parseProjectQueryCursor",
+        "parseProjectQueryOptions",
+        "parseProjectQueryPage"
+      ],
+      "declarationsSha256": "fce3fad2bc40fce8dec39b5e532668a841607ce96a36ea8523a45826da066d3a"
+    },
+    {
+      "entry": "./project-query-node",
+      "stability": "stable",
+      "availability": "optional",
+      "environments": [
+        "node"
+      ],
+      "runtimeNames": [
+        "createNodeProjectQueries"
+      ],
+      "declarationNames": [
+        "NodeProjectQueries",
+        "NodeProjectQueryCapabilities",
+        "createNodeProjectQueries"
+      ],
+      "declarationsSha256": "aa7065f63c243fb444ce933e4acd6a97239cbcdbcc383d9a0b3de748d8500a91"
+    },
+    {
+      "entry": "./project-watch",
+      "stability": "stable",
+      "availability": "optional",
+      "environments": [
+        "node",
+        "browser"
+      ],
+      "runtimeNames": [
+        "PROJECT_RESYNC_REASONS",
+        "PROJECT_SCAN_REASONS",
+        "PROJECT_WATCH_LIMITS",
+        "parseProjectEntry",
+        "parseProjectPatterns",
+        "parseProjectSnapshot",
+        "parseProjectWatchCapabilities",
+        "parseProjectWatchEvent",
+        "parseProjectWatchOptions"
+      ],
+      "declarationNames": [
+        "PROJECT_RESYNC_REASONS",
+        "PROJECT_SCAN_REASONS",
+        "PROJECT_WATCH_LIMITS",
+        "ProjectChange",
+        "ProjectEntry",
+        "ProjectResyncReason",
+        "ProjectScanReason",
+        "ProjectSnapshot",
+        "ProjectWatchCapabilities",
+        "ProjectWatchEvent",
+        "ProjectWatchOptions",
+        "parseProjectEntry",
+        "parseProjectPatterns",
+        "parseProjectSnapshot",
+        "parseProjectWatchCapabilities",
+        "parseProjectWatchEvent",
+        "parseProjectWatchOptions"
+      ],
+      "declarationsSha256": "4b4095ab2e48261c98fa385d9c4e85c0eeb308cb4a1b876b42c020413ceaf101"
+    },
+    {
+      "entry": "./project-watch-node",
+      "stability": "stable",
+      "availability": "optional",
+      "environments": [
+        "node"
+      ],
+      "runtimeNames": [
+        "createNodeProjectWatcher"
+      ],
+      "declarationNames": [
+        "NodeProjectWatchCapabilities",
+        "NodeProjectWatcher",
+        "createNodeProjectWatcher"
+      ],
+      "declarationsSha256": "aa142b1ad12968a67e8bca9881c919841a11b2d9e47bab29b323156eb2511cbf"
+    },
+    {
+      "entry": "./publishing",
+      "stability": "stable",
+      "availability": "library",
+      "environments": [
+        "node"
+      ],
+      "runtimeNames": [
+        "packPlugin",
+        "validatePluginPackage",
+        "verifyPluginArchive"
+      ],
+      "declarationNames": [
+        "PackageFile",
+        "PackageReport",
+        "PackedPlugin",
+        "VerifiedPluginArchive",
+        "packPlugin",
+        "validatePluginPackage",
+        "verifyPluginArchive"
+      ],
+      "declarationsSha256": "0fbeb14838e64dd879e77c169d8db6f61222b4e6f62b04073089b6aceae0e7c5"
+    },
+    {
+      "entry": "./schemas",
+      "stability": "stable",
+      "availability": "library",
+      "environments": [
+        "node",
+        "browser"
+      ],
+      "runtimeNames": [
+        "SCHEMAS"
+      ],
+      "declarationNames": [
+        "SCHEMAS"
+      ],
+      "declarationsSha256": "a25b1a2abe5e8f398cb39f954cedc77927e8a77a035dbafc570818f42ef1be97"
+    },
+    {
+      "entry": "./secrets",
+      "stability": "stable",
+      "availability": "optional",
+      "environments": [
+        "node",
+        "browser"
+      ],
+      "runtimeNames": [
+        "SECRET_LIMITS",
+        "createSecretExecution",
+        "createSecretResolver",
+        "parseSecretReference"
+      ],
+      "declarationNames": [
+        "SECRET_LIMITS",
+        "SecretExecution",
+        "SecretExecutionApi",
+        "SecretExecutionScope",
+        "SecretLeaseCallback",
+        "SecretReference",
+        "SecretResolver",
+        "SecretResolverPort",
+        "createSecretExecution",
+        "createSecretResolver",
+        "parseSecretReference"
+      ],
+      "declarationsSha256": "e3e66bb38c0abcfdcaa04e283b40b0af6ba788afe6dbcca4d817301d3ee57daa"
+    },
+    {
+      "entry": "./settings",
+      "stability": "stable",
+      "availability": "optional",
+      "environments": [
+        "node",
+        "browser"
+      ],
+      "runtimeNames": [
+        "SETTINGS_LIMITS",
+        "createSettingsStore",
+        "parseSettingsDefinition",
+        "parseSettingsSnapshot"
+      ],
+      "declarationNames": [
+        "SETTINGS_LIMITS",
+        "SettingDefinition",
+        "SettingsApi",
+        "SettingsDefinition",
+        "SettingsLayers",
+        "SettingsReadPort",
+        "SettingsScope",
+        "SettingsSnapshot",
+        "SettingsState",
+        "SettingsStore",
+        "SettingsValues",
+        "createSettingsStore",
+        "parseSettingsDefinition",
+        "parseSettingsSnapshot"
+      ],
+      "declarationsSha256": "4c22ce8b4f44d58313e49da3c63b85054225fd940b67043b6114132126c53bb3"
+    },
+    {
+      "entry": "./testing",
+      "stability": "stable",
+      "availability": "library",
+      "environments": [
+        "node",
+        "browser"
+      ],
+      "runtimeNames": [
+        "TEST_FAULTS",
+        "TEST_LIMITS",
+        "TEST_RESOURCE_KINDS",
+        "TRACE_OPERATIONS",
+        "createFaultController",
+        "createMemoryJobStore",
+        "createMemoryWorkspace",
+        "createScenarioHost",
+        "createTestClock",
+        "createTestHost",
+        "createTestRecorder",
+        "createTestReplay",
+        "createTestResources",
+        "flushTestMicrotasks",
+        "parseTestTrace"
+      ],
+      "declarationNames": [
+        "FaultController",
+        "MemoryJobSnapshot",
+        "MemoryJobStore",
+        "MemoryWorkspace",
+        "ScenarioHost",
+        "ScenarioInspection",
+        "ScenarioOptions",
+        "TEST_FAULTS",
+        "TEST_LIMITS",
+        "TEST_RESOURCE_KINDS",
+        "TRACE_OPERATIONS",
+        "TestClock",
+        "TestFault",
+        "TestFixture",
+        "TestHost",
+        "TestRecorder",
+        "TestReplay",
+        "TestResourceKind",
+        "TestResources",
+        "TestTrace",
+        "TestTraceEvent",
+        "TestTraceOptions",
+        "TraceOperation",
+        "createFaultController",
+        "createMemoryJobStore",
+        "createMemoryWorkspace",
+        "createScenarioHost",
+        "createTestClock",
+        "createTestHost",
+        "createTestRecorder",
+        "createTestReplay",
+        "createTestResources",
+        "flushTestMicrotasks",
+        "parseTestTrace"
+      ],
+      "declarationsSha256": "602ab99fde3e350fb7cfdcd39751fa5812d0e22f5cdc7e48a1145200a8df17d3"
+    },
+    {
+      "entry": "./themes",
+      "stability": "stable",
+      "availability": "library",
+      "environments": [
+        "node",
+        "browser"
+      ],
+      "runtimeNames": [
+        "THEME_COLOR_KEYS",
+        "THEME_METRICS",
+        "THEME_SCHEMA",
+        "THEME_TOKEN_COLOR_KEYS",
+        "THEME_XML_MAX_BYTES",
+        "parseTheme",
+        "serializeThemeXml"
+      ],
+      "declarationNames": [
+        "DdsTheme",
+        "THEME_COLOR_KEYS",
+        "THEME_METRICS",
+        "THEME_SCHEMA",
+        "THEME_TOKEN_COLOR_KEYS",
+        "THEME_XML_MAX_BYTES",
+        "ThemeColorKey",
+        "ThemeMetricKey",
+        "ThemeMode",
+        "ThemeTokenColorKey",
+        "parseTheme",
+        "serializeThemeXml"
+      ],
+      "declarationsSha256": "3d67f76fc0f5003d57b931d8104079d17e31cf5c30c8369085357377e734440b"
+    },
+    {
+      "entry": "./transfer-queue",
+      "stability": "stable",
+      "availability": "optional",
+      "environments": [
+        "node",
+        "browser"
+      ],
+      "runtimeNames": [
+        "TRANSFER_DEFAULTS",
+        "TRANSFER_PHASES",
+        "TRANSFER_QUEUE_LIMITS",
+        "TRANSFER_STATES",
+        "createTransferQueue",
+        "parseTransferQueueOptions",
+        "parseTransferSnapshot"
+      ],
+      "declarationNames": [
+        "TRANSFER_DEFAULTS",
+        "TRANSFER_PHASES",
+        "TRANSFER_QUEUE_LIMITS",
+        "TRANSFER_STATES",
+        "TransferHandle",
+        "TransferPhase",
+        "TransferQueue",
+        "TransferQueueOptions",
+        "TransferScheduling",
+        "TransferSnapshot",
+        "TransferState",
+        "createTransferQueue",
+        "parseTransferQueueOptions",
+        "parseTransferSnapshot"
+      ],
+      "declarationsSha256": "a501435b8d1b356ee7ec29e145956a90714a442eb9d5f05844276d7264c406a5"
+    },
+    {
+      "entry": "./uploads",
+      "stability": "stable",
+      "availability": "optional",
+      "environments": [
+        "node",
+        "browser"
+      ],
+      "runtimeNames": [
+        "DEFAULT_UPLOAD_LIMITS",
+        "EMPTY_UPLOAD_SHA256",
+        "UPLOAD_LIMITS",
+        "UPLOAD_STATES",
+        "parseUploadCapabilities",
+        "parseUploadChunk",
+        "parseUploadCommitReceipt",
+        "parseUploadIdentity",
+        "parseUploadLimits",
+        "parseUploadQuery",
+        "parseUploadReference",
+        "parseUploadRequest",
+        "parseUploadResult",
+        "parseUploadSpec",
+        "parseUploadStatus",
+        "uploadFile",
+        "uploadInteger",
+        "uploadUuid"
+      ],
+      "declarationNames": [
+        "DEFAULT_UPLOAD_LIMITS",
+        "EMPTY_UPLOAD_SHA256",
+        "UPLOAD_LIMITS",
+        "UPLOAD_STATES",
+        "UploadCapabilities",
+        "UploadChunk",
+        "UploadCommitReceipt",
+        "UploadFileOptions",
+        "UploadIdentity",
+        "UploadLimits",
+        "UploadProgress",
+        "UploadQuery",
+        "UploadReference",
+        "UploadSource",
+        "UploadSpec",
+        "UploadState",
+        "UploadStatus",
+        "parseUploadCapabilities",
+        "parseUploadChunk",
+        "parseUploadCommitReceipt",
+        "parseUploadIdentity",
+        "parseUploadLimits",
+        "parseUploadQuery",
+        "parseUploadReference",
+        "parseUploadRequest",
+        "parseUploadResult",
+        "parseUploadSpec",
+        "parseUploadStatus",
+        "uploadFile",
+        "uploadInteger",
+        "uploadUuid"
+      ],
+      "declarationsSha256": "1db1f3508b58d7a5341ebd4ea1acab60e196e2cf0ea7e1afb3330368db020f5c"
+    },
+    {
+      "entry": "./uploads-browser",
+      "stability": "stable",
+      "availability": "optional",
+      "environments": [
+        "node",
+        "browser"
+      ],
+      "runtimeNames": [
+        "createBrowserUploadSource"
+      ],
+      "declarationNames": [
+        "createBrowserUploadSource"
+      ],
+      "declarationsSha256": "7870d15593a9940c5dd23faab30bcaa30f15988f7ba9ac9104cb594036cba3a6"
+    },
+    {
+      "entry": "./uploads-node",
+      "stability": "stable",
+      "availability": "optional",
+      "environments": [
+        "node"
+      ],
+      "runtimeNames": [
+        "createNodeUploadSource",
+        "createNodeUploadStore"
+      ],
+      "declarationNames": [
+        "NodeUploadConfiguration",
+        "NodeUploadStore",
+        "createNodeUploadSource",
+        "createNodeUploadStore"
+      ],
+      "declarationsSha256": "a04f718b4464f94d15742b7a7b05c759d0fda551224c847c955d3539d0061d13"
+    },
+    {
+      "entry": "./workspace-client",
+      "stability": "stable",
+      "availability": "optional",
+      "environments": [
+        "node",
+        "browser"
+      ],
+      "runtimeNames": [
+        "WORKSPACE_OBSERVATION_LIMITS",
+        "WORKSPACE_PROJECT_LIMITS",
+        "applyTextEdits",
+        "createWorkspaceClient",
+        "createWorkspaceProject",
+        "normalizeWorkspaceUrl",
+        "parseWorkspaceProjectCapabilities",
+        "parseWorkspaceProjectPoll"
+      ],
+      "declarationNames": [
+        "EditSnapshot",
+        "TextEdit",
+        "WORKSPACE_OBSERVATION_LIMITS",
+        "WORKSPACE_PROJECT_LIMITS",
+        "WorkspaceClient",
+        "WorkspaceConditionalFile",
+        "WorkspaceEditSession",
+        "WorkspaceFileCapabilities",
+        "WorkspaceFileChange",
+        "WorkspaceFileRevision",
+        "WorkspaceFileWatchOptions",
+        "WorkspaceJobUpdate",
+        "WorkspaceJobWatchOptions",
+        "WorkspaceObservationOptions",
+        "WorkspaceObserver",
+        "WorkspaceProject",
+        "WorkspaceProjectCapabilities",
+        "WorkspaceProjectPoll",
+        "WorkspaceProjectWatchOptions",
+        "WorkspaceRequestOptions",
+        "applyTextEdits",
+        "createWorkspaceClient",
+        "createWorkspaceProject",
+        "normalizeWorkspaceUrl",
+        "parseWorkspaceProjectCapabilities",
+        "parseWorkspaceProjectPoll"
+      ],
+      "declarationsSha256": "ba7753be442440704b1f5607d6da5af21199a65d3df19b04423b1b2acde3e710"
+    },
+    {
+      "entry": "./workspace-edits",
+      "stability": "stable",
+      "availability": "optional",
+      "environments": [
+        "node",
+        "browser"
+      ],
+      "runtimeNames": [
+        "WORKSPACE_EDIT_CAPABILITIES",
+        "WORKSPACE_EDIT_LIMITS",
+        "applyWorkspaceEdit",
+        "createWorkspaceCompensation",
+        "parseWorkspaceEdit",
+        "parseWorkspaceEditPreview",
+        "parseWorkspaceEditReceipt",
+        "parseWorkspaceEditRecord",
+        "previewWorkspaceEdit",
+        "recoverWorkspaceEdit"
+      ],
+      "declarationNames": [
+        "WORKSPACE_EDIT_CAPABILITIES",
+        "WORKSPACE_EDIT_LIMITS",
+        "WorkspaceEdit",
+        "WorkspaceEditApplyOptions",
+        "WorkspaceEditAuthorization",
+        "WorkspaceEditChange",
+        "WorkspaceEditFileState",
+        "WorkspaceEditJournal",
+        "WorkspaceEditObservedState",
+        "WorkspaceEditPathState",
+        "WorkspaceEditPreview",
+        "WorkspaceEditPreviewStep",
+        "WorkspaceEditReceipt",
+        "WorkspaceEditRecord",
+        "applyWorkspaceEdit",
+        "createWorkspaceCompensation",
+        "parseWorkspaceEdit",
+        "parseWorkspaceEditPreview",
+        "parseWorkspaceEditReceipt",
+        "parseWorkspaceEditRecord",
+        "previewWorkspaceEdit",
+        "recoverWorkspaceEdit"
+      ],
+      "declarationsSha256": "dd29986893ff1d5888f8d7ec43ab8799afc316c2c297d8383870ad244270ab72"
+    },
+    {
+      "entry": "./workspace-edits-node",
+      "stability": "stable",
+      "availability": "optional",
+      "environments": [
+        "node"
+      ],
+      "runtimeNames": [
+        "createNodeWorkspaceEditJournal"
+      ],
+      "declarationNames": [
+        "NodeWorkspaceEditJournal",
+        "createNodeWorkspaceEditJournal"
+      ],
+      "declarationsSha256": "9eced8881f30721d622b6d421996f7daee38b2d06b3fc2009df2c221fa9c247b"
+    },
+    {
+      "entry": "./workspace-node",
+      "stability": "stable",
+      "availability": "optional",
+      "environments": [
+        "node"
+      ],
+      "runtimeNames": [
+        "createNodeWorkspace",
+        "createProcessBackend",
+        "createWorkspaceServer",
+        "downloadJobBinaryArtifact",
+        "downloadStoredJobArtifact"
+      ],
+      "declarationNames": [
+        "ArtifactDownloadOptions",
+        "ArtifactDownloadProgress",
+        "ArtifactDownloadReceipt",
+        "ConfiguredWorkspacePlugin",
+        "NodeWorkspace",
+        "ProcessBackend",
+        "StoredArtifactDownloadReceipt",
+        "WorkspaceServer",
+        "WorkspaceServerOptions",
+        "createNodeWorkspace",
+        "createProcessBackend",
+        "createWorkspaceServer",
+        "downloadJobBinaryArtifact",
+        "downloadStoredJobArtifact"
+      ],
+      "declarationsSha256": "f86bf2a795090933bc41b182982db8013b3e6fbbe865c10baba54515bdef708c"
+    }
+  ]
+}

@@ -110,7 +110,9 @@ test('slow consumers receive a bounded resync snapshot after queue overflow',asy
   }
   assert.ok(port.inspect().queuedEvents<=4);assert.ok(port.inspect().overflows>=1);
   const resync=await event(iterator,x=>x.reason==='consumer_overflow');assert.equal(resync.kind,'resync');assert.deepEqual(resync.changes,[]);assert.ok(resync.cursor>1);
-  const latest=await event(iterator,x=>x.snapshot.entries[0].revision===hash('7'));assert.equal(parseProjectWatchEvent(latest).snapshot.entries[0].revision,hash('7'));
+  const hasLatest=x=>x.snapshot.entries.some(entry=>entry.path==='value.txt'&&entry.revision===hash('7'));
+  const latest=hasLatest(resync)?resync:await event(iterator,hasLatest);
+  assert.ok(hasLatest(parseProjectWatchEvent(latest)));
 });
 
 test('native hint loss, missing names, initial-scan races and native errors require explicit resync',async t=>{

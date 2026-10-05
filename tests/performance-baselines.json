@@ -1,0 +1,512 @@
+{
+  "schemaVersion": 1,
+  "description": "Five fresh-process combined workloads per profile; coarse regression guard, not a latency or memory guarantee.",
+  "threshold": "maximum + max(6 * median absolute deviation, 2 * observed range, maximum)",
+  "fixture": {
+    "cycles": 3,
+    "bytes": 131089,
+    "languageRequests": 120,
+    "commands": 120,
+    "verifiedTransfers": 6,
+    "watchUpdates": 3
+  },
+  "measurementLimits": {
+    "disk": "Instrumented fs.promises payload bytes, excluding physical disk/cache effects.",
+    "network": "HTTP JSON body bytes, excluding headers and transport overhead.",
+    "memory": "RSS and heap sampled every 5 ms, not exact allocation peaks."
+  },
+  "profiles": {
+    "win32-x64-node24": {
+      "source": {
+        "run": "https://github.com/Altifigence/dds-plugin-sdk/actions/runs/37246613594",
+        "job": "https://github.com/Altifigence/dds-plugin-sdk/actions/runs/37246613594/job/111565657652",
+        "commit": "4e7052ee572c3a089fe21dc4b9159a3d818c5d34",
+        "jobName": "SDK / windows-2025 / Node 24.21.0",
+        "node": "v24.21.0",
+        "platform": "win32",
+        "arch": "x64",
+        "osRelease": "10.0.26100"
+      },
+      "sampleCount": 5,
+      "metrics": {
+        "importMs": {
+          "observed": {
+            "median": 104.84870000000001,
+            "mad": 1.3260000000000218,
+            "min": 103.52269999999999,
+            "max": 114.8108
+          },
+          "maximumMedian": 230
+        },
+        "elapsedMs": {
+          "observed": {
+            "median": 2978.8111,
+            "mad": 32.16809999999987,
+            "min": 2946.643,
+            "max": 3018.4071
+          },
+          "maximumMedian": 6037
+        },
+        "cpuMs": {
+          "observed": {
+            "median": 2953,
+            "mad": 30,
+            "min": 2923,
+            "max": 3219
+          },
+          "maximumMedian": 6438
+        },
+        "peakRssBytes": {
+          "observed": {
+            "median": 134344704,
+            "mad": 327680,
+            "min": 130248704,
+            "max": 136564736
+          },
+          "maximumMedian": 273129472
+        },
+        "peakHeapBytes": {
+          "observed": {
+            "median": 54890576,
+            "mad": 450000,
+            "min": 47817576,
+            "max": 55359776
+          },
+          "maximumMedian": 110719552
+        },
+        "watchLatencyMs": {
+          "observed": {
+            "median": 116.57990000000018,
+            "mad": 2.558899999999767,
+            "min": 98.27640000000002,
+            "max": 119.13879999999995
+          },
+          "maximumMedian": 239
+        },
+        "hostStartMs": {
+          "observed": {
+            "median": 138.89679999999998,
+            "mad": 1.825099999999992,
+            "min": 137.0717,
+            "max": 144.25619999999998
+          },
+          "maximumMedian": 289
+        },
+        "requestBytes": {
+          "observed": {
+            "median": 563595,
+            "mad": 0,
+            "min": 563595,
+            "max": 563595
+          },
+          "maximumMedian": 1127190
+        },
+        "responseBytes": {
+          "observed": {
+            "median": 600209,
+            "mad": 1,
+            "min": 600208,
+            "max": 600210
+          },
+          "maximumMedian": 1200420
+        },
+        "diskReadBytes": {
+          "observed": {
+            "median": 7394741,
+            "mad": 21,
+            "min": 7001491,
+            "max": 7657000
+          },
+          "maximumMedian": 15314000
+        },
+        "diskWriteBytes": {
+          "observed": {
+            "median": 1644210,
+            "mad": 0,
+            "min": 1644208,
+            "max": 1644210
+          },
+          "maximumMedian": 3288420
+        },
+        "peakHandles": {
+          "observed": {
+            "median": 6,
+            "mad": 0,
+            "min": 6,
+            "max": 6
+          },
+          "maximumMedian": 12
+        }
+      }
+    },
+    "win32-x64-node22": {
+      "source": {
+        "run": "https://github.com/Altifigence/dds-plugin-sdk/actions/runs/37246613594",
+        "job": "https://github.com/Altifigence/dds-plugin-sdk/actions/runs/37246613594/job/111565657766",
+        "commit": "4e7052ee572c3a089fe21dc4b9159a3d818c5d34",
+        "jobName": "SDK / windows-2025 / Node 22.23.3",
+        "node": "v22.23.3",
+        "platform": "win32",
+        "arch": "x64",
+        "osRelease": "10.0.26100"
+      },
+      "sampleCount": 5,
+      "metrics": {
+        "importMs": {
+          "observed": {
+            "median": 64.4676,
+            "mad": 1.9227999999999952,
+            "min": 61.6871,
+            "max": 78.1083
+          },
+          "maximumMedian": 157
+        },
+        "elapsedMs": {
+          "observed": {
+            "median": 3076.3363,
+            "mad": 16.164700000000266,
+            "min": 2894.4713,
+            "max": 3138.7867
+          },
+          "maximumMedian": 6278
+        },
+        "cpuMs": {
+          "observed": {
+            "median": 1906,
+            "mad": 62,
+            "min": 1719,
+            "max": 1985
+          },
+          "maximumMedian": 3970
+        },
+        "peakRssBytes": {
+          "observed": {
+            "median": 125227008,
+            "mad": 806912,
+            "min": 124018688,
+            "max": 127623168
+          },
+          "maximumMedian": 255246336
+        },
+        "peakHeapBytes": {
+          "observed": {
+            "median": 51203976,
+            "mad": 132672,
+            "min": 48606768,
+            "max": 51336648
+          },
+          "maximumMedian": 102673296
+        },
+        "watchLatencyMs": {
+          "observed": {
+            "median": 58.9708,
+            "mad": 1.9091999999999985,
+            "min": 57.0616,
+            "max": 72.60180000000003
+          },
+          "maximumMedian": 146
+        },
+        "hostStartMs": {
+          "observed": {
+            "median": 207.2952,
+            "mad": 21.00569999999999,
+            "min": 186.2895,
+            "max": 245.2852
+          },
+          "maximumMedian": 491
+        },
+        "requestBytes": {
+          "observed": {
+            "median": 563595,
+            "mad": 0,
+            "min": 563595,
+            "max": 563595
+          },
+          "maximumMedian": 1127190
+        },
+        "responseBytes": {
+          "observed": {
+            "median": 600207,
+            "mad": 0,
+            "min": 600207,
+            "max": 600207
+          },
+          "maximumMedian": 1200414
+        },
+        "diskReadBytes": {
+          "observed": {
+            "median": 7263665,
+            "mad": 262195,
+            "min": 7001417,
+            "max": 7525860
+          },
+          "maximumMedian": 15051720
+        },
+        "diskWriteBytes": {
+          "observed": {
+            "median": 1644183,
+            "mad": 0,
+            "min": 1644183,
+            "max": 1644189
+          },
+          "maximumMedian": 3288378
+        },
+        "peakHandles": {
+          "observed": {
+            "median": 5,
+            "mad": 0,
+            "min": 5,
+            "max": 6
+          },
+          "maximumMedian": 12
+        }
+      }
+    },
+    "linux-x64-node22": {
+      "source": {
+        "run": "https://github.com/Altifigence/dds-plugin-sdk/actions/runs/37246613594",
+        "job": "https://github.com/Altifigence/dds-plugin-sdk/actions/runs/37246613594/job/111565657790",
+        "commit": "4e7052ee572c3a089fe21dc4b9159a3d818c5d34",
+        "jobName": "SDK / ubuntu-24.04 / Node 22.23.3",
+        "node": "v22.23.3",
+        "platform": "linux",
+        "arch": "x64",
+        "osRelease": "6.17.0-1022-azure"
+      },
+      "sampleCount": 5,
+      "metrics": {
+        "importMs": {
+          "observed": {
+            "median": 75.404455,
+            "mad": 0.7301629999999903,
+            "min": 74.67429200000001,
+            "max": 79.894552
+          },
+          "maximumMedian": 160
+        },
+        "elapsedMs": {
+          "observed": {
+            "median": 1726.87901,
+            "mad": 13.419302000000243,
+            "min": 1713.4597079999999,
+            "max": 1768.766288
+          },
+          "maximumMedian": 3538
+        },
+        "cpuMs": {
+          "observed": {
+            "median": 2073.919,
+            "mad": 18.010999999999967,
+            "min": 2055.908,
+            "max": 2115.317
+          },
+          "maximumMedian": 4231
+        },
+        "peakRssBytes": {
+          "observed": {
+            "median": 150831104,
+            "mad": 262144,
+            "min": 147460096,
+            "max": 151093248
+          },
+          "maximumMedian": 302186496
+        },
+        "peakHeapBytes": {
+          "observed": {
+            "median": 49324920,
+            "mad": 673480,
+            "min": 48651440,
+            "max": 50870792
+          },
+          "maximumMedian": 101741584
+        },
+        "watchLatencyMs": {
+          "observed": {
+            "median": 120.06222700000001,
+            "mad": 0.8086590000000342,
+            "min": 116.9888840000001,
+            "max": 121.42590700000005
+          },
+          "maximumMedian": 243
+        },
+        "hostStartMs": {
+          "observed": {
+            "median": 88.938452,
+            "mad": 6.289303000000004,
+            "min": 80.64725899999999,
+            "max": 105.926038
+          },
+          "maximumMedian": 212
+        },
+        "requestBytes": {
+          "observed": {
+            "median": 562056,
+            "mad": 0,
+            "min": 562056,
+            "max": 562056
+          },
+          "maximumMedian": 1124112
+        },
+        "responseBytes": {
+          "observed": {
+            "median": 597912,
+            "mad": 0,
+            "min": 597912,
+            "max": 597912
+          },
+          "maximumMedian": 1195824
+        },
+        "diskReadBytes": {
+          "observed": {
+            "median": 5689633,
+            "mad": 0,
+            "min": 5689633,
+            "max": 5689633
+          },
+          "maximumMedian": 11379266
+        },
+        "diskWriteBytes": {
+          "observed": {
+            "median": 1643805,
+            "mad": 0,
+            "min": 1643805,
+            "max": 1643805
+          },
+          "maximumMedian": 3287610
+        },
+        "peakHandles": {
+          "observed": {
+            "median": 5,
+            "mad": 0,
+            "min": 5,
+            "max": 5
+          },
+          "maximumMedian": 10
+        }
+      }
+    },
+    "linux-x64-node24": {
+      "source": {
+        "run": "https://github.com/Altifigence/dds-plugin-sdk/actions/runs/37246613594",
+        "job": "https://github.com/Altifigence/dds-plugin-sdk/actions/runs/37246613594/job/111565657824",
+        "commit": "4e7052ee572c3a089fe21dc4b9159a3d818c5d34",
+        "jobName": "SDK / ubuntu-24.04 / Node 24.21.0",
+        "node": "v24.21.0",
+        "platform": "linux",
+        "arch": "x64",
+        "osRelease": "6.17.0-1022-azure"
+      },
+      "sampleCount": 5,
+      "metrics": {
+        "importMs": {
+          "observed": {
+            "median": 87.78970799999999,
+            "mad": 0.7768299999999897,
+            "min": 86.819623,
+            "max": 88.922325
+          },
+          "maximumMedian": 178
+        },
+        "elapsedMs": {
+          "observed": {
+            "median": 1731.019084,
+            "mad": 6.489560999999867,
+            "min": 1719.948972,
+            "max": 1791.601427
+          },
+          "maximumMedian": 3584
+        },
+        "cpuMs": {
+          "observed": {
+            "median": 2089.093,
+            "mad": 1.0730000000003201,
+            "min": 2073.953,
+            "max": 2148.164
+          },
+          "maximumMedian": 4297
+        },
+        "peakRssBytes": {
+          "observed": {
+            "median": 163512320,
+            "mad": 192512,
+            "min": 162611200,
+            "max": 165703680
+          },
+          "maximumMedian": 331407360
+        },
+        "peakHeapBytes": {
+          "observed": {
+            "median": 51277912,
+            "mad": 442456,
+            "min": 50353320,
+            "max": 52522784
+          },
+          "maximumMedian": 105045568
+        },
+        "watchLatencyMs": {
+          "observed": {
+            "median": 125.19743499999998,
+            "mad": 10.276982999999916,
+            "min": 113.91800999999998,
+            "max": 142.92998799999998
+          },
+          "maximumMedian": 286
+        },
+        "hostStartMs": {
+          "observed": {
+            "median": 80.94591199999999,
+            "mad": 2.435966999999991,
+            "min": 76.053739,
+            "max": 86.652951
+          },
+          "maximumMedian": 174
+        },
+        "requestBytes": {
+          "observed": {
+            "median": 562056,
+            "mad": 0,
+            "min": 562056,
+            "max": 562056
+          },
+          "maximumMedian": 1124112
+        },
+        "responseBytes": {
+          "observed": {
+            "median": 597912,
+            "mad": 0,
+            "min": 597912,
+            "max": 597912
+          },
+          "maximumMedian": 1195824
+        },
+        "diskReadBytes": {
+          "observed": {
+            "median": 5689633,
+            "mad": 0,
+            "min": 5689633,
+            "max": 5689633
+          },
+          "maximumMedian": 11379266
+        },
+        "diskWriteBytes": {
+          "observed": {
+            "median": 1643805,
+            "mad": 0,
+            "min": 1643805,
+            "max": 1643805
+          },
+          "maximumMedian": 3287610
+        },
+        "peakHandles": {
+          "observed": {
+            "median": 5,
+            "mad": 0,
+            "min": 5,
+            "max": 5
+          },
+          "maximumMedian": 10
+        }
+      }
+    }
+  }
+}

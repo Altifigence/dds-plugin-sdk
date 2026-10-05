@@ -163,7 +163,7 @@ function inspectContents(contents, archived = false) {
   if (archived) {
     // Only the generated inert npm metadata is accepted, including the tested
     // SDK line. Additional scripts or dependencies cannot be smuggled into it.
-    const accepted = [metadataBytes, ...['>=0.3.0 <0.4.0', '>=0.4.0 <0.5.0', '>=0.5.0 <0.6.0', '>=0.6.0 <0.7.0', '>=0.7.0 <0.8.0', '>=0.8.0 <0.9.0', '>=0.9.0 <0.10.0', '>=0.10.0 <0.11.0', '>=0.11.0 <0.12.0', '>=0.12.0 <0.13.0'].map(range => Buffer.from(`${JSON.stringify({...metadata, peerDependencies: {'@altifigence/dds-plugin-sdk': range}}, null, 2)}\n`))];
+    const accepted = [metadataBytes, ...['>=0.3.0 <0.4.0', '>=0.4.0 <0.5.0', '>=0.5.0 <0.6.0', '>=0.6.0 <0.7.0', '>=0.7.0 <0.8.0', '>=0.8.0 <0.9.0', '>=0.9.0 <0.10.0', '>=0.10.0 <0.11.0', '>=0.11.0 <0.12.0', '>=0.12.0 <0.13.0', '>=0.13.0 <0.14.0'].map(range => Buffer.from(`${JSON.stringify({...metadata, peerDependencies: {'@altifigence/dds-plugin-sdk': range}}, null, 2)}\n`))];
     if (!accepted.some(bytes => contents.get('package.json').equals(bytes))) fail('package.json must match the generated SDK metadata');
   } else {
     contents.set('package.json', metadataBytes);

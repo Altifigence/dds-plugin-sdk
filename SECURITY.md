@@ -1,6 +1,6 @@
 # Security
 
-The current development line is **0.7.x**. It retains the security fixes from
+The current release candidate is **1.0.0-rc.1**. It retains the security fixes from
 0.3.2. Update workspace servers and clients together, using a current patched
 Node 22 or 24; do not use a pre-0.3.2 workspace host.
 Report an SDK
@@ -55,7 +55,7 @@ protect storage, verify the current identity and implement revocation themselves
 
 ## 한국어
 
-현재 개발 버전은 **0.7.x**이며 0.3.2의 보안 수정을 유지합니다. workspace **서버와 클라이언트를 모두
+현재 출시 후보는 **1.0.0-rc.1**이며 0.3.2의 보안 수정을 유지합니다. workspace **서버와 클라이언트를 모두
 0.3.2 이상**으로 갱신하고 Node 22/24의 최신 보안 패치를 사용하세요. 클라이언트만
 갱신하면 오래된 서버의 파일 검사와 요청 수신 제한은 바뀌지 않습니다.
 
@@ -74,3 +74,12 @@ The Node downloader hashes the entire stream and the actual staging file before
 exclusive publication. Partial files are not verified results. This is not a lock
 against hostile processes with write access to the workspace or download directory.
 Custom ports must enforce equivalent isolation and coherent-source checks.
+
+## 1.x review and support
+
+See the [support policy](docs/SUPPORT_POLICY.md) for maintained lines, runtime end
+dates and deprecated APIs, and [conformance](docs/CONFORMANCE.md) for test scope.
+Durable state, upload staging and workspace edit journals are operator-owned;
+recovery requires current authority and does not replay execution automatically.
+Synthetic tests and local diagnostic exports contain no real customer fixtures.
+Conformance results and unsigned package hashes do not grant trust or permissions.

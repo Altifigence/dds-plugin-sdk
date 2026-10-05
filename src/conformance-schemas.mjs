@@ -1,0 +1,8 @@
+import {CONFORMANCE_FEATURES} from './conformance-catalog.mjs';
+const object=properties=>({type:'object',properties,required:Object.keys(properties),additionalProperties:false});
+const identifier={type:'string',maxLength:128,pattern:'^[A-Za-z0-9][A-Za-z0-9 ._+()-]*$'};
+const features={type:'array',items:identifier,maxItems:64,uniqueItems:true};
+const result=object({id:{enum:CONFORMANCE_FEATURES},status:{enum:['supported','unsupported','failed']},reason:{enum:['passed','not_declared','missing_adapter','assertion','provider_error','timed_out','cancelled','cleanup_failed','aborted_after_timeout']},check:{anyOf:[identifier,{type:'null'}]},durationMs:{type:'number',minimum:0},cleanup:{enum:['complete','pending','failed','not-run']}});
+export const CONFORMANCE_SCHEMAS=Object.freeze({
+  'conformance-report':{...object({schemaVersion:{const:1},suiteVersion:{const:1},sdkVersion:identifier,identity:object({host:identifier,version:identifier,runtime:identifier,platform:identifier}),declaredFeatures:features,unknownFeatures:features,requiredFeatures:{...features,items:{enum:CONFORMANCE_FEATURES}},results:{type:'array',items:result,minItems:CONFORMANCE_FEATURES.length,maxItems:CONFORMANCE_FEATURES.length},summary:object({supported:{type:'integer',minimum:0,maximum:CONFORMANCE_FEATURES.length},unsupported:{type:'integer',minimum:0,maximum:CONFORMANCE_FEATURES.length},failed:{type:'integer',minimum:0,maximum:CONFORMANCE_FEATURES.length}}),ok:{type:'boolean'}}),$comment:'Runtime also validates exact case order, counts, unknown/required declarations and status/cleanup/ok consistency.'},
+});

@@ -47,3 +47,5 @@ jobs:
           npm run benchmark:uploads
           npm run benchmark:transfer-queue
           npm run benchmark:devtools
+      - name: Combined workload regression guard
+        run: npm run benchmark:combined
