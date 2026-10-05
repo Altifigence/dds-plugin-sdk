@@ -47,5 +47,5 @@ jobs:
           npm run benchmark:uploads
           npm run benchmark:transfer-queue
           npm run benchmark:devtools
-      - name: Calibrate combined workload
-        run: npm run benchmark:combined -- --calibrate
+      - name: Combined workload regression guard
+        run: npm run benchmark:combined
