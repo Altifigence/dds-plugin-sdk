@@ -1,6 +1,6 @@
 # SDK 1.x support and migration
 
-`1.0.0` is the stable SDK line. Pin the installed archive; newly packed plugins
+`1.1.0` is the current stable SDK release in the 1.x line. Pin the installed archive; newly packed plugins
 use `>=1.0.0 <2.0.0`. The policy below applies to this line. Security audit and
 vulnerability validation remain pending under the owner's 2026-10-05 deferral;
 stable API status does not constitute security or DDS product acceptance.
@@ -27,7 +27,7 @@ experimental changes are announced in minor-release notes and require fresh
 acceptance. Its presence is not a cross-browser compatibility claim. Other browser
 ports also require their documented capability and permission checks.
 
-No stable API is deprecated in 1.0.0. Future deprecations appear in declarations,
+No stable API is deprecated in 1.1.0. Future deprecations appear in declarations,
 the changelog and migration guide for at least two minor releases and six months
 before removal in a new major. Runtime execution does not emit unsolicited warning
 logs or change grants. A security emergency is documented explicitly.

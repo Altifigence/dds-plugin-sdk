@@ -4,8 +4,8 @@ import ts from 'typescript';
 import {SDK_PLUGIN_PEER_RANGE} from '../src/version.mjs';
 const mode=process.argv[2];if(!['--write','--check'].includes(mode))throw Error('Use --write or --check');
 const root=new URL('../',import.meta.url),pkg=JSON.parse(await readFile(new URL('package.json',root),'utf8'));
-const optional=new Set(['./workspace-node','./workspace-client','./jobs','./artifacts','./job-storage','./job-history','./job-storage-node','./artifact-storage','./artifact-storage-node','./workspace-edits','./workspace-edits-node','./project-watch','./project-watch-node','./project-query','./project-query-node','./artifact-transfer','./artifact-transfer-browser','./uploads','./uploads-node','./uploads-browser','./artifact-resume-browser','./transfer-queue','./settings','./secrets']);
-const nodeOnly=new Set(['./publishing','./devtools','./workspace-node','./job-storage-node','./artifact-storage-node','./workspace-edits-node','./project-watch-node','./project-query-node','./uploads-node','./conformance-node']);
+const optional=new Set(['./bundles','./provenance','./updates','./updates-node','./upstream','./workspace-node','./workspace-client','./jobs','./artifacts','./job-storage','./job-history','./job-storage-node','./artifact-storage','./artifact-storage-node','./workspace-edits','./workspace-edits-node','./project-watch','./project-watch-node','./project-query','./project-query-node','./artifact-transfer','./artifact-transfer-browser','./uploads','./uploads-node','./uploads-browser','./artifact-resume-browser','./transfer-queue','./settings','./secrets']);
+const nodeOnly=new Set(['./bundles','./provenance','./updates','./updates-node','./upstream','./publishing','./devtools','./workspace-node','./job-storage-node','./artifact-storage-node','./workspace-edits-node','./project-watch-node','./project-query-node','./uploads-node','./conformance-node']);
 function typeNames(source){
   const file=ts.createSourceFile('entry.d.mts',source,ts.ScriptTarget.Latest,true),names=new Set();
   for(const statement of file.statements){

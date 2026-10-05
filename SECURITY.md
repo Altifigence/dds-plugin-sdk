@@ -1,6 +1,6 @@
 # Security
 
-The current stable API release is **1.0.0**. It retains the security fixes from
+The current stable API release is **1.1.0**. It retains the security fixes from
 0.3.2. Update workspace servers and clients together, using a current patched
 Node 22 or 24; do not use a pre-0.3.2 workspace host.
 Report an SDK
@@ -59,7 +59,7 @@ protect storage, verify the current identity and implement revocation themselves
 
 ## 한국어
 
-현재 안정 API 릴리스는 **1.0.0**이며 0.3.2의 보안 수정을 유지합니다. workspace **서버와 클라이언트를 모두
+현재 안정 API 릴리스는 **1.1.0**이며 0.3.2의 보안 수정을 유지합니다. workspace **서버와 클라이언트를 모두
 0.3.2 이상**으로 갱신하고 Node 22/24의 최신 보안 패치를 사용하세요. 클라이언트만
 갱신하면 오래된 서버의 파일 검사와 요청 수신 제한은 바뀌지 않습니다.
 
