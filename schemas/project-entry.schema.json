@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v1.0.0-rc.1/schemas/project-entry.schema.json",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v1.0.0/schemas/project-entry.schema.json",
   "title": "project-entry",
   "type": "object",
   "properties": {

@@ -1,5 +1,14 @@
 # Compatibility and availability
 
+## 1.0 stable API
+
+`1.0.0` retains the RC runtime/protocol API. Newly packed plugins use
+`>=1.0.0 <2.0.0`; raise the minimum before using an API added in a later minor.
+The verifier preserves exact historical 0.3.x–0.13.x and `1.0.0-rc.1` metadata.
+Revalidate and repack an RC plugin as a new plugin version for stable installation.
+Archive verification does not widen installation ranges. See [release contents](RELEASE_1_0.md)
+for accepted profiles and the separately deferred security audit.
+
 ## 1.0 release candidate
 
 `1.0.0-rc.1` retains the 0.13 public runtime and protocol contracts and adds
@@ -76,7 +85,7 @@ is unchanged. These features do not establish a DDS product editor integration.
 | Browser-only DDS host | Native workspace transport is unavailable |
 | Language providers | Diagnostics plus completion, hover, definition, references and document symbols in SDK hosts since 0.3.0; no released DDS editor bridge is implied |
 | Project edit sessions | Client helpers in 0.3.0 over unchanged workspace protocol v1, including 0.2.x servers |
-| Download verification | Node API/CLI since 0.3.1; 0.13.0 accepts exact 0.3.x–0.13.x package metadata; no extraction, code execution or publisher authentication |
+| Download verification | Node API/CLI since 0.3.1; 1.0.0 accepts exact 0.3.x–0.13.x, RC1 and current stable package metadata; no extraction, code execution or publisher authentication |
 | Development tools | `init`, `doctor`, `dev` since 0.4.0; six templates, `generate`, synthetic testing and local profiles in 0.13 |
 | Command jobs | Opt-in SDK host/client extension since 0.4.0; progress/logs/UTF-8 artifacts; v1 hello unchanged |
 | File and job observation | Client helpers since 0.5.0; 0.6 uses revision reads when supported; job reads need enabled 0.4+ hosts |

@@ -10,13 +10,15 @@ a small ESM package, TypeScript declarations and versioned contracts. Connect
 your own workspace and tools with the Node.js host and HTTP client. The SDK has
 **zero runtime dependencies**.
 
-Version **1.0.0-rc.1** is the stable API release candidate. The
+Version **1.0.0** is the stable API release. The
 [API inventory](API_SUPPORT.json), [support and migration policy](docs/SUPPORT_POLICY.md)
 and [host conformance suite](docs/CONFORMANCE.md) make its scope reviewable.
 Run `npm run example:conformance`, `npm run example:conformance-browser` or
 `npm run example:combined` to check independent Node/browser hosts and the combined
-language/settings/edit/job/watch/transfer workload. RC packages pin the exact
-prerelease peer; they do not establish GA or DDS product acceptance.
+language/settings/edit/job/watch/transfer workload. New plugin packages declare `>=1.0.0 <2.0.0`. The
+[1.0 release contents and acceptance](docs/RELEASE_1_0.md) distinguish functional
+acceptance from the deferred security audit. SDK delivery is separate from DDS
+product acceptance.
 
 Version 0.13 adds six [project templates and guarded contract generation](docs/DEVTOOLS.md),
 [deterministic synthetic test hosts](docs/testing.md) and opt-in
@@ -55,7 +57,7 @@ application, private engines/services and production signing systems are outside
 this repository. Read the [public scope](docs/PUBLIC_SCOPE.md) and
 [compatibility table](docs/COMPATIBILITY.md) for exact boundaries.
 
-Version **1.0.0-rc.1** supports Node 22 and 24. Manifest v1 diagnostic plugins remain
+Version **1.0.0** supports Node 22 and 24. Manifest v1 diagnostic plugins remain
 compatible. Manifest v2 adds commands, permission-scoped workspace and backend
 APIs, and open-source or proprietary distribution metadata. Themes export to
 the XML format already supported by DDS. The workspace host runs trusted plugins
@@ -115,7 +117,7 @@ mkdir my-dds-plugin
 cd my-dds-plugin
 npm init -y
 npm pkg set type=module
-npm install --ignore-scripts --save-exact https://github.com/Altifigence/dds-plugin-sdk/releases/download/v1.0.0-rc.1/altifigence-dds-plugin-sdk-1.0.0-rc.1.tgz
+npm install --ignore-scripts --save-exact https://github.com/Altifigence/dds-plugin-sdk/releases/download/v1.0.0/altifigence-dds-plugin-sdk-1.0.0.tgz
 ```
 
 Copy the example's `plugin.mjs` and `run.mjs` into this directory, then run:
