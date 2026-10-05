@@ -4,6 +4,12 @@ Candidate: **1.0.0-rc.1**. This document records the acceptance scope; exact rel
 asset digests and final verification receipts accompany the GitHub release. An
 unpublished checkout is not a release receipt.
 
+Security audit and vulnerability validation are **pending** under the owner's
+2026-10-05 deferral (DDS-243). Existing review records are retained. Functional,
+compatibility and performance acceptance can continue, but none of those results
+constitutes completed security acceptance. This candidate must not be described
+as having passed the deferred audit.
+
 ## Reproducible checks
 
 `npm ci --ignore-scripts` and `npm run check` cover the reviewed package allowlist,

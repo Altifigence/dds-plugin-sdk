@@ -1,6 +1,7 @@
 import {spawnSync} from 'node:child_process';
 import {readFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
+import os from 'node:os';
 const samples=[];
 for(let n=0;n<5;n++){
   const result=spawnSync(process.execPath,[fileURLToPath(new URL('./benchmark-combined-worker.mjs',import.meta.url))],{encoding:'utf8',timeout:60000,maxBuffer:1_000_000,windowsHide:true});
@@ -13,7 +14,7 @@ const profile=`${process.platform}-${process.arch}-node${process.versions.node.s
 let baseline;try{baseline=JSON.parse(await readFile(new URL('../tests/performance-baselines.json',import.meta.url),'utf8')).profiles[profile];}catch(error){if(error.code!=='ENOENT')throw error;}
 const failures=[];
 if(baseline)for(const [metric,limits] of Object.entries(baseline.metrics)){if(measurements[metric].median>limits.maximumMedian)failures.push(metric);}
-const report={schemaVersion:1,profile,sampleCount:samples.length,fixture:{cycles:3,bytes:131089,languageRequests:120,commands:120,verifiedTransfers:6,watchUpdates:3},measurements,baseline:baseline?{source:baseline.source,failures}:null,logicalDisk:'Instrumented fs.promises payload I/O; excludes physical device/cache behavior.',resourceCleanup:samples.every(s=>s.logicalDisk.remainingHandles===0&&Object.keys(s.remainingResources).length===0)};
+const report={schemaVersion:1,profile,runtime:{node:process.version,platform:process.platform,arch:process.arch,osRelease:os.release()},sampleCount:samples.length,fixture:{cycles:3,bytes:131089,languageRequests:120,commands:120,verifiedTransfers:6,watchUpdates:3},measurements,baseline:baseline?{source:baseline.source,failures}:null,logicalDisk:'Instrumented fs.promises payload I/O; excludes physical device/cache behavior.',resourceCleanup:samples.every(s=>s.logicalDisk.remainingHandles===0&&Object.keys(s.remainingResources).length===0)};
 console.log(JSON.stringify(report,null,2));
 if(failures.length)throw Error('Combined workload regression: '+failures.join(', '));
 if(!baseline&&!process.argv.includes('--calibrate'))throw Error('Missing measured baseline for '+profile+'; run explicit calibration and review the result');
