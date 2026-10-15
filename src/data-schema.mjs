@@ -8,18 +8,32 @@ const primitive = value => value === null || ['boolean', 'string', 'number'].inc
 const same = (a, b) => a === b;
 const bounded = (value, maximum, path) => integer(value, maximum, 0, path);
 
-function validate(node, value, path, applyDefaults) {
+const encoder = new TextEncoder();
+// Match configurationCopy's aggregate output limits while constructing defaults.
+function account(serialized, budget) {
+  if (budget && (budget.bytes -= encoder.encode(serialized).byteLength) < 0) fail('budget', '', true);
+}
+function validate(node, value, path, applyDefaults, budget) {
+  if (budget && --budget.nodes < 0) fail('budget', '', true);
   if (value === undefined && applyDefaults && own(node, 'default')) value = node.default;
   const type = node.type;
   if (type === 'object' && node.format === 'dds-secret-reference') {
-    try {return parseSecretReference(value);} catch {fail('secret_reference', path);}
+    let reference;
+    try {reference = parseSecretReference(value);} catch {fail('secret_reference', path);}
+    if (budget && (budget.nodes -= 2) < 0) fail('budget', '', true);
+    account(JSON.stringify(reference), budget);
+    return reference;
   }
   if (type === 'object') {
     if (!value || typeof value !== 'object' || Array.isArray(value)) fail('type', path);
     if (Object.keys(value).some(name => !own(node.properties, name))) fail('unknown_field', path);
-    const result = {};
+    account('{}', budget);
+    const result = {}; let fields = 0;
     for (const [name, child] of Object.entries(node.properties)) {
-      if (own(value, name) || applyDefaults && own(child, 'default')) result[name] = validate(child, value[name], `${path}/${name}`, applyDefaults);
+      if (own(value, name) || applyDefaults && own(child, 'default')) {
+        account(`${fields++ ? ',' : ''}${JSON.stringify(name)}:`, budget);
+        result[name] = validate(child, value[name], `${path}/${name}`, applyDefaults, budget);
+      }
       else if (node.required?.includes(name)) fail('required', `${path}/${name}`);
     }
     return Object.freeze(result);
@@ -27,7 +41,8 @@ function validate(node, value, path, applyDefaults) {
   if (type === 'array') {
     if (!Array.isArray(value)) fail('type', path);
     if (value.length < (node.minItems ?? 0) || value.length > (node.maxItems ?? DATA_SCHEMA_LIMITS.arrayItems)) fail('range', path);
-    return Object.freeze(value.map((item, index) => validate(node.items, item, `${path}/${index}`, applyDefaults)));
+    account('[]' + ','.repeat(Math.max(0, value.length - 1)), budget);
+    return Object.freeze(value.map((item, index) => validate(node.items, item, `${path}/${index}`, applyDefaults, budget)));
   }
   if (type === 'null' ? value !== null : type === 'integer' ? !Number.isSafeInteger(value) : typeof value !== type) fail('type', path);
   if (type === 'string') {
@@ -38,6 +53,7 @@ function validate(node, value, path, applyDefaults) {
     if (!Number.isFinite(value) || own(node, 'minimum') && value < node.minimum || own(node, 'maximum') && value > node.maximum) fail('range', path);
   }
   if (node.enum && !node.enum.some(item => same(item, value))) fail('enum', path);
+  account(JSON.stringify(value), budget);
   return value;
 }
 
@@ -98,8 +114,9 @@ export function validateDataValue(schema, input, options = {}) {
   schema = parseDataSchema(schema);
   if (typeof applyDefaults !== 'boolean') fail('options');
   const value = input === undefined && applyDefaults && own(schema.schema, 'default') ? undefined : configurationCopy(input, DATA_SCHEMA_LIMITS.valueBytes);
-  // Recopy the expanded result to enforce total bytes/nodes after defaults too.
-  return configurationCopy(validate(schema.schema, value, '', applyDefaults), DATA_SCHEMA_LIMITS.valueBytes);
+  const budget = {nodes: 10_000, bytes: DATA_SCHEMA_LIMITS.valueBytes};
+  // Keep the final independent copy as a defensive JSON boundary.
+  return configurationCopy(validate(schema.schema, value, '', applyDefaults, budget), DATA_SCHEMA_LIMITS.valueBytes);
 }
 
 function collect(node, value, path = '', output = []) {

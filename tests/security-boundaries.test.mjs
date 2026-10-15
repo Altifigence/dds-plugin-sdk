@@ -1,3 +1,4 @@
+import {spawnSync} from 'node:child_process';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as fs from 'node:fs/promises';
@@ -155,4 +156,50 @@ test('unauthenticated connections are capped before any HTTP body is received', 
     socket.on('error', () => {});
     socket.once('close', () => { clearTimeout(timer); resolve(); });
   });
+});
+
+
+test('resolved protected names reject real Windows short aliases at every workspace file boundary', {skip: process.platform !== 'win32'}, async t => {
+  const f = await fixture(t);
+  const batch = path.join(f.directory, 'short-name.cmd');
+  await fs.writeFile(batch, '@for %%I in ("%~1") do @echo %%~snxI\r\n');
+  const short = absolute => {
+    const result = spawnSync('cmd.exe', ['/d', '/s', '/c', `""${batch}" "${absolute}""`], {encoding: 'utf8', windowsHide: true, windowsVerbatimArguments: true, timeout: 5000});
+    assert.equal(result.status, 0, result.stderr);
+    return result.stdout.trim();
+  };
+  await fs.mkdir(path.join(f.root, '.aws'));
+  const aws = short(path.join(f.root, '.aws'));
+  if (aws === '.aws') {t.skip('The fixture volume has no 8.3 aliases'); return;}
+  assert.ok(aws && !aws.includes('"'));
+  await fs.writeFile(path.join(f.root, '.aws', 'credentials'), 'synthetic protected content');
+  await fs.writeFile(path.join(f.root, 'ordinary.txt'), 'safe');
+  const workspace = await createNodeWorkspace({root: f.root, binaryArtifacts: true}); f.cleanup.push(() => workspace.dispose());
+  const original = await workspace.readFile('ordinary.txt');
+  for (const name of ['.aws', aws]) {
+    await assert.rejects(workspace.readFile(`${name}/credentials`), {code: 'unsafe_path'});
+    await assert.rejects(workspace.captureBinaryFile(`${name}/credentials`), {code: 'unsafe_path'});
+    await assert.rejects(workspace.listFiles(name), {code: 'unsafe_path'});
+    await assert.rejects(workspace.writeFile(`${name}/created.txt`, 'bad', {expectedRevision: null}), {code: 'unsafe_path'});
+    await assert.rejects(workspace.writeFile(`${name}/credentials`, 'bad', {expectedRevision: original.revision}), {code: 'unsafe_path'});
+    await assert.rejects(workspace.mkdir(`${name}/created`), {code: 'unsafe_path'});
+    await assert.rejects(workspace.rename('ordinary.txt', `${name}/moved.txt`), {code: 'unsafe_path'});
+    await assert.rejects(workspace.rename(`${name}/credentials`, 'moved.txt'), {code: 'unsafe_path'});
+    await assert.rejects(workspace.remove(`${name}/credentials`), {code: 'unsafe_path'});
+  }
+  // A protected final component must be checked even when its parent is public.
+  await fs.writeFile(path.join(f.root, '.env.production'), 'synthetic environment');
+  const env = short(path.join(f.root, '.env.production'));
+  await assert.rejects(workspace.readFile(env), {code: 'unsafe_path'});
+  await assert.rejects(workspace.remove(env), {code: 'unsafe_path'});
+  assert.equal(await fs.readFile(path.join(f.root, '.aws', 'credentials'), 'utf8'), 'synthetic protected content');
+  assert.deepEqual(await fs.readdir(path.join(f.root, '.aws')), ['credentials']);
+  assert.equal((await workspace.readFile('ordinary.txt')).content, 'safe');
+  // Ordinary aliases and an operator root whose own name is excluded stay usable.
+  const ordinary = path.join(f.root, 'ordinary-long-directory'); await fs.mkdir(ordinary);
+  const alias = short(ordinary);
+  await workspace.writeFile(`${alias}/new.txt`, 'allowed', {expectedRevision: null});
+  assert.equal((await workspace.readFile('ordinary-long-directory/new.txt')).content, 'allowed');
+  const selectedRoot = await createNodeWorkspace({root: path.join(f.root, '.aws')}); f.cleanup.push(() => selectedRoot.dispose());
+  assert.equal((await selectedRoot.readFile('credentials')).content, 'synthetic protected content');
 });
