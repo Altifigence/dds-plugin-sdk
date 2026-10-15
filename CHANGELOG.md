@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.1 — 2026-10-15
+
+- Fix protected workspace path reads and creation through Windows 8.3 short-name aliases. Affected versions: <=1.2.0; fixed in 1.2.1.
+- Bound nested default expansion to prevent memory exhaustion. Affected versions: <=1.2.0; fixed in 1.2.1.
+- Preserve the public API, schema contracts and package exports; generated schema version identifiers follow the SDK version.
+
 ## 1.2.0 — 2026-10-05
 
 - Add bounded command DAGs with typed output bindings, exact plan approval, per-step grants, existing command-job integration and durable CAS checkpoints. Explicit restart recovery and retries create new attempts without automatic replay.

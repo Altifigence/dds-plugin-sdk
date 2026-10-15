@@ -1,3 +1,4 @@
+import {spawnSync} from 'node:child_process';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createSettingsStore, parseSettingsDefinition, SETTINGS_LIMITS} from '../src/settings.mjs';
@@ -94,4 +95,26 @@ test('import and bounds reject incompatible or excessive state and release subsc
   assert.throws(() => store.subscribe('w', () => {}), hasCode('budget_exceeded')); disposables.forEach(x => x.dispose()); assert.equal(store.inspect().subscriptions, 0);
   const bad = definition(); bad.settings.protocol.scopes = ['user']; assert.throws(() => parseSettingsDefinition(bad));
   store.dispose(); restored.dispose();
+});
+
+
+test('settings update import and migration bound defaults and preserve prior state', () => {
+  const source = `
+    import assert from 'node:assert/strict';
+    const api = await import(${JSON.stringify(new URL('../src/settings.mjs', import.meta.url).href)});
+    const record = properties => ({type: 'object', properties, additionalProperties: false});
+    const build = level => record(level ? {a: {type: 'array', items: build(level - 1), default: Array.from({length: 256}, () => ({}))}} : {});
+    const schema = {schemaVersion: 1, schema: build(3)};
+    const definition = version => ({schemaVersion: 1, pluginId: 'bounded', version, settings: {tree: {schema, scopes: ['user', 'workspace']}}});
+    const store = api.createSettingsStore(definition(1));
+    const before = store.exportState();
+    assert.throws(() => store.update({workspaceId: 'one', scope: 'user', expectedRevision: 0, values: {tree: {}}}), {code: 'budget_exceeded'});
+    assert.deepEqual(store.exportState(), before);
+    assert.throws(() => api.createSettingsStore(definition(1), {state: {...before, user: {tree: {}}}}), {code: 'budget_exceeded'});
+    await assert.rejects(store.migrate(definition(2), () => ({user: {tree: {}}, workspaces: {}}), {expectedRevision: 0}), {code: 'budget_exceeded'});
+    assert.deepEqual(store.exportState(), before);
+    store.dispose();
+  `;
+  const child = spawnSync(process.execPath, ['--max-old-space-size=128', '--input-type=module', '--eval', source], {encoding: 'utf8', windowsHide: true, timeout: 10000, maxBuffer: 100000});
+  assert.equal(child.status, 0, child.stderr || child.error?.message);
 });

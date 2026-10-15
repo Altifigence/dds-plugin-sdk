@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v1.2.0/schemas/workflow-fingerprint.schema.json",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v1.2.1/schemas/workflow-fingerprint.schema.json",
   "title": "workflow-fingerprint",
   "type": "object",
   "properties": {
@@ -33,7 +33,7 @@
           "const": 1
         },
         "sdkVersion": {
-          "const": "1.2.0"
+          "const": "1.2.1"
         },
         "scope": {
           "type": "object",

@@ -56,7 +56,11 @@ export async function createNodeWorkspace({root, writable = true, manage = writa
       let stat;
       try { stat = await fs.lstat(target, {bigint: true}); }
       catch (failure) { if (allowMissing && i === parts.length - 1 && failure.code === 'ENOENT') return {target, stat: undefined}; throw failure; }
-      if (stat.isSymbolicLink() || !contained(canonical, await fs.realpath(target))) throw workspaceFailure('unsafe_path', 'Symlink workspace paths are forbidden');
+      const resolved = await fs.realpath(target);
+      if (stat.isSymbolicLink() || !contained(canonical, resolved)) throw workspaceFailure('unsafe_path', 'Symlink workspace paths are forbidden');
+      // Apply the same policy to long names behind filesystem aliases too.
+      requireWorkspacePath(path.relative(canonical, resolved).split(path.sep).join('/'));
+      target = resolved;
       if (i < parts.length - 1 && !stat.isDirectory()) throw workspaceFailure('unsafe_path', 'Workspace parent is not a directory');
     }
     return {target, stat: await fs.lstat(target, {bigint: true})};

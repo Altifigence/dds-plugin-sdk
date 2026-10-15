@@ -10,6 +10,10 @@ a small ESM package, TypeScript declarations and versioned contracts. Connect
 your own workspace and tools with the Node.js host and HTTP client. The SDK has
 **zero runtime dependencies**.
 
+Version **1.2.1** fixes Windows protected-path aliases and nested default expansion
+memory exhaustion affecting versions <=1.2.0. See the [changelog](CHANGELOG.md)
+and [security guidance](SECURITY.md). Public APIs, schema contracts and exports remain compatible.
+
 Version **1.2.0** adds [command workflows and incremental cache](docs/WORKFLOWS.md),
 [registered tool streams](docs/TOOL_STREAMS.md) and a [public stdio LSP bridge](docs/LSP.md).
 Run `npm run example:workflows`, `npm run example:workflow-tools` and `npm run example:lsp`
@@ -30,7 +34,7 @@ Run `npm run example:conformance`, `npm run example:conformance-browser` or
 `npm run example:combined` to check independent Node/browser hosts and the combined
 language/settings/edit/job/watch/transfer workload. New plugin packages declare `>=1.0.0 <2.0.0`. The
 [1.0 release contents and acceptance](docs/RELEASE_1_0.md) distinguish functional
-acceptance from the deferred security audit. SDK delivery is separate from DDS
+acceptance from security review. SDK delivery is separate from DDS
 product acceptance.
 
 Version 0.13 adds six [project templates and guarded contract generation](docs/DEVTOOLS.md),
@@ -70,7 +74,7 @@ application, private engines/services and production signing systems are outside
 this repository. Read the [public scope](docs/PUBLIC_SCOPE.md) and
 [compatibility table](docs/COMPATIBILITY.md) for exact boundaries.
 
-Version **1.2.0** supports Node 22 and 24. Manifest v1 diagnostic plugins remain
+Version **1.2.1** supports Node 22 and 24. Manifest v1 diagnostic plugins remain
 compatible. Manifest v2 adds commands, permission-scoped workspace and backend
 APIs, and open-source or proprietary distribution metadata. Themes export to
 the XML format already supported by DDS. The workspace host runs trusted plugins
@@ -130,7 +134,7 @@ mkdir my-dds-plugin
 cd my-dds-plugin
 npm init -y
 npm pkg set type=module
-npm install --ignore-scripts --save-exact https://github.com/Altifigence/dds-plugin-sdk/releases/download/v1.2.0/altifigence-dds-plugin-sdk-1.2.0.tgz
+npm install --ignore-scripts --save-exact https://github.com/Altifigence/dds-plugin-sdk/releases/download/v1.2.1/altifigence-dds-plugin-sdk-1.2.1.tgz
 ```
 
 Copy the example's `plugin.mjs` and `run.mjs` into this directory, then run:

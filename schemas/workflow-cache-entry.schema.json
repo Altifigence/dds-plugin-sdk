@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v1.2.0/schemas/workflow-cache-entry.schema.json",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v1.2.1/schemas/workflow-cache-entry.schema.json",
   "title": "workflow-cache-entry",
   "type": "object",
   "properties": {
@@ -46,7 +46,7 @@
       "uniqueItems": true
     },
     "value": {
-      "$ref": "https://github.com/Altifigence/dds-plugin-sdk/blob/v1.2.0/schemas/json-value.schema.json"
+      "$ref": "https://github.com/Altifigence/dds-plugin-sdk/blob/v1.2.1/schemas/json-value.schema.json"
     },
     "valueSha256": {
       "type": "string",

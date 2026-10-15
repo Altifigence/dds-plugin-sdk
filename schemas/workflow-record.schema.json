@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v1.2.0/schemas/workflow-record.schema.json",
+  "$id": "https://github.com/Altifigence/dds-plugin-sdk/blob/v1.2.1/schemas/workflow-record.schema.json",
   "title": "workflow-record",
   "type": "object",
   "properties": {
@@ -170,7 +170,7 @@
             ]
           },
           "output": {
-            "$ref": "https://github.com/Altifigence/dds-plugin-sdk/blob/v1.2.0/schemas/json-value.schema.json"
+            "$ref": "https://github.com/Altifigence/dds-plugin-sdk/blob/v1.2.1/schemas/json-value.schema.json"
           },
           "outputSha256": {
             "oneOf": [

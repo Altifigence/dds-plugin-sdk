@@ -1,3 +1,4 @@
+import {spawnSync} from 'node:child_process';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createPluginHost, definePlugin, parseCommandDefinition, parseCommandInput, parseCommandOutput} from '../src/index.mjs';
@@ -90,4 +91,20 @@ test('secret port accessors are rejected without invoking foreign code', () => {
   let reads = 0;
   assert.throws(() => createPluginHost({secrets: {get withSecret() {reads++; return () => {};}}}), hasCode('invalid_contract'));
   assert.equal(reads, 0);
+});
+
+
+test('command input bounds multiplicative defaults before handler execution', () => {
+  const source = `
+    import assert from 'node:assert/strict';
+    const api = await import(${JSON.stringify(new URL('../src/index.mjs', import.meta.url).href)});
+    const record = properties => ({type: 'object', properties, additionalProperties: false});
+    const build = level => record(level ? {a: {type: 'array', items: build(level - 1), default: Array.from({length: 256}, () => ({}))}} : {});
+    const schema = {schemaVersion: 1, schema: build(3)};
+    const command = {id: 'bounded', title: 'Bounded', inputSchema: schema};
+    assert.throws(() => api.parseCommandInput({}, command), error => error.code === 'budget_exceeded' && error.path.startsWith('/input'));
+    assert.deepEqual(api.parseCommandInput({name: 'old'}, {id: 'legacy', title: 'Legacy'}), {name: 'old'});
+  `;
+  const child = spawnSync(process.execPath, ['--max-old-space-size=128', '--input-type=module', '--eval', source], {encoding: 'utf8', windowsHide: true, timeout: 10000, maxBuffer: 100000});
+  assert.equal(child.status, 0, child.stderr || child.error?.message);
 });

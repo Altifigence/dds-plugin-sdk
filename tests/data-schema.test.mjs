@@ -1,3 +1,4 @@
+import {spawnSync} from 'node:child_process';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {parseDataSchema, validateDataValue, collectSecretReferences, describeDataForm, DataValidationError, DATA_SCHEMA_LIMITS} from '../src/data-schema.mjs';
@@ -68,4 +69,38 @@ test('form metadata stays literal, bounded and detached from schema input', () =
   assert.equal(fields[1].path, '/mode'); assert.equal(fields[1].display.label, '<img src=x onerror=alert(1)>'); assert.deepEqual(fields[1].choices, ['safe', 'fast']);
   assert.ok(Object.isFrozen(fields[1].display.accessibility));
   assert.throws(() => parseDataSchema(schema({type: 'string', display: {html: '<b>bad</b>'}})));
+});
+
+
+test('multiplicative defaults reject before exhausting a capped child heap', () => {
+  const source = `
+    import assert from 'node:assert/strict';
+    const api = await import(${JSON.stringify(new URL('../src/data-schema.mjs', import.meta.url).href)});
+    const record = properties => ({type: 'object', properties, additionalProperties: false});
+    const build = level => record(level ? {a: {type: 'array', items: build(level - 1), default: Array.from({length: 256}, () => ({}))}} : {});
+    const schema = {schemaVersion: 1, schema: build(3)};
+    const parsed = api.parseDataSchema(schema);
+    assert.deepEqual(api.validateDataValue(parsed, {}), {});
+    assert.throws(() => api.validateDataValue(parsed, {}, {applyDefaults: true}), {code: 'budget_exceeded', reason: 'budget'});
+  `;
+  const child = spawnSync(process.execPath, ['--max-old-space-size=128', '--input-type=module', '--eval', source], {encoding: 'utf8', windowsHide: true, timeout: 10000, maxBuffer: 100000});
+  assert.equal(child.status, 0, child.stderr || child.error?.message);
+});
+
+
+test('expanded values retain exact JSON byte and node limits, including UTF-8 and escaping', () => {
+  const defaults = {type: 'array', items: record({text: {type: 'string', default: '\n界🌍'}})};
+  assert.deepEqual(validateDataValue(schema(defaults), [{}, {}], {applyDefaults: true}), [{text: '\n界🌍'}, {text: '\n界🌍'}]);
+  // 1 + 39 * (1 + 255) + (1 + 14) = 10000 nodes, exactly the existing limit.
+  const matrix = schema({type: 'array', items: {type: 'array', items: {type: 'null'}}});
+  const exact = [...Array.from({length: 39}, () => Array(255).fill(null)), Array(14).fill(null)];
+  assert.deepEqual(validateDataValue(matrix, exact), exact);
+  exact.at(-1).push(null);
+  assert.throws(() => validateDataValue(matrix, exact), {code: 'budget_exceeded'});
+  const string = schema({type: 'array', items: {type: 'string'}});
+  // JSON syntax contributes seven bytes for the two-element array.
+  const atLimit = ['x'.repeat(16_384), '界'.repeat(16_381) + 'xx'];
+  assert.equal(new TextEncoder().encode(JSON.stringify(atLimit)).byteLength, 65_536);
+  assert.deepEqual(validateDataValue(string, atLimit), atLimit);
+  atLimit[1] += 'x'; assert.throws(() => validateDataValue(string, atLimit), {code: 'budget_exceeded'});
 });

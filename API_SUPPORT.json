@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sdkVersion": "1.2.0",
+  "sdkVersion": "1.2.1",
   "releaseStatus": "stable",
   "pluginPeerRange": ">=1.0.0 <2.0.0",
   "policy": "docs/SUPPORT_POLICY.md",
