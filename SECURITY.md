@@ -1,6 +1,6 @@
 # Security
 
-The current stable API release is **1.2.0**. It retains the security fixes from
+The current stable API release is **1.2.1**. It retains the security fixes from
 0.3.2. Update workspace servers and clients together, using a current patched
 Node 22 or 24; do not use a pre-0.3.2 workspace host.
 Report an SDK
@@ -12,9 +12,14 @@ exploit details or project data in an issue.
 Include the SDK version, a minimal synthetic reproducer, expected behavior and
 impact. Omit credentials, customer source and private filesystem paths.
 
-The post-0.7 security audit and vulnerability validation are pending under the
-owner's 2026-10-05 deferral. Functional and release checks do not complete that
-audit or establish that its unvalidated candidates are resolved.
+## 1.2.1 security fixes
+
+The resumed security review identified two issues affecting SDK versions <=1.2.0:
+protected workspace path reads and creation through Windows 8.3 short-name aliases,
+and memory exhaustion during nested default expansion. Both are fixed in 1.2.1.
+Update operator-owned workspace hosts and SDK clients to 1.2.1. Public APIs,
+schema contracts and package exports remain compatible. These targeted fixes do
+not establish that every vulnerability is resolved or that DDS product hosts are accepted.
 
 ## 0.3.2 boundary fixes
 
@@ -59,8 +64,10 @@ protect storage, verify the current identity and implement revocation themselves
 
 ## 한국어
 
-현재 안정 API 릴리스는 **1.2.0**이며 0.3.2의 보안 수정을 유지합니다. workspace **서버와 클라이언트를 모두
-0.3.2 이상**으로 갱신하고 Node 22/24의 최신 보안 패치를 사용하세요. 클라이언트만
+현재 안정 API 릴리스는 **1.2.1**이며 0.3.2의 보안 수정을 유지합니다. 1.2.0 이하에 영향을 주는
+Windows 8.3 짧은 이름 별칭의 보호 경로 읽기·생성과 중첩 기본값 확장의 메모리 고갈을
+1.2.1에서 수정했습니다. workspace **서버와 클라이언트를 모두 1.2.1**로 갱신하고
+Node 22/24의 최신 보안 패치를 사용하세요. 클라이언트만
 갱신하면 오래된 서버의 파일 검사와 요청 수신 제한은 바뀌지 않습니다.
 
 0.3.1에서 합성 파일과 로컬 서버로 재현한 하드링크를 통한 파일 노출, 일부 자격증명
